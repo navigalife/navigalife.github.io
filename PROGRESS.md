@@ -5,16 +5,19 @@
 
 - **Current phase**: Phase 4 — rendered and regression QA partial; real-repo publish blocked
 - **Branch**: `codex/001-initial-site`
-- **Next action**: After the user reconfirms localhost browser access, reload
-  `/admin/?branch=codex%2F001-initial-site`, re-run the saved product edit and
-  reorder, add testimonial `t-010`, select the Sage theme, dismiss the dirty
-  logout confirmation, publish once, wait for `No workflow run found`, and
-  verify the single content commit with `git log --stat`.
+- **Next action**: After command approval and localhost browser access are
+  reconfirmed, first push local commit `67ec548` to
+  `codex/001-initial-site`; then reload the admin, re-run the saved product
+  edit and reorder, add testimonial `t-010`, select the Sage theme, dismiss the
+  dirty logout confirmation, publish once, wait for `No workflow run found`,
+  and verify the single content commit with `git log --stat`.
 - **Blockers**: During the native logout check, Browser Use rejected further
   interaction and reported that the user had requested
   `http://127.0.0.1:4173` not be used. No such instruction appears in the task,
   but the browser policy forbids switching to another surface after this hard
-  rejection. The real-repo content publish did not run. The PAT remained
+  rejection. Command approval quota also became exhausted again before the
+  QA-discovered save-control commit could be pushed. The real-repo content
+  publish did not run. The PAT remained
   runtime-only and was not written to a file, command, application log,
   commit, or this document.
 
