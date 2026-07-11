@@ -3,10 +3,11 @@
 > Executor: update at EVERY checkpoint, and before ending any session.
 > This file is the only handoff between sessions. Be precise.
 
-- **Current phase**: Phase 3 — Public site (not started)
+- **Current phase**: Phase 4 — Admin panel (not started)
 - **Branch**: `codex/001-initial-site`
-- **Next action**: Read only spec §Phase 3 plus §Design System and §Constraints,
-  then build `src/build.js`, the public templates, CSS, and progressive JS.
+- **Next action**: Read only spec §Phase 4 plus §Design System and §Constraints,
+  then implement the first checkpointable admin-panel slice without changing
+  the completed public-site architecture.
 - **Blockers**: none
 
 ## Checkpoint log
@@ -17,6 +18,9 @@
 | 2026-07-10 | Phase 2 | Brand foundation complete | Authored the frozen product-edit and portrait prompts in `IMAGE-STYLE.md`, plus copy rules and worked examples in `COPY-VOICE.md`. Vendored Anthropic's official `frontend-design` skill byte-for-byte from its public repository; SHA-256 `1608ea77fbb6fc30d13a97d12cfa8ebf31358d40f0dd97beed24829d6b3f45dd`. |
 | 2026-07-10 | Phase 2 | Public data complete | Added 20 products with unique immutable ids, normalized specifications, rewritten descriptions, conditions, and reserved image paths; 9 placeholder testimonials (5 photo, 4 quote); company and SEO copy; and 4 complete light/dark themes. All five JSON files parse. Contrast audit passed every tested body, CTA, link, and focus pair; lowest required ratio 5.46:1. Fingerprint scan across `data/` and `docs/brand/` returned 0. |
 | 2026-07-10 | Phase 2 | Checkpoint 2 complete | Generated and approved 20 product edits from archived references plus 5 text-to-image testimonial portraits using the locked prompts in `IMAGE-STYLE.md`. Re-encoded product assets to 1800×1200 WebP and portraits to 1200×1200 WebP with `sharp`; EXIF/XMP/IPTC/ICC scan returned 0 findings. `assets/products/manifest.json` contains 25 records with complete prompts, model, date, output, and archived-source paths for all product edits. Added Fraunces wordmark SVG, SVG favicon, 32/180/192/512 PNG favicon set, and a 1200×630 OG image; all raster brand files are metadata-clean. Exact JSON parse command passed; exact fingerprint scan across `data/ assets/ src/ admin/ docs/brand/` returned `0`; 20/20 product image directories are non-empty. Visual contact-sheet review found consistent warm studio treatment, no visible source branding, and varied natural portraits. Installed only the permitted dev dependencies: `puppeteer@24.43.1` and `sharp@0.34.5`; npm reported 0 vulnerabilities at installation. |
+| 2026-07-10 | Phase 3 | Public build complete | Added the data-driven `src/build.js` pipeline, public template, token-only CSS, progressive JS, and dependency-free local server. `npm run build` exited 0 with `Built 20 products with theme meridian`, `Client JavaScript: 4494 bytes (4.39 KB)`, and the expected `dist/` site, hashed CSS/JS and processed-image names, sitemap, robots file, 404 page, brand assets, and conditional admin copy-through. The approved `company.json` has blank email and hours fields, so the template safely omits those two contact rows until verified values are supplied instead of inventing them. Catalogue links intentionally target Phase 5 PDF outputs. |
+| 2026-07-10 | Phase 3 | Render and interaction QA complete | In-app Browser QA passed page identity, meaningful DOM, framework-overlay check, zero console warnings/errors, 20 cards and 20 detail panels, light/dark toggle, mobile menu, product click routing, direct `#product/venogain-scd-500` load, dialog focus, and zero broken images. Screenshots reviewed at desktop and 360×800; the 360px DOM reported no horizontal overflow. Native Puppeteer keyboard fallback passed link Enter → dialog open/focus close → Escape → dialog closed/hash cleared/focus returned. `clinic`, `sage`, and `graphite` builds were each rendered and spot-checked against exact light/dark `--bg` and `--primary` tokens; final output was restored to `meridian`. The only visual repair found in QA was the static dark wordmark losing contrast; it now consumes `--ink`. |
+| 2026-07-10 | Phase 3 | Checkpoint 3 complete | Exact verify evidence: `npm run build` → exit 0; product-name audit → `20/20 visible product names found`, `missing: none`; shipped JS audit → `4494 dist/assets/site.d62774152b.js`; exact `grep -c "indiamart" dist/ -r` printed `:0` for every output file (grep exit 1 because there were no matches); case-insensitive `rg -ni '(indiamart|imimg)' src dist` → no output; 55 shipped raster images checked with 0 EXIF/XMP/IPTC/ICC findings; `node --check` passed all four source JS files. Ban-list scan and non-token hex scan of authored CSS returned no matches. Accessibility DOM audit found no duplicate ids, missing image alt text, or unnamed buttons. |
 
 ## QA evidence (Phase 5)
 
