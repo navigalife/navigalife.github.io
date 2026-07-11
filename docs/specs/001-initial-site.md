@@ -526,4 +526,103 @@ has to remember the recipe. IMAGE-STYLE.md is the canonical reference.
 
 ## Addendum (post-start changes only)
 
-_(empty)_
+**A1 — 2026-07-10, advisor, after Phase 3 interim review** (see
+advisor-side `reviews/navigalife.github.io/001-interim-phase3.md`):
+
+1. **Accepted deviation — responsive images**: 640/1200w WebP-only `srcset`
+   (no `<picture>`/fallback, not 480/960/1440) is approved as shipped.
+2. **Accepted deviation — src layout**: flat `src/` (`template.js`,
+   `styles.css`, `site.js`, `serve.js`) is approved. `src/templates/catalogue.html`
+   is still expected in Phase 5 as specced.
+3. **Reaffirmed, punch item**: fonts MUST be self-hosted WOFF2 per §4 —
+   remove the Google Fonts links, commit the exact weights under
+   `assets/fonts/`, `@font-face` + `font-display: swap` + preload both files.
+4. **Reaffirmed, punch item**: §9.3 frame uses `object-fit: contain` with 8%
+   inner padding on `--surface-2` (currently `cover`) so future off-ratio
+   uploads normalize instead of cropping.
+5. **Data note**: `company.json` phone `8047765670` is an IndiaMart virtual
+   routing number; real phone/WhatsApp/email/hours + founding year are
+   pending from the owner. Executor: leave placeholders as-is until new
+   values are provided in-session; do not invent.
+
+---
+
+**A2 — 2026-07-11, advisor, owner repositioning directive.** Supersedes §7
+Phase 3's section order and §6's testimonial schema. Everything not named
+here stands as specced (+A1).
+
+**A2.1 Positioning.** Naviga Life is a **solutions/protocols brand, not a
+product catalogue**. The differentiator: disease-specific and
+machine-specific usage protocols under expert guidance (this is the owners'
+own service language — see their existing copy: "customized protocols …
+under our expert guidance", "solves the problem in 30–90 days on case to
+case basis"). Products are the instrument, not the pitch. Three audiences:
+(a) people managing the named diseases, (b) elderly wellbeing — balance,
+mobility, circulation, (c) sports injury rehab & athletic recovery.
+
+**A2.2 New section order** (replaces §Phase 3 order): Hero (protocol-led) →
+Trust strip → **Approach & Protocols** (core section: the engagement model —
+assess → customized protocol → guided home use → review/adjust — plus
+condition-specific protocol cards organized under the three audience
+tracks) → **Testimonials (before/after proof)** → Product range
+(category-grouped grid, unchanged internally, demoted in order) → About →
+Contact/footer. The old standalone "therapy explainer" merges into
+Approach & Protocols. Overlay, catalogue links, contact block unchanged.
+
+**A2.3 `data/protocols.json`** (new, admin-editable in Phase 4): array of
+`{ "id": slug, "condition": "...", "audience": "disease"|"wellbeing"|"sports",
+"summary": "2–3 sentences on what the protocol covers", "engagement":
+["Assessment …", "Device & garment selection …", "Guided sessions …",
+"Review & adjustment …"], "durationNote": "e.g. 30–90 days, case to case",
+"deviceIds": ["kl-5000-pro-neo", …], "visible": true }`. Seed one entry per
+major condition + one each for wellbeing and sports. **Binding content
+rule**: describe the engagement model in the owners' service language; DO
+NOT invent clinical specifics — no pressures, mmHg, frequencies, session
+counts, or week-by-week regimens beyond what the scrape or the owner
+explicitly provides. Where substance is pending, write the summary at the
+service level and mark the entry `"draft": true`.
+
+**A2.4 Testimonials schema v2** (replaces §6 testimonials). Two types, no
+customer portraits:
+- `"type": "before-after"`: `{ id, name, location, quote, context,
+  beforeImage, afterImage, placeholder }`
+- `"type": "quote"`: `{ id, name, location, quote, context, placeholder }`
+Retire the 5 generated portrait photos (delete `assets/testimonials/*`,
+mark their manifest records `"status": "retired"`) and convert existing
+photo-type placeholder entries to quote-type. §9's portrait template is
+retired with them (keep in IMAGE-STYLE.md, marked retired).
+
+**A2.5 Before/after component.** Two matched frames, 4:5 each, side by side
+(stack only under ~400px), `--surface-2` matting, consistent radius and
+inner gap, small-caps BEFORE / AFTER labels (AFTER may use `--primary`),
+quote + name · location · condition line beneath. Customer photos arrive
+chaotic: standardization is **deterministic only** — crop, rotate,
+exposure/white-balance normalization, and the fixed frame; when a photo
+can't crop cleanly to 4:5, letterbox it over a blurred fill of itself.
+**Generative/AI editing of patient photos is prohibited** (it resamples the
+limb and falsifies medical evidence). Add this recipe to IMAGE-STYLE.md.
+**No fabricated before/after placeholder imagery** — the site never shows
+fake medical outcomes. Until real customer pairs are supplied, ship
+quote-type placeholders plus a designed empty-state for the before/after
+row; the component and admin support are built now regardless.
+
+**A2.6 Hero redesign** (replaces the overlapping-card collage, which is
+rejected). Keep §8.2's asymmetric editorial law. Required elements:
+protocol-first headline + supporting line (hero copy stays in
+site-config.json); the three audience pathways visible without scrolling on
+desktop (chips or compact cards linking to their tracks); at most ONE
+device image, presented in the §9.3 normalized frame; optionally a compact
+protocol-steps rail (Assess → Custom protocol → Guided home use → Review &
+adjust). No rotated/overlapping imagery, no collage. When real before/after
+pairs exist, the hero visual may become one before/after pair (A2.5
+treatment) — design the layout so that swap is trivial.
+
+**A2.7 Admin (Phase 4) deltas**: testimonial editor implements v2 (dual
+image upload + client-side crop to 4:5 for before/after; type toggle);
+new Protocols tab (same list/CRUD pattern: reorder, visibility, edit,
+device multi-select); products tab unchanged.
+
+**A2.8 Schedule**: session 3 = A1 fixes + A2 public-site rework +
+re-verify Checkpoint 3; session 4 = Phase 4 admin (new schemas); session 5
+= Phase 5. Checkpoint 3 verify commands unchanged and must be re-run and
+re-logged after the rework.
