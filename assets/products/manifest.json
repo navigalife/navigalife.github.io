@@ -1,0 +1,380 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "id": "product-venogain-scd-500-01",
+      "kind": "product",
+      "productId": "venogain-scd-500",
+      "sourceCachePath": "scrape/images/daf027929822747b-lymphedema-compression-dvt-pump.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of VenoGain SCD 500. Isolate the actual black oval controller and its matching compression garment from the source layout; discard the doctor portrait, diagrams, borders, background, and all printed copy.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/venogain-scd-500/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-kl-3000-pro-neo-01",
+      "kind": "product",
+      "productId": "kl-3000-pro-neo",
+      "sourceCachePath": "scrape/images/d8c9005aa9c5c047-kl-3000-pro-neo-catalog-jpg.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of KL 3000 Pro Neo Limb Therapy System. Isolate the actual black rectangular controller, its tubing, and matching compression garments from the source brochure; discard the clinician portrait, specifications table, borders, background, and all printed copy.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/kl-3000-pro-neo/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-kl-5000-pro-neo-01",
+      "kind": "product",
+      "productId": "kl-5000-pro-neo",
+      "sourceCachePath": "scrape/images/22f2fc95b76a4420-compressible-limb-therapy-system-kl-5000-pro-neo-legs-and-arms-swellin.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of KL 5000 Pro Neo Limb Therapy System. Isolate the actual dark green and black controller shown in the source layout; discard the clinician portrait, borders, background, and all printed copy. Include the matching compression garments shown with this model.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/kl-5000-pro-neo/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-kl-2000-pro-neo-01",
+      "kind": "product",
+      "productId": "kl-2000-pro-neo",
+      "sourceCachePath": "scrape/images/aa9b81c3d5ec8081-kl-2000-pro-neo-catalog-jpg.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of KL 2000 Pro Neo Compression Pump. Isolate the actual black rectangular controller, its tubing, and matching compression garments from the source brochure; discard the clinician portrait, specifications table, borders, background, and all printed copy.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/kl-2000-pro-neo/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-cvi-cellulitis-care-01",
+      "kind": "product",
+      "productId": "cvi-cellulitis-care",
+      "sourceCachePath": "scrape/images/732ab74840f694e3-cvi-chronic-cellulitis-treatment-device.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of CVI and Cellulitis Limb Therapy System. Isolate the actual black controller, tubing, and matching compression garments from the brochure; discard the clinician portrait, specifications, background, and all printed copy.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/cvi-cellulitis-care/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-filariasis-leg-compression-01",
+      "kind": "product",
+      "productId": "filariasis-leg-compression",
+      "sourceCachePath": "scrape/images/9463deeb265dd8bc-filariasis-elephantiasis-treatment-device.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Filariasis Leg Compression System. Isolate the actual dark green and black controller and matching full-leg compression garments from the source layout; discard the clinician portrait, background, and all printed copy.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/filariasis-leg-compression/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-foot-amputation-prevention-4-01",
+      "kind": "product",
+      "productId": "foot-amputation-prevention-4",
+      "sourceCachePath": "scrape/images/aa9b81c3d5ec8081-kl-2000-pro-neo-catalog-jpg.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Four-Chamber Foot and Leg Compression System. Isolate the actual black four-chamber controller, tubing, and matching leg-and-foot garments from the brochure; discard the clinician portrait, specifications table, background, and all printed copy.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/foot-amputation-prevention-4/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-foot-leg-amputation-prevention-6-01",
+      "kind": "product",
+      "productId": "foot-leg-amputation-prevention-6",
+      "sourceCachePath": "scrape/images/56da4ee445be5c7e-foot-leg-amputation-prevention.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Six-Chamber Limb Circulation System. Isolate the actual black six-chamber controller, tubing, and matching compression garments from the brochure; discard the clinician portrait, specifications table, background, and all printed copy.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/foot-leg-amputation-prevention-6/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-limb-lymphedema-8-01",
+      "kind": "product",
+      "productId": "limb-lymphedema-8",
+      "sourceCachePath": "scrape/images/29d119e94fd6ce44-legs-and-arms-swelling-lymphedema-treatment-device.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Eight-Chamber Lymphedema Therapy System. Isolate the actual dark green and black controller, tubing, and eight-chamber arm and leg garments from the source layout; discard the clinician portrait, background, and all printed copy.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/limb-lymphedema-8/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-lymphedema-cellulitis-6-01",
+      "kind": "product",
+      "productId": "lymphedema-cellulitis-6",
+      "sourceCachePath": "scrape/images/76888249e538ece6-lymphedema-and-cellulitis-patient-treatment-device.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Six-Chamber Lymphedema and Cellulitis System. Isolate the actual black controller, tubing, and matching six-chamber compression garments from the brochure; discard the clinician portrait, specifications, background, and all printed copy.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/lymphedema-cellulitis-6/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-pad-pvd-circulation-4-01",
+      "kind": "product",
+      "productId": "pad-pvd-circulation-4",
+      "sourceCachePath": "scrape/images/b8af4a5ca31244af-pad-peripheral-artery-disease-pvd-peripheral-vascular-disease-preventi.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Four-Chamber PAD and PVD Support System. Isolate the actual black four-chamber controller, tubing, and leg-and-foot compression garments from the brochure; discard the clinician portrait, specifications, background, and all printed copy.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/pad-pvd-circulation-4/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-diabetic-foot-pad-8-01",
+      "kind": "product",
+      "productId": "diabetic-foot-pad-8",
+      "sourceCachePath": "scrape/images/e666a6a43750db05-pad-peripheral-artery-disease-treatment-diabetic-foot-amputation-preve.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Eight-Chamber Diabetic Foot and PAD System. Isolate the actual dark green and black controller, tubing, and eight-chamber leg-and-foot compression garments from the source layout; discard the clinician portrait, background, and all printed copy.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/diabetic-foot-pad-8/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-post-lumpectomy-arm-01",
+      "kind": "product",
+      "productId": "post-lumpectomy-arm",
+      "sourceCachePath": "scrape/images/7fb1c747121e5ed8-post-lumpectomy-upper-limb-arm-swelling-lymphedema-treatment-device.jp.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Post-Lumpectomy Arm Therapy System. Restyle the exact black multi-chamber arm compression garment and attached tubing shown in Image 1. Remove only the blue background and visible watermark. Do not invent or add a controller.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/post-lumpectomy-arm/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-post-mastectomy-arm-01",
+      "kind": "product",
+      "productId": "post-mastectomy-arm",
+      "sourceCachePath": "scrape/images/d2feccb8967a7b4b-post-mastectomy-arm-lymphedema-treatment-device.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Post-Mastectomy Arm Therapy System. Restyle the exact black multi-chamber arm compression garment and attached tubing shown in Image 1. Remove only the blue background and visible watermark. Do not invent or add a controller.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/post-mastectomy-arm/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-venous-care-6-01",
+      "kind": "product",
+      "productId": "venous-care-6",
+      "sourceCachePath": "scrape/images/defd99c80adedd4b-varicose-veins-cellulitis-cvi-chronic-venous-insufficiency-venous-ulce.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Six-Chamber Venous Care System. Restyle the exact pair of black six-chamber leg compression garments and attached tubing shown in Image 1. Remove only the blue background and visible watermark. Do not invent or add a controller.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/venous-care-6/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-varicose-vein-care-01",
+      "kind": "product",
+      "productId": "varicose-vein-care",
+      "sourceCachePath": "scrape/images/00da26d6b828e7d7-varicose-veins-treatment-device.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Varicose Vein Therapy System. Restyle the exact pair of black six-chamber leg compression garments and attached tubing shown in Image 1. Remove only the blue background and visible watermark. Do not invent or add a controller.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/varicose-vein-care/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-venous-ulcer-cvi-fluid-01",
+      "kind": "product",
+      "productId": "venous-ulcer-cvi-fluid",
+      "sourceCachePath": "scrape/images/144cefa52113d8f4-varicose-veins-venous-ulcers-cellulitis-cvi-limbs-water-retention-trea.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Venous Ulcer and CVI Therapy System. Restyle the exact pair of black six-chamber leg compression garments and attached tubing shown in Image 1. Remove only the blue background and visible watermark. Do not invent or add a controller.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/venous-ulcer-cvi-fluid/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-venous-ulcer-compression-01",
+      "kind": "product",
+      "productId": "venous-ulcer-compression",
+      "sourceCachePath": "scrape/images/4e138e9820587867-varicose-veins-venous-ulcers-treatment-device.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Venous Ulcer Compression System. Restyle the exact pair of black six-chamber leg compression garments and attached tubing shown in Image 1. Remove only the blue background and visible watermark. Do not invent or add a controller.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/venous-ulcer-compression/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-venous-ulcer-dvt-care-01",
+      "kind": "product",
+      "productId": "venous-ulcer-dvt-care",
+      "sourceCachePath": "scrape/images/f749f9da4a6a7a4a-venous-ulcers-deep-vein-thrombosis-blood-clots-treatment-device.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Venous Ulcer and DVT Care System. Restyle the exact pair of black six-channel leg compression garments and attached tubing shown in Image 1. Remove only the blue background and visible watermark. Do not invent or add a controller.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/venous-ulcer-dvt-care/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "product-post-surgical-arm-swelling-01",
+      "kind": "product",
+      "productId": "post-surgical-arm-swelling",
+      "sourceCachePath": "scrape/images/b491debba02ea7fd-after-breast-cancer-surgery-arms-swelling-treatment-device.jpg.jpg",
+      "fullPrompt": "Use case: product-mockup\nAsset type: medical-device catalogue and website product image\nInput images: Image 1 is the edit target and exact product reference\nPrimary request: Restyle Image 1 as a clean studio product photograph of Post-Surgical Arm Swelling Therapy System. Restyle the exact black multi-chamber arm compression garment and attached tubing shown in Image 1. Remove only the blue background and visible watermark. Do not invent or add a controller.\nDevice integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.\n\nStyle/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.\nScene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.\nComposition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.\nLighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.\nColor palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.\nMaterials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.\nConstraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/products/post-surgical-arm-swelling/01.webp",
+      "dimensions": {
+        "width": 1800,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "portrait-t-001",
+      "kind": "testimonial-portrait",
+      "testimonialId": "t-001",
+      "sourceCachePath": null,
+      "fullPrompt": "Use case: photorealistic-natural\nAsset type: website testimonial portrait\nPrimary request: A natural chest-up portrait of an Indian woman in her early 50s from Pune, wearing a simple muted teal cotton kurta, gentle genuine expression.\n\nScene/backdrop: warm neutral interior backdrop with subtle real-world texture and no identifiable location.\nStyle/medium: photorealistic editorial portrait; candid, respectful, and lightly finished rather than commercial stock photography.\nComposition/framing: chest-up, eye-level, 1:1 square aspect ratio, relaxed posture, simple everyday clothing, direct or slightly off-camera gaze.\nLighting/mood: soft natural window light from the upper left; calm, approachable, and credible.\nColor palette: warm paper neutrals, natural skin tones, restrained deep-teal or earth-tone clothing accents.\nMaterials/textures: natural skin texture, age-appropriate detail, realistic hair and fabric.\nConstraints: one person only; no clinician costume; no medical setting; no device; no text; no logo; no watermark; no exaggerated smile; no beauty retouching; no glamour styling; no visible brand marks.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/testimonials/t-001.webp",
+      "dimensions": {
+        "width": 1200,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "portrait-t-003",
+      "kind": "testimonial-portrait",
+      "testimonialId": "t-003",
+      "sourceCachePath": null,
+      "fullPrompt": "Use case: photorealistic-natural\nAsset type: website testimonial portrait\nPrimary request: A natural chest-up portrait of an Indian woman in her early 60s from Jaipur, wearing a warm clay and cream handloom top, gentle genuine expression.\n\nScene/backdrop: warm neutral interior backdrop with subtle real-world texture and no identifiable location.\nStyle/medium: photorealistic editorial portrait; candid, respectful, and lightly finished rather than commercial stock photography.\nComposition/framing: chest-up, eye-level, 1:1 square aspect ratio, relaxed posture, simple everyday clothing, direct or slightly off-camera gaze.\nLighting/mood: soft natural window light from the upper left; calm, approachable, and credible.\nColor palette: warm paper neutrals, natural skin tones, restrained deep-teal or earth-tone clothing accents.\nMaterials/textures: natural skin texture, age-appropriate detail, realistic hair and fabric.\nConstraints: one person only; no clinician costume; no medical setting; no device; no text; no logo; no watermark; no exaggerated smile; no beauty retouching; no glamour styling; no visible brand marks.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/testimonials/t-003.webp",
+      "dimensions": {
+        "width": 1200,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "portrait-t-005",
+      "kind": "testimonial-portrait",
+      "testimonialId": "t-005",
+      "sourceCachePath": null,
+      "fullPrompt": "Use case: photorealistic-natural\nAsset type: website testimonial portrait\nPrimary request: A natural chest-up portrait of an Indian Muslim woman in her late 50s from Lucknow, wearing a modest sage-green dupatta and neutral clothing, gentle genuine expression.\n\nScene/backdrop: warm neutral interior backdrop with subtle real-world texture and no identifiable location.\nStyle/medium: photorealistic editorial portrait; candid, respectful, and lightly finished rather than commercial stock photography.\nComposition/framing: chest-up, eye-level, 1:1 square aspect ratio, relaxed posture, simple everyday clothing, direct or slightly off-camera gaze.\nLighting/mood: soft natural window light from the upper left; calm, approachable, and credible.\nColor palette: warm paper neutrals, natural skin tones, restrained deep-teal or earth-tone clothing accents.\nMaterials/textures: natural skin texture, age-appropriate detail, realistic hair and fabric.\nConstraints: one person only; no clinician costume; no medical setting; no device; no text; no logo; no watermark; no exaggerated smile; no beauty retouching; no glamour styling; no visible brand marks.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/testimonials/t-005.webp",
+      "dimensions": {
+        "width": 1200,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "portrait-t-007",
+      "kind": "testimonial-portrait",
+      "testimonialId": "t-007",
+      "sourceCachePath": null,
+      "fullPrompt": "Use case: photorealistic-natural\nAsset type: website testimonial portrait\nPrimary request: A natural chest-up portrait of an Indian man in his mid 40s from Hyderabad, wearing a simple deep-teal collared shirt, gentle genuine expression.\n\nScene/backdrop: warm neutral interior backdrop with subtle real-world texture and no identifiable location.\nStyle/medium: photorealistic editorial portrait; candid, respectful, and lightly finished rather than commercial stock photography.\nComposition/framing: chest-up, eye-level, 1:1 square aspect ratio, relaxed posture, simple everyday clothing, direct or slightly off-camera gaze.\nLighting/mood: soft natural window light from the upper left; calm, approachable, and credible.\nColor palette: warm paper neutrals, natural skin tones, restrained deep-teal or earth-tone clothing accents.\nMaterials/textures: natural skin texture, age-appropriate detail, realistic hair and fabric.\nConstraints: one person only; no clinician costume; no medical setting; no device; no text; no logo; no watermark; no exaggerated smile; no beauty retouching; no glamour styling; no visible brand marks.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/testimonials/t-007.webp",
+      "dimensions": {
+        "width": 1200,
+        "height": 1200
+      },
+      "status": "approved"
+    },
+    {
+      "id": "portrait-t-009",
+      "kind": "testimonial-portrait",
+      "testimonialId": "t-009",
+      "sourceCachePath": null,
+      "fullPrompt": "Use case: photorealistic-natural\nAsset type: website testimonial portrait\nPrimary request: A natural chest-up portrait of an Indian Bengali woman in her early 50s from Kolkata, wearing a restrained ochre and cream cotton sari blouse, gentle genuine expression.\n\nScene/backdrop: warm neutral interior backdrop with subtle real-world texture and no identifiable location.\nStyle/medium: photorealistic editorial portrait; candid, respectful, and lightly finished rather than commercial stock photography.\nComposition/framing: chest-up, eye-level, 1:1 square aspect ratio, relaxed posture, simple everyday clothing, direct or slightly off-camera gaze.\nLighting/mood: soft natural window light from the upper left; calm, approachable, and credible.\nColor palette: warm paper neutrals, natural skin tones, restrained deep-teal or earth-tone clothing accents.\nMaterials/textures: natural skin texture, age-appropriate detail, realistic hair and fabric.\nConstraints: one person only; no clinician costume; no medical setting; no device; no text; no logo; no watermark; no exaggerated smile; no beauty retouching; no glamour styling; no visible brand marks.",
+      "model": "gpt-image-2 via built-in image_gen",
+      "generatedAt": "2026-07-11T03:15:21.845Z",
+      "outputPath": "assets/testimonials/t-009.webp",
+      "dimensions": {
+        "width": 1200,
+        "height": 1200
+      },
+      "status": "approved"
+    }
+  ]
+}
