@@ -23,18 +23,21 @@ const server = http.createServer((request, response) => {
   const safePath = candidate.startsWith(root) ? candidate : path.join(root, '404.html');
 
   fs.stat(safePath, (statError, stat) => {
-    const filePath = !statError && stat.isFile() ? safePath : path.join(root, '404.html');
-    fs.readFile(filePath, (readError, content) => {
-      if (readError) {
-        response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-        response.end('Unable to read the built site.');
-        return;
-      }
-      response.writeHead(filePath.endsWith('404.html') ? 404 : 200, {
-        'Content-Type': types[path.extname(filePath)] || 'application/octet-stream',
-        'Cache-Control': 'no-store',
+    const filePath = !statError && stat.isDirectory() ? path.join(safePath, 'index.html') : safePath;
+    fs.stat(filePath, (fileStatError, fileStat) => {
+      const resolvedFile = !fileStatError && fileStat.isFile() ? filePath : path.join(root, '404.html');
+      fs.readFile(resolvedFile, (readError, content) => {
+        if (readError) {
+          response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+          response.end('Unable to read the built site.');
+          return;
+        }
+        response.writeHead(resolvedFile.endsWith('404.html') ? 404 : 200, {
+          'Content-Type': types[path.extname(resolvedFile)] || 'application/octet-stream',
+          'Cache-Control': 'no-store',
+        });
+        response.end(content);
       });
-      response.end(content);
     });
   });
 });
