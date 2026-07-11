@@ -285,7 +285,9 @@ const renderPage = ({
         </div>
         <div class="hero__visual" data-reveal style="--reveal-order:1">
           <figure class="hero-product">
-            ${image(featured.images[0], imageMap, { alt: `${featured.name} compression system`, sizes: '(max-width: 760px) 92vw, 38vw', eager: true })}
+            <div class="hero-product__frame">
+              ${image(featured.images[0], imageMap, { alt: `${featured.name} compression system`, sizes: '(max-width: 760px) 92vw, 38vw', eager: true })}
+            </div>
             <figcaption><strong>${escapeHtml(featured.name)}</strong><span>One instrument within a customized protocol</span></figcaption>
           </figure>
           <ol class="hero-steps" aria-label="Naviga Life protocol">
