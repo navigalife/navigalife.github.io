@@ -5,10 +5,10 @@
 
 - **Current phase**: Phase 3 — A1/A2 public-site rework (session 3)
 - **Branch**: `codex/001-initial-site`
-- **Next action**: Implement A2.3–A2.5 data and asset-retirement changes:
-  add `data/protocols.json`, migrate testimonials to schema v2, retire generated
-  portrait assets and manifest records, and document deterministic-only
-  before/after treatment in `IMAGE-STYLE.md`.
+- **Next action**: Rework `src/build.js`, `src/template.js`, and
+  `src/styles.css` for A2.2/A2.5/A2.6: protocol-led hero, three audience
+  pathways, Approach & Protocols, testimonial proof with before/after empty
+  state, and the demoted product range in the required section order.
 - **Blockers**: None for the session 3 public-site rework. Phase 4 remains
   deferred to session 4 per A2.7–A2.8.
 
@@ -25,6 +25,7 @@
 | 2026-07-10 | Phase 3 | Checkpoint 3 complete | Exact verify evidence: `npm run build` → exit 0; product-name audit → `20/20 visible product names found`, `missing: none`; shipped JS audit → `4494 dist/assets/site.d62774152b.js`; exact `grep -c "indiamart" dist/ -r` printed `:0` for every output file (grep exit 1 because there were no matches); case-insensitive `rg -ni '(indiamart|imimg)' src dist` → no output; 55 shipped raster images checked with 0 EXIF/XMP/IPTC/ICC findings; `node --check` passed all four source JS files. Ban-list scan and non-token hex scan of authored CSS returned no matches. Accessibility DOM audit found no duplicate ids, missing image alt text, or unnamed buttons. |
 | 2026-07-10 | Phase 4 | Clean stop before implementation | Read only spec §Phase 4 after Checkpoint 3. The checkpoint requires validating token auth, full CRUD, and an atomic Git Data API publish against the real repository branch. `git remote -v` confirmed `navigalife/navigalife.github.io`; `gh auth status` confirmed no GitHub host is authenticated. No admin files were started because the real publish acceptance path could not be checkpointed in this session. |
 | 2026-07-11 | Phase 3 rework | A1 punch list complete | Self-hosted the official Latin WOFF2 files for Fraunces 600 and Instrument Sans 400–600 under `assets/fonts/`; SHA-256: Fraunces `2c3287428a81fc670a67e56fd0d87f76ddc0b3ef4f25104c0adc600cf68fe24e`, Instrument Sans `6219bc4bfdfc5d9b2201dcdf046218b122a758f932e25ed5f168f929b7ca2311`. Removed Google Fonts connections, added both preload links, added `@font-face` with `font-display: swap`, and copied fonts into `dist/`. Updated hero, product-card, and detail product frames to `object-fit: contain` with 8% inner padding on `--surface-2`, including dark-theme wash behavior. `npm run build` exited 0 with `Built 20 products with theme meridian` and `Client JavaScript: 4494 bytes (4.39 KB)`; `cmp` confirmed both shipped font files exactly match their sources; the output scan found only local preloads/font URLs and no Google Fonts hosts. |
+| 2026-07-11 | Phase 3 rework | A2 data and evidence protocol complete | Added 9 visible draft protocol seeds: 7 disease-specific entries plus elderly wellbeing and sports recovery. Copy stays at the owner-approved service level and contains no invented pressures, frequencies, session counts, or regimens; all referenced device ids resolve. Migrated all 9 placeholders to testimonial schema v2 quote records with no image fields. Deleted all 5 generated portrait files and marked exactly their 5 manifest records `retired`; all 20 product records remain `approved`. Marked the portrait prompt retired and added the deterministic-only 4:5 before/after evidence recipe and no-fabricated-imagery empty-state rule to `IMAGE-STYLE.md`. Updated protocol-first hero and SEO copy in `site-config.json`; `company.json` was not edited. Validation output: `7 JSON files parse`; `9 protocols: 7 disease, 1 wellbeing, 1 sports`; `9 quote testimonials; 0 portrait references`; `5 portrait manifest records retired; product records remain approved`; fingerprint scan `0`; testimonial portrait assets `0`; `npm run build` exited 0. |
 
 ## QA evidence (Phase 5)
 

@@ -46,7 +46,11 @@ Materials/textures: truthful medical-grade plastics, fabric, tubing, and matte s
 Constraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.
 ```
 
-## Testimonial portrait template — frozen
+## Testimonial portrait template — retired
+
+This template is retained as a historical record only. A2 retires customer
+portraits and prohibits generating replacements. Do not use this prompt for
+new testimonial assets.
 
 ```text
 Use case: photorealistic-natural
@@ -62,6 +66,29 @@ Constraints: one person only; no clinician costume; no medical setting; no devic
 ```
 
 Vary age, gender presentation, clothing, expression, and city context across the set. Do not vary the composition, lighting direction, neutral backdrop, or realism requirements.
+
+## Before/after evidence recipe — deterministic only
+
+Patient before/after photographs are medical evidence, not creative assets.
+Generative or AI editing is prohibited. Never use image generation, inpainting,
+generative fill, face or body retouching, background replacement, synthetic
+upscaling, or any process that can change the photographed limb or outcome.
+
+1. Preserve the supplied original files as the evidence source.
+2. Apply only deterministic auto-orientation, rotation, global exposure and
+   white-balance normalization, ordinary resizing/re-encoding, and a 4:5 crop.
+   Do not use local retouching or remove marks, objects, swelling, discoloration,
+   or other visible evidence.
+3. Keep the subject at a comparable visual scale where the source pair permits
+   it. If either image cannot crop cleanly to 4:5, letterbox that complete image
+   over a blurred fill derived from the same image. Never invent edge content.
+4. Render the pair in matched 4:5 frames with `--surface-2` matting, the shared
+   component radius, a consistent inner gap, and small-caps BEFORE / AFTER
+   labels. AFTER may use `--primary` for the label only.
+5. Strip EXIF, XMP, IPTC, and ICC metadata from shipped derivatives. Record the
+   source-to-output transform so the deterministic treatment can be reproduced.
+6. When no real paired photographs are available, render the designed empty
+   state. Never generate or substitute fabricated outcome imagery.
 
 ## Output and review rules
 

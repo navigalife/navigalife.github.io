@@ -1,10 +1,9 @@
 [
   {
     "id": "t-001",
-    "type": "photo",
+    "type": "quote",
     "name": "Meera Sethi",
     "location": "Pune, Maharashtra",
-    "image": "assets/testimonials/t-001.webp",
     "quote": "The leg sleeve took a few sessions to position quickly, but the controls were straightforward once my therapist showed me. I now use the pump during my evening reading, and the swelling feels easier to manage.",
     "context": "Lymphedema home care, 5 months",
     "placeholder": true
@@ -20,10 +19,9 @@
   },
   {
     "id": "t-003",
-    "type": "photo",
+    "type": "quote",
     "name": "Anita Verma",
     "location": "Jaipur, Rajasthan",
-    "image": "assets/testimonials/t-003.webp",
     "quote": "The arm cuff feels supportive without making the routine complicated. I appreciate being able to complete the session at home on the schedule my clinician gave me.",
     "context": "Post-mastectomy arm lymphedema, 4 months",
     "placeholder": true
@@ -39,10 +37,9 @@
   },
   {
     "id": "t-005",
-    "type": "photo",
+    "type": "quote",
     "name": "Farida Khan",
     "location": "Lucknow, Uttar Pradesh",
-    "image": "assets/testimonials/t-005.webp",
     "quote": "The full-leg garment looked intimidating at first, but the markings helped me learn the setup. Regular sessions fit comfortably into my morning routine.",
     "context": "Filariasis-related leg swelling, 7 months",
     "placeholder": true
@@ -58,10 +55,9 @@
   },
   {
     "id": "t-007",
-    "type": "photo",
+    "type": "quote",
     "name": "Karthik Rao",
     "location": "Hyderabad, Telangana",
-    "image": "assets/testimonials/t-007.webp",
     "quote": "The adjustable timer is useful on days when my therapist changes the session length. I can follow the plan without changing the rest of my routine.",
     "context": "Varicose veins and leg swelling, 4 months",
     "placeholder": true
@@ -77,10 +73,9 @@
   },
   {
     "id": "t-009",
-    "type": "photo",
+    "type": "quote",
     "name": "Nandini Bose",
     "location": "Kolkata, West Bengal",
-    "image": "assets/testimonials/t-009.webp",
     "quote": "I wanted a routine I could manage at home after my lumpectomy. The arm sleeve needs careful positioning, but the session feels calm once it starts.",
     "context": "Post-lumpectomy arm swelling, 12 weeks",
     "placeholder": true
