@@ -16,6 +16,7 @@ const icon = (name) => {
     menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
     message: '<path d="M20 11.5a8 8 0 0 1-11.8 7L3 20l1.5-5.1A8 8 0 1 1 20 11.5Z"/><path d="M8.5 9.3c.8 2 2.2 3.4 4.2 4.2"/>',
     moon: '<path d="M20.2 15.2A8.5 8.5 0 0 1 8.8 3.8a8.5 8.5 0 1 0 11.4 11.4Z"/>',
+    photo: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m4.5 17 5-5 3.5 3 2.5-2.5 4 4.5"/>',
     sun: '<circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   };
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg>`;
@@ -87,16 +88,66 @@ const renderProductDetail = (product, imageMap, company) => {
     </article>`;
 };
 
-const renderTestimonial = (testimonial, imageMap, index) => `
-  <figure class="testimonial ${testimonial.image ? 'testimonial--photo' : ''}" data-reveal style="--reveal-order:${index % 3}">
-    ${testimonial.image ? `<div class="testimonial__portrait">${image(testimonial.image, imageMap, { alt: `Representative portrait of ${testimonial.name}`, sizes: '(max-width: 720px) 88px, 112px', width: 640, height: 640 })}</div>` : ''}
+const renderProtocolCard = (protocol, products, index) => {
+  const linkedProducts = protocol.deviceIds
+    .map((deviceId) => products.find((product) => product.id === deviceId))
+    .filter(Boolean);
+  return `
+    <article class="protocol-card" data-reveal style="--reveal-order:${index % 2}">
+      <div class="protocol-card__header">
+        <h3>${escapeHtml(protocol.condition)}</h3>
+        <span>${escapeHtml(protocol.durationNote)}</span>
+      </div>
+      <p>${escapeHtml(protocol.summary)}</p>
+      <details>
+        <summary>What guidance covers</summary>
+        <ol>${protocol.engagement.map((step) => `<li>${escapeHtml(step)}</li>`).join('')}</ol>
+      </details>
+      <div class="protocol-card__devices">
+        <span>Related devices</span>
+        ${linkedProducts.length
+          ? linkedProducts.map((product) => `<a href="#product/${escapeHtml(product.id)}" data-product-open="${escapeHtml(product.id)}">${escapeHtml(product.name)}</a>`).join('')
+          : '<em>Selected after assessment</em>'}
+      </div>
+    </article>`;
+};
+
+const evidenceImage = (source, imageMap, label, testimonial) => `
+  <div class="evidence-frame">
+    <span class="evidence-frame__label evidence-frame__label--${label.toLowerCase()}">${label}</span>
+    <div class="evidence-frame__image">
+      <div class="evidence-frame__fill" aria-hidden="true">${image(source, imageMap, { alt: '', sizes: '(max-width: 400px) 92vw, 28vw', width: 640, height: 800 })}</div>
+      ${image(source, imageMap, { alt: `${label.toLowerCase()} photograph for ${testimonial.context}`, sizes: '(max-width: 400px) 92vw, 28vw', width: 640, height: 800 })}
+    </div>
+  </div>`;
+
+const renderBeforeAfter = (testimonial, imageMap, index) => `
+  <article class="before-after" data-reveal style="--reveal-order:${index % 2}">
+    <div class="before-after__pair">
+      ${evidenceImage(testimonial.beforeImage, imageMap, 'BEFORE', testimonial)}
+      ${evidenceImage(testimonial.afterImage, imageMap, 'AFTER', testimonial)}
+    </div>
     <blockquote>“${escapeHtml(testimonial.quote)}”</blockquote>
-    <figcaption>
-      <strong>${escapeHtml(testimonial.name)}</strong>
-      <span>${escapeHtml(testimonial.location)}</span>
-      <span>${escapeHtml(testimonial.context)}</span>
-    </figcaption>
+    <p class="before-after__credit"><strong>${escapeHtml(testimonial.name)}</strong><span aria-hidden="true">·</span>${escapeHtml(testimonial.location)}<span aria-hidden="true">·</span>${escapeHtml(testimonial.context)}</p>
+  </article>`;
+
+const renderQuoteTestimonial = (testimonial, index) => `
+  <figure class="testimonial" data-reveal style="--reveal-order:${index % 3}">
+    <blockquote>“${escapeHtml(testimonial.quote)}”</blockquote>
+    <figcaption><strong>${escapeHtml(testimonial.name)}</strong><span>${escapeHtml(testimonial.location)}</span><span>${escapeHtml(testimonial.context)}</span></figcaption>
   </figure>`;
+
+const renderEvidenceEmptyState = () => `
+  <div class="evidence-empty" data-reveal>
+    <div class="evidence-empty__frames" aria-hidden="true">
+      <div><span>BEFORE</span>${icon('photo')}</div>
+      <div><span>AFTER</span>${icon('photo')}</div>
+    </div>
+    <div>
+      <h3>Real before-and-after stories will appear here</h3>
+      <p>We publish customer photo pairs only as supplied, with deterministic framing and tonal normalization. We never generate or generatively edit patient outcome images.</p>
+    </div>
+  </div>`;
 
 const renderJsonLd = ({ company, products, imageMap, siteUrl }) => {
   const organization = {
@@ -131,6 +182,7 @@ const renderJsonLd = ({ company, products, imageMap, siteUrl }) => {
 const renderPage = ({
   company,
   products,
+  protocols,
   testimonials,
   config,
   themeId,
@@ -140,8 +192,30 @@ const renderPage = ({
   ogImage,
   siteUrl,
 }) => {
-  const featured = products.filter((product) => product.featured).slice(0, 3);
+  const featured = products.find((product) => product.featured) || products[0];
   const groups = [...new Set(products.map((product) => product.category))];
+  const beforeAfterTestimonials = testimonials.filter((testimonial) => testimonial.type === 'before-after');
+  const quoteTestimonials = testimonials.filter((testimonial) => testimonial.type === 'quote');
+  const audienceTracks = [
+    {
+      id: 'disease',
+      label: 'Disease-specific care',
+      short: 'Lymphedema, venous conditions, DVT prevention, diabetic foot, and filariasis',
+      description: 'Customized support for named vascular, lymphatic, and circulation-related conditions within an existing care plan.',
+    },
+    {
+      id: 'wellbeing',
+      label: 'Elderly wellbeing',
+      short: 'Balance, mobility, circulation, and everyday confidence',
+      description: 'A case-by-case pathway for older adults, beginning with practical goals and the support already in place.',
+    },
+    {
+      id: 'sports',
+      label: 'Sports recovery',
+      short: 'Injury rehabilitation and athletic recovery',
+      description: 'A guided pathway that first establishes whether a device belongs in the wider recovery plan.',
+    },
+  ];
   const telephone = phoneHref(company.phone);
   const whatsapp = phoneHref(company.whatsapp).replace('+', '');
   const aboutParagraphs = company.about.split(/\n\n+/).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('');
@@ -180,8 +254,9 @@ const renderPage = ({
       <a class="wordmark" href="#top" aria-label="Naviga Life home"><span class="wordmark__text" aria-hidden="true">Naviga Life</span></a>
       <button class="icon-button menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-menu-toggle><span class="sr-only">Open navigation</span>${icon('menu')}</button>
       <nav class="site-nav" id="site-nav" aria-label="Main navigation" data-nav>
+        <a href="#approach">Approach</a>
+        <a href="#stories">Stories</a>
         <a href="#products">Devices</a>
-        <a href="#therapy">Therapy</a>
         <a href="#about">About</a>
         <a href="#contact">Contact</a>
       </nav>
@@ -201,12 +276,21 @@ const renderPage = ({
           <h1>${escapeHtml(config.heroHeadline)}</h1>
           <p>${escapeHtml(config.heroSub)}</p>
           <div class="hero__actions">
-            <a class="button" href="#products">Explore the range ${icon('arrow')}</a>
-            <a class="text-link" href="#therapy">Understand the therapy</a>
+            <a class="button" href="#approach">Find your pathway ${icon('arrow')}</a>
+            <a class="text-link" href="#products">View the devices</a>
           </div>
+          <nav class="hero__pathways" aria-label="Protocol pathways">
+            ${audienceTracks.map((track) => `<a href="#track-${track.id}"><strong>${track.label}</strong><span>${track.short}</span></a>`).join('')}
+          </nav>
         </div>
-        <div class="hero__media" aria-label="Featured compression therapy systems" data-reveal style="--reveal-order:1">
-          ${featured.map((product, index) => `<figure class="hero-product hero-product--${index + 1}">${image(product.images[0], imageMap, { alt: `${product.name} compression system`, sizes: '(max-width: 720px) 70vw, 34vw', eager: index === 0 })}<figcaption>${escapeHtml(product.name)}</figcaption></figure>`).join('')}
+        <div class="hero__visual" data-reveal style="--reveal-order:1">
+          <figure class="hero-product">
+            ${image(featured.images[0], imageMap, { alt: `${featured.name} compression system`, sizes: '(max-width: 760px) 92vw, 38vw', eager: true })}
+            <figcaption><strong>${escapeHtml(featured.name)}</strong><span>One instrument within a customized protocol</span></figcaption>
+          </figure>
+          <ol class="hero-steps" aria-label="Naviga Life protocol">
+            <li><span>01</span>Assess</li><li><span>02</span>Custom protocol</li><li><span>03</span>Guided home use</li><li><span>04</span>Review &amp; adjust</li>
+          </ol>
         </div>
       </div>
       <div class="container">
@@ -219,11 +303,55 @@ const renderPage = ({
       </div>
     </section>
 
+    <section class="section approach" id="approach">
+      <div class="container">
+        <div class="section-heading" data-reveal>
+          <h2>A protocol before a product</h2>
+          <p>Every engagement follows the same clear model, then changes around the person, condition, goals, and practical home routine.</p>
+        </div>
+        <ol class="engagement-model" aria-label="How a Naviga Life protocol works">
+          <li data-reveal style="--reveal-order:0"><span>01</span><div><h3>Assess</h3><p>Understand the condition or goal, current care, and what home use needs to look like.</p></div></li>
+          <li data-reveal style="--reveal-order:1"><span>02</span><div><h3>Customize the protocol</h3><p>Match the service plan, machine, and garment to the individual case.</p></div></li>
+          <li data-reveal style="--reveal-order:2"><span>03</span><div><h3>Guide home use</h3><p>Support setup and use under expert guidance, without replacing medical advice.</p></div></li>
+          <li data-reveal style="--reveal-order:3"><span>04</span><div><h3>Review and adjust</h3><p>Revisit progress and practical fit, then adjust the pathway case by case.</p></div></li>
+        </ol>
+        <div class="protocol-tracks">
+          ${audienceTracks.map((track) => {
+            const trackProtocols = protocols.filter((protocol) => protocol.audience === track.id);
+            return `<section class="protocol-track" id="track-${track.id}" aria-labelledby="track-${track.id}-title">
+              <div class="protocol-track__intro" data-reveal>
+                <p>${track.id === 'disease' ? 'Track 01' : track.id === 'wellbeing' ? 'Track 02' : 'Track 03'}</p>
+                <h3 id="track-${track.id}-title">${track.label}</h3>
+                <p>${track.description}</p>
+              </div>
+              <div class="protocol-list">${trackProtocols.map((protocol, index) => renderProtocolCard(protocol, products, index)).join('')}</div>
+            </section>`;
+          }).join('')}
+        </div>
+      </div>
+    </section>
+
+    <section class="section stories" id="stories">
+      <div class="container">
+        <div class="section-heading section-heading--split" data-reveal>
+          <h2>Proof presented without invention</h2>
+          <p>Real customer photo pairs will be shown only as supplied and deterministically normalized. Representative written profiles preview the quote format until verified accounts replace them.</p>
+        </div>
+        <div class="before-after-row">
+          ${beforeAfterTestimonials.length
+            ? beforeAfterTestimonials.map((testimonial, index) => renderBeforeAfter(testimonial, imageMap, index)).join('')
+            : renderEvidenceEmptyState()}
+        </div>
+        <div class="quote-section-heading" data-reveal><h3>Care routines, in patients’ own words</h3><p>Representative written profiles for layout preview</p></div>
+        <div class="testimonial-grid">${quoteTestimonials.map((testimonial, index) => renderQuoteTestimonial(testimonial, index)).join('')}</div>
+      </div>
+    </section>
+
     <section class="section product-range" id="products">
       <div class="container">
         <div class="section-heading" data-reveal>
-          <h2>Compression systems for distinct care plans</h2>
-          <p>Compare chamber counts, garment configurations, pressure ranges, and supported conditions. A clinician should guide device selection and treatment settings.</p>
+          <h2>Devices selected to serve the protocol</h2>
+          <p>Compare chamber counts, garment configurations, pressure ranges, and supported conditions after the care pathway is clear. A clinician should guide device selection and treatment settings.</p>
         </div>
         ${groups.map((group) => {
           const groupProducts = products.filter((product) => product.category === group);
@@ -235,30 +363,6 @@ const renderPage = ({
             <div class="product-grid">${groupProducts.map((product, index) => renderProductCard(product, imageMap, index)).join('')}</div>
           </section>`;
         }).join('')}
-      </div>
-    </section>
-
-    <section class="section therapy" id="therapy">
-      <div class="container therapy__layout">
-        <div class="section-heading" data-reveal>
-          <h2>How sequential compression therapy works</h2>
-          <p>A controller fills overlapping chambers in a prescribed sequence. The graduated pressure supports fluid movement and circulation during a timed session.</p>
-        </div>
-        <ol class="therapy-steps">
-          <li data-reveal style="--reveal-order:0"><span>01</span><div><h3>Fit the garment</h3><p>Position the prescribed arm, leg, or foot sleeve and connect its air lines to the controller.</p></div></li>
-          <li data-reveal style="--reveal-order:1"><span>02</span><div><h3>Set the care plan</h3><p>Use the pressure, mode, and timer settings provided by the treating clinician.</p></div></li>
-          <li data-reveal style="--reveal-order:2"><span>03</span><div><h3>Complete the cycle</h3><p>The chambers inflate and release in sequence. Stop and contact a clinician if discomfort occurs.</p></div></li>
-        </ol>
-      </div>
-    </section>
-
-    <section class="section stories" id="stories">
-      <div class="container">
-        <div class="section-heading section-heading--split" data-reveal>
-          <h2>Care routines, in patients’ own words</h2>
-          <p>Representative profiles are shown to preview this section. Verified customer experiences will replace them before publication.</p>
-        </div>
-        <div class="testimonial-grid">${testimonials.map((testimonial, index) => renderTestimonial(testimonial, imageMap, index)).join('')}</div>
       </div>
     </section>
 
@@ -289,7 +393,7 @@ const renderPage = ({
     <div class="container footer__top">
       <span class="footer-wordmark" aria-label="Naviga Life">Naviga Life</span>
       <p>${escapeHtml(company.tagline)}</p>
-      <nav aria-label="Footer navigation"><a href="#products">Devices</a><a href="#therapy">Therapy</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
+      <nav aria-label="Footer navigation"><a href="#approach">Approach</a><a href="#stories">Stories</a><a href="#products">Devices</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
     </div>
     <div class="container footer__bottom">
       <p>Individual results may vary. Please consult your physician for guidance specific to your condition.</p>

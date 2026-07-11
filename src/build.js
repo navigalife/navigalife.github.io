@@ -64,7 +64,8 @@ const buildImageMap = async (products, testimonials) => {
   const sources = new Set();
   products.forEach((product) => product.images.forEach((image) => sources.add(image)));
   testimonials.forEach((testimonial) => {
-    if (testimonial.image) sources.add(testimonial.image);
+    if (testimonial.beforeImage) sources.add(testimonial.beforeImage);
+    if (testimonial.afterImage) sources.add(testimonial.afterImage);
   });
 
   const entries = await Promise.all(
@@ -107,7 +108,7 @@ const themeCss = (theme) => {
   return `:root {\n${declarations(theme.light)}\n}\n[data-theme="dark"] {\n${declarations(theme.dark)}\n}\n`;
 };
 
-const validate = ({ products, testimonials, themes, config }) => {
+const validate = ({ products, protocols, testimonials, themes, config }) => {
   const themeId = process.env.SITE_THEME || config.theme;
   const theme = themes.find((candidate) => candidate.id === themeId);
   if (!theme) throw new Error(`Unknown theme: ${themeId}`);
@@ -120,12 +121,44 @@ const validate = ({ products, testimonials, themes, config }) => {
     if (!product.name || !product.images?.length) throw new Error(`Incomplete product: ${product.id}`);
     ids.add(product.id);
   }
+
+  const protocolIds = new Set();
+  const visibleProtocols = protocols.filter((protocol) => protocol.visible);
+  for (const protocol of visibleProtocols) {
+    if (!protocol.id || protocolIds.has(protocol.id)) {
+      throw new Error(`Invalid protocol id: ${protocol.id}`);
+    }
+    if (!['disease', 'wellbeing', 'sports'].includes(protocol.audience)) {
+      throw new Error(`Invalid protocol audience: ${protocol.id}`);
+    }
+    if (!protocol.condition || !protocol.summary || !protocol.engagement?.length) {
+      throw new Error(`Incomplete protocol: ${protocol.id}`);
+    }
+    for (const deviceId of protocol.deviceIds || []) {
+      if (!ids.has(deviceId)) throw new Error(`Protocol ${protocol.id} links unknown device: ${deviceId}`);
+    }
+    protocolIds.add(protocol.id);
+  }
+
   for (const testimonial of testimonials) {
-    if (testimonial.placeholder !== true) {
-      throw new Error(`Testimonial ${testimonial.id} must retain placeholder: true until replaced.`);
+    if (!['quote', 'before-after'].includes(testimonial.type)) {
+      throw new Error(`Invalid testimonial type: ${testimonial.id}`);
+    }
+    if (!testimonial.id || !testimonial.name || !testimonial.location || !testimonial.quote || !testimonial.context) {
+      throw new Error(`Incomplete testimonial: ${testimonial.id}`);
+    }
+    if (typeof testimonial.placeholder !== 'boolean') {
+      throw new Error(`Testimonial ${testimonial.id} must declare placeholder as a boolean.`);
+    }
+    if (testimonial.type === 'before-after') {
+      if (testimonial.placeholder || !testimonial.beforeImage || !testimonial.afterImage) {
+        throw new Error(`Before/after testimonial ${testimonial.id} requires a real, non-placeholder image pair.`);
+      }
+    } else if (testimonial.beforeImage || testimonial.afterImage) {
+      throw new Error(`Quote testimonial ${testimonial.id} cannot include before/after images.`);
     }
   }
-  return { theme, themeId, visibleProducts };
+  return { theme, themeId, visibleProducts, visibleProtocols };
 };
 
 const copyAdmin = async () => {
@@ -139,10 +172,11 @@ const copyAdmin = async () => {
 };
 
 const build = async () => {
-  const [company, products, testimonials, themes, config, baseCss, clientJs] =
+  const [company, products, protocols, testimonials, themes, config, baseCss, clientJs] =
     await Promise.all([
       readJson('data/company.json'),
       readJson('data/products.json'),
+      readJson('data/protocols.json'),
       readJson('data/testimonials.json'),
       readJson('data/themes.json'),
       readJson('data/site-config.json'),
@@ -150,7 +184,13 @@ const build = async () => {
       fs.readFile(path.join(__dirname, 'site.js'), 'utf8'),
     ]);
 
-  const { theme, themeId, visibleProducts } = validate({ products, testimonials, themes, config });
+  const { theme, themeId, visibleProducts, visibleProtocols } = validate({
+    products,
+    protocols,
+    testimonials,
+    themes,
+    config,
+  });
   await fs.rm(DIST, { recursive: true, force: true });
   await fs.mkdir(DIST, { recursive: true });
 
@@ -163,6 +203,7 @@ const build = async () => {
   const html = renderPage({
     company,
     products: visibleProducts,
+    protocols: visibleProtocols,
     testimonials,
     config,
     themeId,
