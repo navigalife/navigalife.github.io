@@ -336,7 +336,7 @@ const renderProductEditor = () => {
     '<label class="upload-control"><input type="file" id="product-images" accept="image/jpeg,image/png,image/webp" multiple><span>Upload one or more images</span><small>JPEG, PNG, or WebP · 20 MB each</small></label></div></div>' +
     '<div class="field-group"><div class="inline-fields"><label class="checkbox-row"><input name="catalogue" type="checkbox" ' + (product.catalogue ? 'checked' : '') + '><span>Generate catalogue</span></label><label class="checkbox-row"><input name="featured" type="checkbox" ' + (product.featured ? 'checked' : '') + '><span>Featured device</span></label><label class="checkbox-row"><input name="visible" type="checkbox" ' + (product.visible ? 'checked' : '') + '><span>Visible</span></label></div></div>' +
     (isNew ? '<aside class="prompt-card"><div class="field-group__heading"><div><h2>Locked product-image prompt</h2><p>Use edit/reference mode with the real device photo. Generate a 3:2 result, then upload it above.</p></div><button class="button button--quiet" type="button" data-action="copy-prompt">' + icon('copy') + ' Copy prompt</button></div><pre id="product-prompt">' + h(productPrompt(product.name)) + '</pre></aside>' : '') +
-    '</div><div class="form-actions"><button class="button button--quiet" type="button" data-action="back">Cancel</button><button class="button button--primary" type="submit">Save product draft</button></div></form></section>';
+    '</div><div class="form-actions"><button class="button button--quiet" type="button" data-action="back">Cancel</button><button class="button button--primary" type="button" data-action="save-editor">Save product draft</button></div></form></section>';
 };
 
 const renderProtocolEditor = () => {
@@ -354,7 +354,7 @@ const renderProtocolEditor = () => {
     '<label class="field--full">Engagement steps<textarea name="engagement" required>' + h(protocol.engagement.join('\n')) + '</textarea><span class="field-help">One step per line.</span></label>' +
     '<div class="field-group"><div class="field-group__heading"><div><h2>Related devices</h2><p>Choose every device that may support this pathway.</p></div></div><div class="device-select">' + devices + '</div></div>' +
     '<div class="field-group"><div class="inline-fields"><label class="checkbox-row"><input name="visible" type="checkbox" ' + (protocol.visible ? 'checked' : '') + '><span>Visible</span></label><label class="checkbox-row"><input name="draft" type="checkbox" ' + (protocol.draft ? 'checked' : '') + '><span>Draft content</span></label></div></div>' +
-    '</div><div class="form-actions"><button class="button button--quiet" type="button" data-action="back">Cancel</button><button class="button button--primary" type="submit">Save protocol draft</button></div></form></section>';
+    '</div><div class="form-actions"><button class="button button--quiet" type="button" data-action="back">Cancel</button><button class="button button--primary" type="button" data-action="save-editor">Save protocol draft</button></div></form></section>';
 };
 
 const evidenceUpload = (testimonial, field, label) => {
@@ -376,7 +376,7 @@ const renderTestimonialEditor = () => {
     '<label class="field--full">Quote<textarea name="quote" required>' + h(testimonial.quote) + '</textarea></label>' +
     (testimonial.type === 'before-after' ? '<div class="field-group"><div class="field-group__heading"><div><h2>Matched evidence pair</h2><p>Real customer photos only. Both images are cropped client-side to 4:5 and encoded as WebP.</p></div></div><div class="evidence-uploads">' + evidenceUpload(testimonial, 'beforeImage', 'before') + evidenceUpload(testimonial, 'afterImage', 'after') + '</div></div>' : '') +
     '<div class="field-group"><label class="checkbox-row"><input name="placeholder" type="checkbox" ' + (testimonial.placeholder ? 'checked' : '') + ' ' + (testimonial.type === 'before-after' ? 'disabled' : '') + '><span>Placeholder testimonial <small class="field-help">This badge appears in admin only.</small></span></label></div>' +
-    '</div><div class="form-actions"><button class="button button--quiet" type="button" data-action="back">Cancel</button><button class="button button--primary" type="submit">Save testimonial draft</button></div></form></section>';
+    '</div><div class="form-actions"><button class="button button--quiet" type="button" data-action="back">Cancel</button><button class="button button--primary" type="button" data-action="save-editor">Save testimonial draft</button></div></form></section>';
 };
 
 const renderCompany = () => {
@@ -396,7 +396,7 @@ const renderCompany = () => {
     '<label>Founded<input name="founded" value="' + h(company.founded) + '"></label>' +
     '<div class="field-group"><div class="field-group__heading"><div><h2>Social profiles</h2><p>Leave unused channels blank.</p></div></div><div class="editor-grid"><label>LinkedIn<input name="linkedin" type="url" value="' + h(company.social.linkedin) + '"></label><label>Instagram<input name="instagram" type="url" value="' + h(company.social.instagram) + '"></label><label>Facebook<input name="facebook" type="url" value="' + h(company.social.facebook) + '"></label></div></div>' +
     '<div class="field-group"><label class="checkbox-row"><input name="gstDisplay" type="checkbox" ' + (company.gstDisplay ? 'checked' : '') + '><span>Show GST registration detail publicly</span></label></div>' +
-    '</div><div class="form-actions"><button class="button button--primary" type="submit">Save company draft</button></div></form></section>';
+    '</div><div class="form-actions"><button class="button button--primary" type="button" data-action="save-company">Save company draft</button></div></form></section>';
 };
 
 const renderAppearance = () => {
@@ -411,7 +411,7 @@ const renderAppearance = () => {
     '<label class="field--full">Hero headline<textarea name="heroHeadline" required>' + h(config.heroHeadline) + '</textarea></label>' +
     '<label class="field--full">Hero supporting line<textarea name="heroSub" required>' + h(config.heroSub) + '</textarea></label>' +
     '<div class="field-group"><div class="field-group__heading"><div><h2>Search metadata</h2><p>Keep title and description specific and concise.</p></div></div><div class="editor-grid"><label class="field--full">SEO title<input name="seoTitle" value="' + h(config.seo.title) + '" required></label><label class="field--full">SEO description<textarea name="seoDescription" required>' + h(config.seo.description) + '</textarea></label></div></div>' +
-    '</div><div class="form-actions"><button class="button button--primary" type="submit">Save appearance draft</button></div></form></section>';
+    '</div><div class="form-actions"><button class="button button--primary" type="button" data-action="save-appearance">Save appearance draft</button></div></form></section>';
 };
 
 const render = () => {
@@ -626,6 +626,9 @@ const handleEditorAction = async (button) => {
   if (action === 'move') return moveItem(button.dataset.kind, Number(button.dataset.index), Number(button.dataset.direction));
   if (action === 'toggle-visible') return toggleVisible(button.dataset.kind, Number(button.dataset.index));
   if (action === 'delete') return deleteItem(button.dataset.kind, Number(button.dataset.index));
+  if (action === 'save-editor') return saveEditor();
+  if (action === 'save-company') return saveCompany(editorRoot.querySelector('#company-form'));
+  if (action === 'save-appearance') return saveAppearance(editorRoot.querySelector('#appearance-form'));
   if (action === 'select-theme') {
     state.draft.config.theme = button.dataset.themeId;
     markDirty('config');
