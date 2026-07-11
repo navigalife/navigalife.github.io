@@ -1,0 +1,7 @@
+# Raw scrape archive — must NEVER be committed (public repo)
+scrape/
+
+node_modules/
+dist/
+.DS_Store
+*.log
