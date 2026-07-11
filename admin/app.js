@@ -20,7 +20,6 @@ const state = {
   branch: new URLSearchParams(location.search).get('branch') || localStorage.getItem(BRANCH_KEY) || 'main',
   baseSha: '',
   draft: {},
-  fileShas: {},
   dirty: new Set(),
   assetChanges: new Map(),
   assetPreviews: new Map(),
@@ -137,10 +136,8 @@ const loadRepository = async () => {
   }));
   state.baseSha = ref.object.sha;
   state.draft = {};
-  state.fileShas = {};
   for (const [key, result] of entries) {
     state.draft[key] = result.data;
-    state.fileShas[key] = result.sha;
   }
   state.loaded = true;
   state.dirty.clear();
@@ -313,6 +310,10 @@ const imagePreview = (path, evidence = false) => {
 const renderProductEditor = () => {
   const product = state.editor.buffer;
   const isNew = state.editor.index < 0;
+  const hasStagedProductImage = product.images.some((path) => {
+    const change = state.assetChanges.get(path);
+    return change && !change.delete;
+  });
   const specs = product.specs.map((spec, index) => '<div class="repeat-row">' +
     '<input aria-label="Specification name" data-spec-index="' + index + '" data-spec-field="key" value="' + h(spec.key) + '" placeholder="Name">' +
     '<input aria-label="Specification value" data-spec-index="' + index + '" data-spec-field="value" value="' + h(spec.value) + '" placeholder="Value">' +
@@ -323,7 +324,7 @@ const renderProductEditor = () => {
   return '<section class="editor-shell" data-testid="product-editor">' + editorHeading(isNew ? 'New product' : 'Edit product', product.name || 'Untitled product') +
     '<form id="product-form"><div class="editor-grid">' +
     '<label>Product name<input name="name" value="' + h(product.name) + '" required></label>' +
-    '<label>Immutable slug<input name="id" value="' + h(product.id) + '" pattern="[a-z0-9-]+" required ' + (isNew ? '' : 'readonly') + '><span class="field-help">Lowercase letters, numbers, and hyphens.</span></label>' +
+    '<label>Immutable slug<input name="id" value="' + h(product.id) + '" pattern="[a-z0-9-]+" required ' + (isNew && !hasStagedProductImage ? '' : 'readonly') + '><span class="field-help">' + (hasStagedProductImage ? 'Remove staged uploads before changing this slug.' : 'Lowercase letters, numbers, and hyphens.') + '</span></label>' +
     '<label>Tagline<input name="tagline" value="' + h(product.tagline) + '" required></label>' +
     '<label>Category<input name="category" value="' + h(product.category) + '" required></label>' +
     '<label>Model<input name="model" value="' + h(product.model || '') + '"></label>' +
@@ -535,10 +536,10 @@ const deleteItem = (kind, index) => {
     }
   }
   if (!confirm('Delete ' + (item.name || item.condition || item.id) + '? This will be included in the next publish.')) return;
-  if (kind === 'products') for (const path of item.images) state.assetChanges.set(path, { delete: true });
+  if (kind === 'products') for (const path of item.images) unstageOrDeleteAsset(path);
   if (kind === 'testimonials') {
-    if (item.beforeImage) state.assetChanges.set(item.beforeImage, { delete: true });
-    if (item.afterImage) state.assetChanges.set(item.afterImage, { delete: true });
+    if (item.beforeImage) unstageOrDeleteAsset(item.beforeImage);
+    if (item.afterImage) unstageOrDeleteAsset(item.afterImage);
   }
   state.draft[kind].splice(index, 1);
   markDirty(kind);
@@ -571,10 +572,26 @@ const stageBlob = async (path, blob) => {
   renderUnsaved();
 };
 
+const unstageOrDeleteAsset = (path) => {
+  const staged = state.assetChanges.get(path);
+  if (staged && !staged.delete) {
+    state.assetChanges.delete(path);
+    const preview = state.assetPreviews.get(path);
+    if (preview) URL.revokeObjectURL(preview);
+    state.assetPreviews.delete(path);
+    renderUnsaved();
+    return;
+  }
+  state.assetChanges.set(path, { delete: true });
+  renderUnsaved();
+};
+
 const uploadProductImages = async (files) => {
   syncEditorFromForm();
   const product = state.editor.buffer;
   if (!product.id || !/^[a-z0-9-]+$/.test(product.id)) throw new Error('Enter a valid product slug before uploading images.');
+  const duplicate = state.draft.products.some((item, index) => item.id === product.id && index !== state.editor.index);
+  if (duplicate) throw new Error('That product slug is already in use. Choose a unique slug before uploading images.');
   for (const file of files) {
     const blob = await resizeProductImage(file);
     const path = nextProductImagePath(product);
@@ -591,7 +608,7 @@ const uploadEvidence = async (field, file) => {
   const label = field === 'beforeImage' ? 'before' : 'after';
   const blob = await cropEvidenceImage(file, label);
   if (!blob) return;
-  if (testimonial[field]) state.assetChanges.set(testimonial[field], { delete: true });
+  if (testimonial[field]) unstageOrDeleteAsset(testimonial[field]);
   const path = 'assets/testimonials/' + testimonial.id + '-' + label + '.webp';
   await stageBlob(path, blob);
   testimonial[field] = path;
@@ -634,11 +651,11 @@ const handleEditorAction = async (button) => {
   }
   if (action === 'image-delete') {
     const [path] = buffer.images.splice(Number(button.dataset.index), 1);
-    state.assetChanges.set(path, { delete: true });
+    unstageOrDeleteAsset(path);
   }
   if (action === 'evidence-delete') {
     const path = buffer[button.dataset.field];
-    if (path) state.assetChanges.set(path, { delete: true });
+    if (path) unstageOrDeleteAsset(path);
     delete buffer[button.dataset.field];
   }
   if (action === 'copy-prompt') {
@@ -695,31 +712,42 @@ const collectChanges = () => {
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 const pollActions = async (commitSha) => {
+  let run;
   for (let attempt = 0; attempt < 10; attempt += 1) {
     const runs = await state.api.listRuns(commitSha);
     if (runs.length) {
-      const run = runs[0];
-      if (run.status !== 'completed') {
-        showStatus('Site build in progress', 'GitHub Actions is building this commit. <a href="' + h(run.html_url) + '" target="_blank" rel="noreferrer">View run</a>.');
-        await wait(3000);
-        continue;
-      }
+      [run] = runs;
+      break;
+    }
+    await wait(3000);
+  }
+  if (!run) {
+    showStatus('No workflow run found', 'The branch update succeeded, but no workflow run was found for this commit. This is expected until the deploy workflow is added in Phase 5.');
+    return;
+  }
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const runs = await state.api.listRuns(commitSha);
+    run = runs.find((candidate) => candidate.id === run.id) || run;
+    if (run.status === 'completed') {
       if (run.conclusion === 'success') showStatus('Publish complete', 'The commit and site build succeeded. <a href="' + h(run.html_url) + '" target="_blank" rel="noreferrer">View run</a>.');
       else showStatus('Build failed', 'The commit was published, but GitHub Actions reported ' + h(run.conclusion) + '. <a href="' + h(run.html_url) + '" target="_blank" rel="noreferrer">View run</a>.');
       return;
     }
+    showStatus('Site build in progress', 'GitHub Actions is building this commit. <a href="' + h(run.html_url) + '" target="_blank" rel="noreferrer">View run</a>.');
     await wait(3000);
   }
-  showStatus('Commit published', 'The branch updated successfully. No Actions run appeared during the 30-second check.');
+  showStatus('Site build still in progress', 'The workflow is still running after three minutes. <a href="' + h(run.html_url) + '" target="_blank" rel="noreferrer">View run</a>.');
 };
 
 const publish = async () => {
   if (state.publishing) return;
+  if (state.editor) return showStatus('Open editor not saved', 'Save or cancel the open editor first.');
   const changes = collectChanges();
   if (!changes.length) return showStatus('Nothing to publish', 'Make a content change first.');
   state.publishing = true;
   renderUnsaved();
   publishButton.textContent = 'Publishing…';
+  barPublishButton.textContent = 'Publishing…';
   showStatus('Preparing commit', 'Uploading changed files before the branch reference is updated atomically.');
   try {
     const commit = await state.api.publish(changes, state.baseSha, 'Update site content from admin');
@@ -738,6 +766,7 @@ const publish = async () => {
   } finally {
     state.publishing = false;
     publishButton.textContent = 'Save & Publish';
+    barPublishButton.textContent = 'Save & Publish';
     renderUnsaved();
   }
 };
@@ -820,8 +849,8 @@ editorRoot.addEventListener('change', async (event) => {
       syncEditorFromForm();
       const testimonial = state.editor.buffer;
       if (testimonial.type === 'quote') {
-        if (testimonial.beforeImage) state.assetChanges.set(testimonial.beforeImage, { delete: true });
-        if (testimonial.afterImage) state.assetChanges.set(testimonial.afterImage, { delete: true });
+        if (testimonial.beforeImage) unstageOrDeleteAsset(testimonial.beforeImage);
+        if (testimonial.afterImage) unstageOrDeleteAsset(testimonial.afterImage);
         delete testimonial.beforeImage;
         delete testimonial.afterImage;
       }

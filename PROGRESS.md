@@ -3,17 +3,16 @@
 > Executor: update at EVERY checkpoint, and before ending any session.
 > This file is the only handoff between sessions. Be precise.
 
-- **Current phase**: Phase 4 — admin implementation complete; rendered and real-repo QA blocked
+- **Current phase**: Phase 4 — advisor code-review fixes complete; rendered and real-repo QA next
 - **Branch**: `codex/001-initial-site`
-- **Next action**: Restart `node src/serve.js` when desktop command approval is
-  available, visually QA `/admin/?branch=codex%2F001-initial-site` at desktop
-  and mobile sizes, then use the runtime-only repo PAT for the full Checkpoint
-  4 CRUD/theme/single-commit publish test on `codex/001-initial-site`.
-- **Blockers**: The local server restart was rejected because the desktop
-  approval quota is exhausted, and the in-app Browser correctly blocks direct
-  `file://` navigation. The admin therefore cannot be rendered or connected to
-  GitHub in this session until local-server approval is available. The PAT was
-  not written to any file, commit, command, application log, or this document.
+- **Next action**: Restart `node src/serve.js`, visually QA
+  `/admin/?branch=codex%2F001-initial-site` at desktop and 390px in light and
+  dark modes, then complete the runtime-only PAT CRUD/theme/single-commit
+  publish test on `codex/001-initial-site`, including the two advisor regression
+  checks and `git log --stat` confirmation.
+- **Blockers**: None. Desktop command approvals are available again. The PAT
+  remains runtime-only and must never be written to a file, command, log,
+  commit, or this document.
 
 ## Checkpoint log
 
@@ -33,6 +32,7 @@
 | 2026-07-11 | Phase 3 rework | Checkpoint 3 re-verified after A1/A2 | Unchanged exact verify commands re-run on the final default build. `npm run build` → exit 0 with `Built 20 products with theme meridian` and `Client JavaScript: 4494 bytes (4.39 KB)`; product-name audit → `20/20 visible product names found`, `missing: none`; shipped JS audit → `4494 dist/assets/site.d62774152b.js` (4.39 KB, below 30 KB); exact `grep -c "indiamart" dist/ -r` printed `:0` for every output file; case-insensitive `rg -ni '(indiamart|imimg)' src dist` → `0`. Additional re-verification: 45 shipped raster images checked with `0 EXIF/XMP/IPTC/ICC findings`; `node --check` passed all 4 source JS files; authored CSS ban-list scan `0`; authored CSS non-token hex scan `0`; both shipped WOFF2 files byte-match their source assets. Headless Chrome rendered every theme in both modes with exact `--bg`/`--primary` tokens, 20 products, 9 protocols, and clean console: meridian light `#F6F4EF/#0E6B63`, dark `#10181A/#4FB3A6`; clinic light `#F3F5F6/#315D75`, dark `#10171C/#7FB2CC`; sage light `#F4F1E8/#476545`, dark `#141A15/#91B28D`; graphite light `#F2F1ED/#3F464A`, dark `#111315/#BCC4C8`. Final output restored to meridian. Keyboard fallback output: `direct hash opened/focused; Escape closed/cleared; click reopened; Escape returned focus`. No Phase 4/admin work was started. |
 | 2026-07-11 | Phase 4 | Advisor hero punch item complete | Moved the 3:2 ratio and frame treatment from the attributed `<img>` to a dedicated `.hero-product__frame`, so intrinsic image dimensions can no longer expand the visual column. `npm run build` exited 0 with `Built 20 products with theme meridian` and `Client JavaScript: 4494 bytes (4.39 KB)`. In-app Browser verification at the required 1440×900 measured the frame at `524.05×349.36` (`1.5` ratio), visual content at `475.20px` high versus the layout's `567.38px`, caption gap `0`, steps gap `28`, horizontal overflow `-15`, and zero console warnings/errors. Original-resolution screenshot review confirmed the frame hugs the device image and the caption and steps rail remain tight beneath. |
 | 2026-07-11 | Phase 4 | Admin implementation static checkpoint | Added the vanilla `/admin/` SPA with token validation and scoped storage warning, repo/branch source loading, file SHAs and base-SHA concurrency guard, in-memory draft state, persistent unsaved bar, before-unload protection, logout, and centralized GitHub error handling. Implemented Products CRUD/reorder/visibility/all-schema editing, spec rows, multi-image WebP/downscale/preview/order/delete, and the canonical locked image prompt; A2.7 Testimonials v2 type switching with dual adjustable client-side 4:5 crops; Protocols CRUD/reorder/visibility/audience/engagement/device multi-select; Company fields; four theme previews plus hero/SEO editing; one-commit Git Data API publishing with ref-last atomicity; reload-and-reapply on branch movement; Actions polling; and deploy workflow dispatch. Updated the dependency-free local server to resolve directory indexes for `/admin/`. Static verification: `node --check` passed `admin/app.js`, `admin/gh-api.js`, `admin/image-tools.js`, and `src/serve.js`; `npm run build` exited 0 with `Built 20 products with theme meridian` and `Client JavaScript: 4494 bytes (4.39 KB)`; all 5 admin source files byte-matched their `dist/admin/` copies after the build; `git diff --check` passed; admin fingerprint/token scan returned `0`. No data JSON, including `company.json`, was changed. Rendered and real-repo QA remain unclaimed because the local server restart was denied by the exhausted desktop approval quota and Browser policy blocks direct local-file navigation. |
+| 2026-07-11 | Phase 4 | Advisor admin punch list complete | Added an explicit publish guard while any product, protocol, or testimonial editor is open; both publish entry points now show `Save or cancel the open editor first`. Centralized asset removal so session-staged uploads are unstaged and their object URLs revoked instead of emitting invalid `sha:null` tombstones, while base-tree files still stage deletes; applied it at all four reviewed call sites. Product upload now rejects duplicate slugs before processing and locks a new-product slug while staged images exist. Split Actions polling into a 30-second run-discovery phase with an accurate expected `No workflow run found` result, followed only when a run exists by up to three minutes of run-status polling. Removed unused file-SHA state and a dead blob ternary, synchronized both publish button labels, and corrected the header sun ray. Static evidence: `node --check` passed all 3 admin JavaScript modules; `npm run build` exited 0 with `Built 20 products with theme meridian` and `Client JavaScript: 4494 bytes (4.39 KB)`; all 5 admin files byte-matched `dist/admin/`; `git diff --check` passed; admin fingerprint/token scan returned `0`. |
 
 ## QA evidence (Phase 5)
 
