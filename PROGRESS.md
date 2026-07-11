@@ -3,12 +3,16 @@
 > Executor: update at EVERY checkpoint, and before ending any session.
 > This file is the only handoff between sessions. Be precise.
 
-- **Current phase**: Phase 4 — Admin panel (not started)
+- **Current phase**: Phase 4 — Admin panel (blocked before implementation)
 - **Branch**: `codex/001-initial-site`
-- **Next action**: Read only spec §Phase 4 plus §Design System and §Constraints,
-  then implement the first checkpointable admin-panel slice without changing
-  the completed public-site architecture.
-- **Blockers**: none
+- **Next action**: Start Phase 4 only in a session where a GitHub token with
+  push permission to `navigalife/navigalife.github.io` can be pasted into the
+  local admin app, so Checkpoint 4 can be completed and verified end to end on
+  `codex/001-initial-site` or a scratch branch (never `main`).
+- **Blockers**: Checkpoint 4 requires a real Git Data API publish and branch
+  verification. `gh auth status` currently reports: “You are not logged into
+  any GitHub hosts.” Per the instruction not to start work that cannot be
+  checkpointed, no Phase 4 implementation was begun in this session.
 
 ## Checkpoint log
 
@@ -21,6 +25,7 @@
 | 2026-07-10 | Phase 3 | Public build complete | Added the data-driven `src/build.js` pipeline, public template, token-only CSS, progressive JS, and dependency-free local server. `npm run build` exited 0 with `Built 20 products with theme meridian`, `Client JavaScript: 4494 bytes (4.39 KB)`, and the expected `dist/` site, hashed CSS/JS and processed-image names, sitemap, robots file, 404 page, brand assets, and conditional admin copy-through. The approved `company.json` has blank email and hours fields, so the template safely omits those two contact rows until verified values are supplied instead of inventing them. Catalogue links intentionally target Phase 5 PDF outputs. |
 | 2026-07-10 | Phase 3 | Render and interaction QA complete | In-app Browser QA passed page identity, meaningful DOM, framework-overlay check, zero console warnings/errors, 20 cards and 20 detail panels, light/dark toggle, mobile menu, product click routing, direct `#product/venogain-scd-500` load, dialog focus, and zero broken images. Screenshots reviewed at desktop and 360×800; the 360px DOM reported no horizontal overflow. Native Puppeteer keyboard fallback passed link Enter → dialog open/focus close → Escape → dialog closed/hash cleared/focus returned. `clinic`, `sage`, and `graphite` builds were each rendered and spot-checked against exact light/dark `--bg` and `--primary` tokens; final output was restored to `meridian`. The only visual repair found in QA was the static dark wordmark losing contrast; it now consumes `--ink`. |
 | 2026-07-10 | Phase 3 | Checkpoint 3 complete | Exact verify evidence: `npm run build` → exit 0; product-name audit → `20/20 visible product names found`, `missing: none`; shipped JS audit → `4494 dist/assets/site.d62774152b.js`; exact `grep -c "indiamart" dist/ -r` printed `:0` for every output file (grep exit 1 because there were no matches); case-insensitive `rg -ni '(indiamart|imimg)' src dist` → no output; 55 shipped raster images checked with 0 EXIF/XMP/IPTC/ICC findings; `node --check` passed all four source JS files. Ban-list scan and non-token hex scan of authored CSS returned no matches. Accessibility DOM audit found no duplicate ids, missing image alt text, or unnamed buttons. |
+| 2026-07-10 | Phase 4 | Clean stop before implementation | Read only spec §Phase 4 after Checkpoint 3. The checkpoint requires validating token auth, full CRUD, and an atomic Git Data API publish against the real repository branch. `git remote -v` confirmed `navigalife/navigalife.github.io`; `gh auth status` confirmed no GitHub host is authenticated. No admin files were started because the real publish acceptance path could not be checkpointed in this session. |
 
 ## QA evidence (Phase 5)
 
