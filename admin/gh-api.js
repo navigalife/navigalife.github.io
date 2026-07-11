@@ -138,7 +138,7 @@ export class GhApi {
     const baseCommit = await this.getCommit(expectedBaseSha);
     const treeEntries = await Promise.all(changes.map(async (change) => {
       if (change.delete) return { path: change.path, mode: '100644', type: 'blob', sha: null };
-      const blob = await this.createBlob(change.encoding === 'base64' ? change.content : change.content, change.encoding || 'utf-8');
+      const blob = await this.createBlob(change.content, change.encoding || 'utf-8');
       return { path: change.path, mode: '100644', type: 'blob', sha: blob.sha };
     }));
     const tree = await this.createTree(baseCommit.tree.sha, treeEntries);
