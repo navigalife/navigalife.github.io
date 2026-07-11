@@ -314,7 +314,7 @@
         "width": 1200,
         "height": 1200
       },
-      "status": "approved"
+      "status": "retired"
     },
     {
       "id": "portrait-t-003",
@@ -329,7 +329,7 @@
         "width": 1200,
         "height": 1200
       },
-      "status": "approved"
+      "status": "retired"
     },
     {
       "id": "portrait-t-005",
@@ -344,7 +344,7 @@
         "width": 1200,
         "height": 1200
       },
-      "status": "approved"
+      "status": "retired"
     },
     {
       "id": "portrait-t-007",
@@ -359,7 +359,7 @@
         "width": 1200,
         "height": 1200
       },
-      "status": "approved"
+      "status": "retired"
     },
     {
       "id": "portrait-t-009",
@@ -374,7 +374,7 @@
         "width": 1200,
         "height": 1200
       },
-      "status": "approved"
+      "status": "retired"
     }
   ]
 }
