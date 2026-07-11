@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Naviga Life</title>
+  <rect width="64" height="64" rx="13" fill="#0E6B63"/>
+  <text x="32" y="43" fill="#F6FBFA" font-family="Fraunces, Georgia, serif" font-size="31" font-weight="600" text-anchor="middle" letter-spacing="-1">NL</text>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Naviga Life</title>
+  <desc id="desc">Compression therapy built around the care plan</desc>
+  <rect width="1200" height="630" fill="#F6F4EF"/>
+  <rect x="760" y="0" width="440" height="630" fill="#E3EFED"/>
+  <path d="M760 0v630" stroke="#DDD6CA" stroke-width="2"/>
+  <g transform="translate(820 156)" fill="none" stroke="#0E6B63" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="0" y="24" width="220" height="160" rx="22" fill="#FDFCF9"/>
+    <path d="M42 83h136M42 118h82M42 151h116" stroke-width="7"/>
+    <path d="M52 222c44-26 91-26 140 0v154c-49 27-96 27-140 0z" fill="#FDFCF9"/>
+    <path d="M80 231v138M108 222v164M136 225v157M164 236v130" stroke-width="5"/>
+    <path d="M111 184v39"/>
+  </g>
+  <text x="92" y="158" fill="#182A2E" font-family="Fraunces, Georgia, serif" font-size="75" font-weight="600" letter-spacing="-2">Naviga Life</text>
+  <text x="94" y="255" fill="#0E6B63" font-family="Instrument Sans, Helvetica, sans-serif" font-size="25" font-weight="600" letter-spacing="3">VASCULAR + LYMPHATIC CARE</text>
+  <text x="92" y="353" fill="#182A2E" font-family="Fraunces, Georgia, serif" font-size="53" font-weight="600">Compression therapy</text>
+  <text x="92" y="415" fill="#182A2E" font-family="Fraunces, Georgia, serif" font-size="53" font-weight="600">built around the care plan</text>
+  <text x="94" y="500" fill="#55666B" font-family="Instrument Sans, Helvetica, sans-serif" font-size="25">Sequential systems for lymphedema, venous disease,</text>
+  <text x="94" y="538" fill="#55666B" font-family="Instrument Sans, Helvetica, sans-serif" font-size="25">DVT prevention, and circulation-focused home care.</text>
+</svg>
