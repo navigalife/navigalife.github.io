@@ -94,6 +94,13 @@ const copyBrandAssets = async () => {
   return processImage('assets/brand/og-image.png');
 };
 
+const copyFonts = async () => {
+  const source = path.join(ROOT, 'assets', 'fonts');
+  const destination = path.join(DIST, 'assets', 'fonts');
+  await fs.mkdir(destination, { recursive: true });
+  await fs.cp(source, destination, { recursive: true });
+};
+
 const themeCss = (theme) => {
   const declarations = (tokens) =>
     Object.entries(tokens).map(([key, value]) => `  ${key}: ${value};`).join('\n');
@@ -178,6 +185,7 @@ const build = async () => {
       `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE_URL}</loc><changefreq>weekly</changefreq><priority>1.0</priority></url></urlset>\n`,
     ),
     fs.writeFile(path.join(DIST, '.nojekyll'), ''),
+    copyFonts(),
     copyAdmin(),
   ]);
 
