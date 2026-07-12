@@ -402,9 +402,9 @@ const renderCompany = () => {
 const renderAppearance = () => {
   const config = state.draft.config;
   const themes = state.draft.themes.map((theme) => {
-    const light = theme.light;
-    const style = '--preview-bg:' + light['--bg'] + ';--preview-surface:' + light['--surface'] + ';--preview-surface-2:' + light['--surface-2'] + ';--preview-ink:' + light['--ink'] + ';--preview-muted:' + light['--ink-muted'] + ';--preview-line:' + light['--line'];
-    return '<button class="theme-option" type="button" data-action="select-theme" data-theme-id="' + h(theme.id) + '" aria-pressed="' + String(config.theme === theme.id) + '"><span class="theme-option__label">' + h(theme.label) + (config.theme === theme.id ? '<span class="badge badge--active">Active</span>' : '') + '</span><span class="theme-option__mock" style="' + h(style) + '"><span><span></span><span><strong>Compression therapy system</strong><small>Guided care at home</small></span></span></span></button>';
+    const previewTokens = (mode) => '--preview-' + mode + '-bg:' + theme[mode]['--bg'] + ';--preview-' + mode + '-surface:' + theme[mode]['--surface'] + ';--preview-' + mode + '-surface-2:' + theme[mode]['--surface-2'] + ';--preview-' + mode + '-ink:' + theme[mode]['--ink'] + ';--preview-' + mode + '-muted:' + theme[mode]['--ink-muted'] + ';--preview-' + mode + '-line:' + theme[mode]['--line'];
+    const style = previewTokens('light') + ';' + previewTokens('dark');
+    return '<button class="theme-option" type="button" data-action="select-theme" data-theme-id="' + h(theme.id) + '" aria-pressed="' + String(config.theme === theme.id) + '"><span class="theme-option__label">' + h(theme.label) + (config.theme === theme.id ? '<span class="badge badge--active">Active</span>' : '') + '</span><span class="theme-option__mock" style="' + h(style) + '" aria-hidden="true"><span class="theme-option__card"><span class="theme-option__image"></span><span class="theme-option__copy"><strong>Compression therapy system</strong><small>Guided care at home</small></span></span></span></button>';
   }).join('');
   return '<section class="editor-shell"><div class="section-toolbar"><div><h1>Appearance</h1><p>Theme, hero positioning, and search metadata.</p></div></div>' +
     '<form id="appearance-form"><div class="editor-grid"><div class="field-group"><div class="field-group__heading"><div><h2>Site theme</h2><p>Each option includes its paired light and dark tokens.</p></div></div><div class="theme-grid">' + themes + '</div></div>' +
@@ -880,7 +880,7 @@ barPublishButton.addEventListener('click', publish);
 
 rebuildButton.addEventListener('click', async () => {
   rebuildButton.disabled = true;
-  showStatus('Starting rebuild', 'Requesting the deploy workflow on ' + h(state.branch) + '.');
+  showStatus('Starting rebuild', 'Requesting the deploy workflow on main.');
   try {
     await state.api.dispatchWorkflow();
     showStatus('Rebuild requested', 'GitHub accepted the workflow dispatch.');

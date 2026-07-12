@@ -156,7 +156,7 @@ export class GhApi {
   dispatchWorkflow() {
     return this.request(this.repoPath('/actions/workflows/deploy.yml/dispatches'), {
       method: 'POST',
-      body: JSON.stringify({ ref: this.branch }),
+      body: JSON.stringify({ ref: 'main' }),
     });
   }
 

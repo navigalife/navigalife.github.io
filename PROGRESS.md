@@ -3,13 +3,11 @@
 > Executor: update at EVERY checkpoint, and before ending any session.
 > This file is the only handoff between sessions. Be precise.
 
-- **Current phase**: Phase 5 — Checkpoint 5 complete
+- **Current phase**: Phase 5 — final §11 punch list complete
 - **Branch**: `codex/001-initial-site`
-- **Next action**: Advisor runs the final §11 merge-gate review on
-  `codex/001-initial-site`; merging to `main` remains the human's decision.
-- **Blockers**: None. Checkpoint 5 is committed and pushed to
-  `origin/codex/001-initial-site`. No PAT was placed in files, commands, logs,
-  commits, browser storage, or this document.
+- **Next action**: advisor re-review
+- **Blockers**: None. No PAT was placed in files, commands, logs, commits,
+  browser storage, or this document.
 
 ## Checkpoint log
 
@@ -35,6 +33,7 @@
 | 2026-07-11 | Phase 4 | Checkpoint 4 complete | Completed the full real-repository admin E2E on `codex/001-initial-site`. Rendered QA passed at 1440×900 and 390×844 in both light and dark modes with exact Meridian backgrounds, no horizontal overflow, and zero console warnings/errors; the final published Sage state was also visually reviewed at 1440×900. Regression coverage passed the required session-upload path: duplicate slug rejected before processing, a unique image staged at `assets/products/upload-regression-device/01.webp`, publish refused while its editor was open with `Save or cancel the open editor first`, and deleting the session-staged upload removed the change instead of creating a tombstone; the later real publish succeeded. Native testimonial-delete confirmation was dismissed with its count unchanged, and the dirty-state logout confirmation was triggered and handled before reconnecting. The Company display name was cleared and remained `valueMissing: true` after the explicit save action, with `company.json` still clean, proving required-field rejection. The final in-memory draft edited the VenoGain tagline, reordered KL 3000 ahead of VenoGain, added quote testimonial `t-010`, and selected Sage. The header button visibly changed to `Publishing…`; publish completed with the expected `No workflow run found` state after the 30-second discovery window and no console output. `git log --oneline 651f2c8..origin/codex/001-initial-site` contained exactly one commit, `e7fdfa0 Update site content from admin`; `git log -1 --stat` reported only `data/products.json`, `data/testimonials.json`, and `data/site-config.json` (3 files, 819 insertions, 179 deletions), with no `company.json` change. The local branch was fast-forwarded to that exact commit. Final verification: both admin JS modules passed `node --check`; all 6 data JSON files parsed; published-content assertions passed for product edit/order, testimonial, and Sage; `npm run build` exited 0 with `Built 20 products with theme sage` and 4494-byte client JS; all 5 admin files byte-matched `dist/admin/`; `git diff --check` passed; `scrape/` remained ignored; shipped fingerprint and token scan returned 0. The PAT was entered only in the runtime token field and was never persisted. |
 
 | 2026-07-12 | Phase 5 | Checkpoint 5 complete | Added the main-only/manual Pages deploy pipeline, deterministic A4 catalogue template and Puppeteer renderer, complete SEO/social/MedicalDevice structured data, inline critical CSS, performance image attributes, and the §10 README. Final QA passed 20 PDF generation/visual/disclaimer checks; Lighthouse mobile 92/100/100/100; six responsive widths with no overflow or sub-44px public targets; 390/1440 dark public, overlay, and admin sweeps; 8 theme-mode checks; reduced motion; native keyboard focus trap/Escape/focus return; 146 internal-link and 20 catalogue checks; 0 console issues, broken visible images, shipped fingerprints, or raster metadata findings. The checkpoint commits are pushed to `origin/codex/001-initial-site` for advisor review. |
+| 2026-07-12 | Phase 5 | Final §11 punch list complete | Rebuild now dispatches `deploy.yml` with `ref: main` unconditionally, including from an admin session connected to `codex/001-initial-site`; the displayed status also identifies `main`. Theme preview markup and selectors now agree, with explicit mock card/image/copy blocks and paired light/dark token sets. A rendered Puppeteer pass against `dist/admin/`, using local mocked GitHub Contents/Actions responses and no real PAT or network call, verified all six preview colors for Meridian, Clinic, Sage, and Graphite in both modes, then intercepted Rebuild and observed `{ ref: "main" }`; console issues were `[]`. Visual inspection of `/private/tmp/naviga-theme-picker.png` confirmed all eight rendered previews. Final static evidence: `node --check` passed all 3 admin modules; `npm run build` exited 0 with `Built 20 products with theme meridian`; all 5 admin files byte-matched `dist/admin/`; and `git diff --check` passed. |
 
 ## QA evidence (Phase 5)
 
