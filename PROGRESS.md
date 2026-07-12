@@ -3,23 +3,17 @@
 > Executor: update at EVERY checkpoint, and before ending any session.
 > This file is the only handoff between sessions. Be precise.
 
-- **Current phase**: Phase 4 — rendered and regression QA partial; real-repo publish blocked
+- **Current phase**: Phase 4 — final advisor validation guard complete; real-repo publish next
 - **Branch**: `codex/001-initial-site`
-- **Next action**: After command approval and localhost browser access are
-  reconfirmed, first push local commit `67ec548` to
-  `codex/001-initial-site`; then reload the admin, re-run the saved product
-  edit and reorder, add testimonial `t-010`, select the Sage theme, dismiss the
-  dirty logout confirmation, publish once, wait for `No workflow run found`,
-  and verify the single content commit with `git log --stat`.
-- **Blockers**: During the native logout check, Browser Use rejected further
-  interaction and reported that the user had requested
-  `http://127.0.0.1:4173` not be used. No such instruction appears in the task,
-  but the browser policy forbids switching to another surface after this hard
-  rejection. Command approval quota also became exhausted again before the
-  QA-discovered save-control commit could be pushed. The real-repo content
-  publish did not run. The PAT remained
-  runtime-only and was not written to a file, command, application log,
-  commit, or this document.
+- **Next action**: Push the three local Phase 4 commits to
+  `codex/001-initial-site`; then reload the admin, re-run the saved product edit
+  and reorder, verify an empty required Company field is rejected, add
+  testimonial `t-010`, select the Sage theme, dismiss the dirty logout
+  confirmation, publish once, wait for `No workflow run found`, and verify the
+  single content commit with `git log --stat`.
+- **Blockers**: None. The user explicitly reconfirmed localhost access and
+  command approvals. The PAT remains runtime-only and must never be written to
+  a file, command, application log, commit, or this document.
 
 ## Checkpoint log
 
@@ -41,6 +35,7 @@
 | 2026-07-11 | Phase 4 | Admin implementation static checkpoint | Added the vanilla `/admin/` SPA with token validation and scoped storage warning, repo/branch source loading, file SHAs and base-SHA concurrency guard, in-memory draft state, persistent unsaved bar, before-unload protection, logout, and centralized GitHub error handling. Implemented Products CRUD/reorder/visibility/all-schema editing, spec rows, multi-image WebP/downscale/preview/order/delete, and the canonical locked image prompt; A2.7 Testimonials v2 type switching with dual adjustable client-side 4:5 crops; Protocols CRUD/reorder/visibility/audience/engagement/device multi-select; Company fields; four theme previews plus hero/SEO editing; one-commit Git Data API publishing with ref-last atomicity; reload-and-reapply on branch movement; Actions polling; and deploy workflow dispatch. Updated the dependency-free local server to resolve directory indexes for `/admin/`. Static verification: `node --check` passed `admin/app.js`, `admin/gh-api.js`, `admin/image-tools.js`, and `src/serve.js`; `npm run build` exited 0 with `Built 20 products with theme meridian` and `Client JavaScript: 4494 bytes (4.39 KB)`; all 5 admin source files byte-matched their `dist/admin/` copies after the build; `git diff --check` passed; admin fingerprint/token scan returned `0`. No data JSON, including `company.json`, was changed. Rendered and real-repo QA remain unclaimed because the local server restart was denied by the exhausted desktop approval quota and Browser policy blocks direct local-file navigation. |
 | 2026-07-11 | Phase 4 | Advisor admin punch list complete | Added an explicit publish guard while any product, protocol, or testimonial editor is open; both publish entry points now show `Save or cancel the open editor first`. Centralized asset removal so session-staged uploads are unstaged and their object URLs revoked instead of emitting invalid `sha:null` tombstones, while base-tree files still stage deletes; applied it at all four reviewed call sites. Product upload now rejects duplicate slugs before processing and locks a new-product slug while staged images exist. Split Actions polling into a 30-second run-discovery phase with an accurate expected `No workflow run found` result, followed only when a run exists by up to three minutes of run-status polling. Removed unused file-SHA state and a dead blob ternary, synchronized both publish button labels, and corrected the header sun ray. Static evidence: `node --check` passed all 3 admin JavaScript modules; `npm run build` exited 0 with `Built 20 products with theme meridian` and `Client JavaScript: 4494 bytes (4.39 KB)`; all 5 admin files byte-matched `dist/admin/`; `git diff --check` passed; admin fingerprint/token scan returned `0`. |
 | 2026-07-11 | Phase 4 | Rendered and regression QA partial | Created the previously absent remote `codex/001-initial-site` branch by pushing the committed Phase 4 code; the first admin connection's `Not Found` was confirmed to be the missing ref rather than token scope. In-app Browser rendered the authenticated 20-product admin at 1440×900 and 390×844 in light and dark modes with exact Meridian `--bg` values, `Instrument Sans`, zero relevant console warnings/errors, and no horizontal page overflow. Runtime upload regression via installed headless Chrome passed: dismissed native testimonial-delete confirmation with count unchanged; duplicate product slug rejected before image processing; unique upload staged `assets/products/upload-regression-device/01.webp`; publish while the editor was open returned `Save or cancel the open editor first`; deleting the staged upload cleared the change and disabled publish. Rendered QA then exposed that valid editor submit buttons focused but did not dispatch the delegated submit in either browser engine. Added explicit visible save actions for product, protocol, testimonial, company, and appearance forms while retaining the native submit handler. `node --check`, `npm run build`, admin copy-through, and `git diff --check` passed after the repair; clicking the repaired product save returned to the list with the unsaved bar, and product reorder changed the first ids from `venogain-scd-500, kl-3000-pro-neo` to `kl-3000-pro-neo, venogain-scd-500` in memory. Browser Use then hard-blocked localhost during the dirty logout confirmation, so testimonial creation, theme switch, actual content publish, expected no-workflow result, and `git log --stat` remain unclaimed. No data JSON or `company.json` changed locally, and no admin content commit was created remotely. |
+| 2026-07-11 | Phase 4 | Explicit-save validity addendum complete | Added `if (!form.reportValidity()) return;` at the start of both `saveCompany` and `saveAppearance`, so their explicit `type="button"` controls preserve native required-field validation. `node --check admin/app.js`, `npm run build`, exact admin copy-through, and `git diff --check` passed. Final E2E must include one empty-required-field rejection before the real branch publish. |
 
 ## QA evidence (Phase 5)
 

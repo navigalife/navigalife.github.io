@@ -670,6 +670,7 @@ const handleEditorAction = async (button) => {
 };
 
 const saveCompany = (form) => {
+  if (!form.reportValidity()) return;
   const data = new FormData(form);
   state.draft.company = {
     name: String(data.get('name') || '').trim(),
@@ -695,6 +696,7 @@ const saveCompany = (form) => {
 };
 
 const saveAppearance = (form) => {
+  if (!form.reportValidity()) return;
   const data = new FormData(form);
   state.draft.config.heroHeadline = String(data.get('heroHeadline') || '').trim();
   state.draft.config.heroSub = String(data.get('heroSub') || '').trim();
