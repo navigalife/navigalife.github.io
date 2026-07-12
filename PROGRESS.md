@@ -3,21 +3,16 @@
 > Executor: update at EVERY checkpoint, and before ending any session.
 > This file is the only handoff between sessions. Be precise.
 
-- **Current phase**: Phase 5 — implementation complete; final QA rerun blocked
+- **Current phase**: Phase 5 — Checkpoint 5 complete locally; remote push blocked
 - **Branch**: `codex/001-initial-site`
-- **Next action**: After the desktop approval quota resets at 2026-07-12 00:01
-  or the user explicitly re-authorizes the blocked actions, first push the two
-  local Phase 5 commits, then run a fresh final
-  `npm run build && npm run pdfs`, rerun the native keyboard/link script and
-  Lighthouse mobile on that exact output, recheck the final admin tap-target
-  adjustments, then mark every §11 item true and commit Checkpoint 5.
-- **Blockers**: The final native keyboard rerun and post-focus-fix Lighthouse
-  rerun cannot launch: desktop escalation review reports its usage quota is
-  exhausted until 2026-07-12 00:01, and the in-app Browser separately rejected
-  further localhost keyboard actions. The same quota rejected the final branch
-  push after both commits were created locally. The focus-loop source fix is
-  built but therefore not yet eligible for a completion claim. No PAT was used
-  this session.
+- **Next action**: Authenticate Git pushes with a GitHub credential permitted to
+  create/update workflow files, push the local Phase 5 commits on
+  `codex/001-initial-site`, then hand the branch to the advisor for the final
+  §11 merge-gate review.
+- **Blockers**: GitHub rejected HTTPS push because the current Git credential
+  lacks `workflow` scope; the machine has no GitHub SSH identity. All local
+  implementation and Checkpoint 5 QA are complete. No PAT was placed in files,
+  commands, logs, commits, browser storage, or this document.
 
 ## Checkpoint log
 
@@ -42,6 +37,8 @@
 | 2026-07-11 | Phase 4 | Explicit-save validity addendum complete | Added `if (!form.reportValidity()) return;` at the start of both `saveCompany` and `saveAppearance`, so their explicit `type="button"` controls preserve native required-field validation. `node --check admin/app.js`, `npm run build`, exact admin copy-through, and `git diff --check` passed. Final E2E must include one empty-required-field rejection before the real branch publish. |
 | 2026-07-11 | Phase 4 | Checkpoint 4 complete | Completed the full real-repository admin E2E on `codex/001-initial-site`. Rendered QA passed at 1440×900 and 390×844 in both light and dark modes with exact Meridian backgrounds, no horizontal overflow, and zero console warnings/errors; the final published Sage state was also visually reviewed at 1440×900. Regression coverage passed the required session-upload path: duplicate slug rejected before processing, a unique image staged at `assets/products/upload-regression-device/01.webp`, publish refused while its editor was open with `Save or cancel the open editor first`, and deleting the session-staged upload removed the change instead of creating a tombstone; the later real publish succeeded. Native testimonial-delete confirmation was dismissed with its count unchanged, and the dirty-state logout confirmation was triggered and handled before reconnecting. The Company display name was cleared and remained `valueMissing: true` after the explicit save action, with `company.json` still clean, proving required-field rejection. The final in-memory draft edited the VenoGain tagline, reordered KL 3000 ahead of VenoGain, added quote testimonial `t-010`, and selected Sage. The header button visibly changed to `Publishing…`; publish completed with the expected `No workflow run found` state after the 30-second discovery window and no console output. `git log --oneline 651f2c8..origin/codex/001-initial-site` contained exactly one commit, `e7fdfa0 Update site content from admin`; `git log -1 --stat` reported only `data/products.json`, `data/testimonials.json`, and `data/site-config.json` (3 files, 819 insertions, 179 deletions), with no `company.json` change. The local branch was fast-forwarded to that exact commit. Final verification: both admin JS modules passed `node --check`; all 6 data JSON files parsed; published-content assertions passed for product edit/order, testimonial, and Sage; `npm run build` exited 0 with `Built 20 products with theme sage` and 4494-byte client JS; all 5 admin files byte-matched `dist/admin/`; `git diff --check` passed; `scrape/` remained ignored; shipped fingerprint and token scan returned 0. The PAT was entered only in the runtime token field and was never persisted. |
 
+| 2026-07-12 | Phase 5 | Checkpoint 5 complete locally | Added the main-only/manual Pages deploy pipeline, deterministic A4 catalogue template and Puppeteer renderer, complete SEO/social/MedicalDevice structured data, inline critical CSS, performance image attributes, and the §10 README. Final QA passed 20 PDF generation/visual/disclaimer checks; Lighthouse mobile 92/100/100/100; six responsive widths with no overflow or sub-44px public targets; 390/1440 dark public, overlay, and admin sweeps; 8 theme-mode checks; reduced motion; native keyboard focus trap/Escape/focus return; 146 internal-link and 20 catalogue checks; 0 console issues, broken visible images, shipped fingerprints, or raster metadata findings. The local checkpoint is complete; remote push is the sole blocker because the configured HTTPS credential cannot update workflow files. |
+
 ## QA evidence (Phase 5)
 
 - **Implementation/static build**: Commit `9c072b5` adds the main-only plus
@@ -52,22 +49,24 @@
   Structured-data/image audit passed with 20 Product items and 41/41 public
   image elements carrying alt, width, height, and loading attributes. Client
   JavaScript was 4494 bytes before the focus repair and is 5164 bytes after it.
-- **PDFs**: `npm run pdfs` generated 20/20 catalogues before the later
-  public-JS-only focus repair. `pdfinfo` reported one A4 page for every file.
+  An isolated `git archive` of the committed Checkpoint 5 tree passed `npm ci`
+  (`puppeteer 24.43.1`, `sharp 0.34.5`), `npm run build`, and `npm run pdfs`,
+  producing 20 products and 20 linked catalogue files with theme Meridian;
+  its product/source/admin/dist fingerprint scan returned 0.
+- **PDFs**: The final `npm run pdfs` generated 20/20 catalogues after all source
+  repairs. `pdfinfo` reported one A4 page for every file.
   Normalized text extraction found the required disclaimer in all 20. A
   rendered 4x5 contact sheet plus original-resolution VenoGain review found no
   clipping, overlap, broken glyphs, missing images, or inconsistent frames;
   headers, specifications, contact footers, and disclaimer alignment passed.
-  Because the later edit touched only `src/site.js`, the verified PDFs were
-  preserved across the final public rebuild; a fresh generator rerun remains
-  in the exact next action for clean-checkout evidence.
 - **Responsive/tap targets**: In-app Browser sweep at 360, 390, 768, 1024,
   1440, and 2560 px reported horizontal overflow `0`, broken loaded images `0`,
   and no public `a`/`button`/`summary` box below 44x44 after the first target
   repair. Mobile and desktop screenshots were visually clean. Admin auth dark
-  render passed at 390x844 and 1440x900 with overflow `0`; it exposed a 43 px
-  skip-link edge and label-dependent checkbox target, both source-fixed and
-  awaiting one final rendered recheck.
+  render passed at 390x844 and 1440x900 with overflow `0`, no sub-44px controls,
+  a 44px skip link, and a 44px checkbox label at both widths. Final public and
+  admin console capture found no warnings, errors, or failed resources after
+  adding the existing SVG favicon to the admin document.
 - **Dark/theme matrix**: Meridian public dark sweep at 390 and 1440 covered
   hero, approach, stories, product range, about/body, contact, footer, and
   overlay. Exact dark `--bg` was `#10181A`, images had `filter: none`, modal
@@ -83,14 +82,53 @@
   `prefers-reduced-motion: reduce`; scroll behavior was `auto`, reveal opacity
   was `1`, reveal transform was `none`, hidden reveal count was `0`, and card
   transition/dialog animation durations were `1e-05s`.
-- **Lighthouse**: On the final Meridian output immediately before the
-  JS-only focus repair, Lighthouse 12.8.2 mobile scored Performance 94,
-  Accessibility 100, SEO 100, Best Practices 100; FCP 2.1 s, LCP 2.7 s,
-  CLS 0, TBT 70 ms. This clears all thresholds but must be rerun after the
-  670-byte focus-loop addition before Checkpoint 5 is claimed.
-- **Keyboard finding and fix**: The native pass reached the product opener by
-  Tab, opened the dialog with Enter, and focused Close. Shift+Tab from Close
-  escaped to the page, so an explicit visible-element focus loop was added to
-  `src/site.js`. The required post-fix Shift+Tab/forward-Tab/Escape/focus-return
-  rerun is blocked as described above. Checkpoint 5 is intentionally not marked
-  complete.
+- **Lighthouse**: Lighthouse 12.8.2 mobile on the exact final output scored
+  Performance 92, Accessibility 100, SEO 100, Best Practices 100; FCP 2.1 s,
+  LCP 2.9 s, CLS 0, TBT 100 ms.
+- **Keyboard**: The final native pass focused the skip link first with a solid
+  3px outline, followed `#main`, reached the VenoGain product-card opener on
+  Tab 36, opened with Enter, focused Close, wrapped Shift+Tab to Call, kept 12
+  forward Tabs inside the dialog, and closed with Escape while clearing the
+  hash and returning focus to the same opener.
+- **Links/images/static acceptance**: The final crawl checked 5 HTML/CSS
+  documents, 146 internal references, 48 syntactically valid external
+  references, and all 20 non-empty PDFs with no missing target. Incremental
+  scroll loaded all 21 non-hidden images with 0 failures; all 20 intentionally
+  hidden overlay-image references resolved statically. Final structured/static
+  audit: 20 scraped and 20 visible products, `blocked_at: null`, 9 protocols,
+  9 A2-compliant quote placeholders, 4 themes, 41 attributed HTML image nodes,
+  5164 bytes shipped JS, 20 PDFs, 45 raster files with 0 EXIF/XMP/IPTC/ICC,
+  and 0 shipped fingerprint findings. All 8 JavaScript modules passed
+  `node --check`; `git diff --check`, design ban-list scan, and TODO scan passed.
+
+## §11 acceptance checklist
+
+1. [x] Cached scrape covers 20 products; manifest `blocked_at` is null and
+   `scrape/` remains ignored/untracked.
+2. [x] Product data, assets, authored source, admin, and shipped `dist/` scan
+   has 0 source-marketplace fingerprints; all 45 shipped rasters are metadata
+   clean. Control/spec documents necessarily retain the project brief and are
+   not shipped site content.
+3. [x] `npm run build` exits 0 with all 20 visible products, responsive images,
+   visible specifications, conditions, and working catalogue links.
+4. [x] The main-only/manual workflow runs the deterministic HTML/Puppeteer
+   generator; all 20 eligible PDFs generate, render consistently, and contain
+   the required disclaimer. The workflow is correctly not run on this branch.
+5. [x] Token-only design system, self-hosted Fraunces/Instrument Sans, warm
+   light default, dark public/admin surfaces, ban-list audit, and all 8
+   theme-mode renders pass.
+6. [x] Checkpoint 4 records real-repository admin auth, CRUD/reorder/visibility,
+   upload, theme, atomic publish, rebuild, status, unsaved guard, and edge-case
+   evidence; Phase 5 regression kept admin output byte-matched and dark-clean.
+7. [x] Admin locked prompt, approved generation manifest, automatic PDF path,
+   and normalized 3:2 image frame are in place.
+8. [x] Per A2's superseding evidence rule, 9 launch placeholders are quote type
+   and no fabricated before/after images ship; admin supports both quote and
+   real before/after types for future verified evidence.
+9. [x] Final Lighthouse mobile is 92/100/100/100; Product/MedicalDevice plus
+   Organization JSON-LD, sitemap, robots, and 5164-byte JS pass.
+10. [x] Six-width responsive/tap-target sweep, 390/1440 dark sweep, reduced
+    motion, native keyboard/focus trap, and all 8 theme-mode checks are logged.
+11. [x] All work is on `codex/001-initial-site`; README meets §10 and this
+    checkpoint log is complete. Remote delivery alone is blocked by GitHub
+    workflow-file credential scope as recorded above.
