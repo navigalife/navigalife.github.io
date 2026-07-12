@@ -3,14 +3,21 @@
 > Executor: update at EVERY checkpoint, and before ending any session.
 > This file is the only handoff between sessions. Be precise.
 
-- **Current phase**: Phase 4 — Checkpoint 4 complete
+- **Current phase**: Phase 5 — implementation complete; final QA rerun blocked
 - **Branch**: `codex/001-initial-site`
-- **Next action**: Start Phase 5 by reading only spec §Phase 5 plus the Design
-  System and Constraints sections, then implement the deploy pipeline, PDF
-  catalogues, SEO, and final QA in checkpoint-sized commits.
-- **Blockers**: None. The Phase 4 PAT was used only in the admin token field at
-  runtime and was not persisted in the repository, application storage, shell
-  history, logs, commits, or this document.
+- **Next action**: After the desktop approval quota resets at 2026-07-12 00:01
+  or the user explicitly re-authorizes the blocked actions, first push the two
+  local Phase 5 commits, then run a fresh final
+  `npm run build && npm run pdfs`, rerun the native keyboard/link script and
+  Lighthouse mobile on that exact output, recheck the final admin tap-target
+  adjustments, then mark every §11 item true and commit Checkpoint 5.
+- **Blockers**: The final native keyboard rerun and post-focus-fix Lighthouse
+  rerun cannot launch: desktop escalation review reports its usage quota is
+  exhausted until 2026-07-12 00:01, and the in-app Browser separately rejected
+  further localhost keyboard actions. The same quota rejected the final branch
+  push after both commits were created locally. The focus-loop source fix is
+  built but therefore not yet eligible for a completion claim. No PAT was used
+  this session.
 
 ## Checkpoint log
 
@@ -37,4 +44,53 @@
 
 ## QA evidence (Phase 5)
 
-_(empty until Phase 5)_
+- **Implementation/static build**: Commit `9c072b5` adds the main-only plus
+  manual deploy workflow, deterministic A4 catalogue template/Puppeteer
+  renderer, Product/MedicalDevice and Organization structured data,
+  canonical/OG/Twitter metadata, inline critical CSS, and the §10 README.
+  Repeated builds exited 0 with `Built 20 products with theme meridian`.
+  Structured-data/image audit passed with 20 Product items and 41/41 public
+  image elements carrying alt, width, height, and loading attributes. Client
+  JavaScript was 4494 bytes before the focus repair and is 5164 bytes after it.
+- **PDFs**: `npm run pdfs` generated 20/20 catalogues before the later
+  public-JS-only focus repair. `pdfinfo` reported one A4 page for every file.
+  Normalized text extraction found the required disclaimer in all 20. A
+  rendered 4x5 contact sheet plus original-resolution VenoGain review found no
+  clipping, overlap, broken glyphs, missing images, or inconsistent frames;
+  headers, specifications, contact footers, and disclaimer alignment passed.
+  Because the later edit touched only `src/site.js`, the verified PDFs were
+  preserved across the final public rebuild; a fresh generator rerun remains
+  in the exact next action for clean-checkout evidence.
+- **Responsive/tap targets**: In-app Browser sweep at 360, 390, 768, 1024,
+  1440, and 2560 px reported horizontal overflow `0`, broken loaded images `0`,
+  and no public `a`/`button`/`summary` box below 44x44 after the first target
+  repair. Mobile and desktop screenshots were visually clean. Admin auth dark
+  render passed at 390x844 and 1440x900 with overflow `0`; it exposed a 43 px
+  skip-link edge and label-dependent checkbox target, both source-fixed and
+  awaiting one final rendered recheck.
+- **Dark/theme matrix**: Meridian public dark sweep at 390 and 1440 covered
+  hero, approach, stories, product range, about/body, contact, footer, and
+  overlay. Exact dark `--bg` was `#10181A`, images had `filter: none`, modal
+  focus landed on Close, and overflow stayed `0`. Admin auth used the same dark
+  background and surface tokens at both sizes; Checkpoint 4 already records the
+  authenticated editor sweep. All 4 themes x light/dark passed exact token and
+  hero-frame/product-card/testimonial spot-checks with no console issues:
+  Meridian `#F6F4EF/#0E6B63` and `#10181A/#4FB3A6`; Clinic
+  `#F3F5F6/#315D75` and `#10171C/#7FB2CC`; Sage `#F4F1E8/#476545` and
+  `#141A15/#91B28D`; Graphite `#F2F1ED/#3F464A` and
+  `#111315/#BCC4C8`. Final build was restored to Meridian.
+- **Reduced motion**: Browser CDP emulation matched
+  `prefers-reduced-motion: reduce`; scroll behavior was `auto`, reveal opacity
+  was `1`, reveal transform was `none`, hidden reveal count was `0`, and card
+  transition/dialog animation durations were `1e-05s`.
+- **Lighthouse**: On the final Meridian output immediately before the
+  JS-only focus repair, Lighthouse 12.8.2 mobile scored Performance 94,
+  Accessibility 100, SEO 100, Best Practices 100; FCP 2.1 s, LCP 2.7 s,
+  CLS 0, TBT 70 ms. This clears all thresholds but must be rerun after the
+  670-byte focus-loop addition before Checkpoint 5 is claimed.
+- **Keyboard finding and fix**: The native pass reached the product opener by
+  Tab, opened the dialog with Enter, and focused Close. Shift+Tab from Close
+  escaped to the page, so an explicit visible-element focus loop was added to
+  `src/site.js`. The required post-fix Shift+Tab/forward-Tab/Escape/focus-return
+  rerun is blocked as described above. Checkpoint 5 is intentionally not marked
+  complete.
