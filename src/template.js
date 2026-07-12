@@ -164,8 +164,8 @@ const renderPage = ({
     .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
     .join('');
   const lockup = (context) => `<span class="lockup" aria-hidden="true">
-    <img class="lockup--ink" src="${markPaths.ink}" alt="" width="384" height="193" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
-    <img class="lockup--paper" src="${markPaths.paper}" alt="" width="384" height="193" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
+    <img class="lockup--ink" src="${markPaths.ink}" alt="" width="512" height="257" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
+    <img class="lockup--paper" src="${markPaths.paper}" alt="" width="512" height="257" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
   </span>`;
 
   return `<!doctype html>

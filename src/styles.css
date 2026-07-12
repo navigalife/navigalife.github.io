@@ -42,7 +42,7 @@ section[id]{scroll-margin-top:92px}
 .header-inner{display:grid;grid-template-columns:auto 1fr auto;min-height:84px;align-items:center;gap:32px}
 .wordmark{display:inline-flex;min-height:44px;align-items:center;text-decoration:none}
 .lockup{display:inline-flex;align-items:center}
-.lockup img{width:auto;height:48px}
+.lockup img{width:auto;height:62px}
 .lockup--paper{display:none}
 [data-theme="dark"] .lockup--ink{display:none}
 [data-theme="dark"] .lockup--paper{display:block}
@@ -162,7 +162,7 @@ section[id]{scroll-margin-top:92px}
 .site-footer{padding:56px 0 30px;border-top:1px solid var(--line);background:var(--bg)}
 .footer__top{display:grid;grid-template-columns:auto 1fr auto;gap:48px;align-items:center;padding-bottom:40px}
 .footer-brand{display:inline-flex;align-items:center}
-.footer-brand .lockup img{height:40px}
+.footer-brand .lockup img{height:54px}
 .footer__top>p{margin:0;color:var(--ink-muted);font-size:1rem}
 .site-footer nav{display:flex;gap:24px}
 .footer__bottom{display:flex;justify-content:space-between;gap:32px;padding-top:24px;border-top:1px solid var(--line);color:var(--ink-muted);font-size:.875rem}
@@ -203,7 +203,7 @@ section[id]{scroll-margin-top:92px}
   html{scroll-padding-top:80px}
   .container{width:min(100% - 32px,1240px)}
   .header-inner{min-height:72px}
-  .lockup img{height:40px}
+  .lockup img{height:50px}
   .header-cta{display:none}
   .hero{padding-top:44px}
   .hero__actions .button{flex:1 1 auto}
@@ -231,7 +231,7 @@ section[id]{scroll-margin-top:92px}
 @media (max-width:400px){
   .container{width:min(100% - 24px,1240px)}
   .header-inner{gap:8px}
-  .lockup img{height:34px}
+  .lockup img{height:44px}
   .hero__actions{flex-direction:column;align-items:stretch}
   .hero__evidence-strip{gap:6px}
   .pair-story__pair{grid-template-columns:1fr}

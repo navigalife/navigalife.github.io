@@ -95,8 +95,8 @@ const copyBrandAssets = async () => {
   );
   const [ogImage, ink, paper] = await Promise.all([
     processImage('assets/brand/og-image.png'),
-    prepareMark('logo-ink', 384),
-    prepareMark('logo-paper', 384),
+    prepareMark('logo-ink', 512),
+    prepareMark('logo-paper', 512),
   ]);
   return { ogImage: ogImage.original, markPaths: { ink, paper } };
 };
@@ -129,7 +129,7 @@ h1{max-width:14ch;margin-bottom:28px;font-size:clamp(2.75rem,6.5vw,4.25rem)}
 .site-header{position:sticky;z-index:50;top:0;border-bottom:1px solid var(--line);background:var(--bg)}
 .header-inner{display:grid;grid-template-columns:auto 1fr auto;min-height:84px;align-items:center;gap:32px}
 .wordmark{display:inline-flex;min-height:44px;align-items:center;text-decoration:none}
-.lockup{display:inline-flex;align-items:center}.lockup img{width:auto;height:48px}.lockup--paper{display:none}
+.lockup{display:inline-flex;align-items:center}.lockup img{width:auto;height:62px}.lockup--paper{display:none}
 [data-theme="dark"] .lockup--ink{display:none}[data-theme="dark"] .lockup--paper{display:block}
 .site-nav{display:flex;align-items:center;justify-content:center;gap:26px}.header-actions{display:flex;align-items:center;gap:12px}.menu-toggle{display:none}
 .kicker{margin-bottom:14px;color:var(--accent);font-size:.875rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
