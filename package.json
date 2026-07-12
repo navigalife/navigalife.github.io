@@ -5,7 +5,8 @@
   "description": "Static product site and catalogue build for Naviga Life",
   "scripts": {
     "build": "node src/build.js",
-    "serve": "npm run build && node src/serve.js"
+    "pdfs": "node tools/gen-pdfs.js",
+    "serve": "npm run build && npm run pdfs && node src/serve.js"
   },
   "devDependencies": {
     "puppeteer": "^24.0.0",

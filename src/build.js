@@ -108,6 +108,31 @@ const themeCss = (theme) => {
   return `:root {\n${declarations(theme.light)}\n}\n[data-theme="dark"] {\n${declarations(theme.dark)}\n}\n`;
 };
 
+const criticalCss = (theme) => `${themeCss(theme)}
+@font-face{font-family:"Fraunces";font-style:normal;font-weight:600;font-display:swap;src:url("assets/fonts/fraunces-latin-600.woff2") format("woff2")}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:400 600;font-display:swap;src:url("assets/fonts/instrument-sans-latin-400-600.woff2") format("woff2")}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:96px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Instrument Sans",system-ui,sans-serif;font-size:1.0625rem;line-height:1.65}
+img{display:block;max-width:100%}
+a{color:inherit}
+h1,h2,h3,p{margin-top:0}
+h1,h2{font-family:"Fraunces",Georgia,serif;font-weight:600;letter-spacing:-.035em;line-height:1.05}
+h1{max-width:15ch;margin-bottom:24px;font-size:clamp(2.4rem,6.1vw,3.8rem)}
+.container{width:min(100% - 40px,1240px);margin-inline:auto}
+.site-header{position:sticky;z-index:50;top:0;border-bottom:1px solid var(--line);background:var(--bg)}
+.header-inner{display:grid;grid-template-columns:auto 1fr auto;min-height:80px;align-items:center;gap:32px}
+.wordmark{text-decoration:none}.wordmark__text{font-family:"Fraunces",Georgia,serif;font-size:1.75rem;font-weight:600;letter-spacing:-.04em}
+.site-nav{display:flex;align-items:center;justify-content:center;gap:24px}.header-actions{display:flex;align-items:center;gap:12px}.menu-toggle{display:none}
+.hero{padding-top:clamp(2.5rem,5vw,4.5rem)}
+.hero__layout{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr);align-items:start;gap:clamp(40px,7vw,104px);min-height:540px}
+.hero__copy>p{max-width:55ch;margin-bottom:32px;color:var(--ink-muted);font-size:clamp(1.05rem,1.6vw,1.25rem)}
+.hero-product__frame{width:100%;aspect-ratio:3/2;padding:8%;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.hero-product__frame img{width:100%;height:100%;object-fit:contain}
+@media(max-width:1000px){.menu-toggle{display:grid}.site-nav{display:none}.hero__layout{grid-template-columns:1fr minmax(320px,.8fr);gap:40px}}
+@media(max-width:760px){.container{width:min(100% - 32px,1240px)}.header-inner{min-height:70px;gap:16px}.header-cta{display:none}.hero{padding-top:48px}.hero__layout{grid-template-columns:1fr;gap:34px;min-height:0}}
+`;
+
 const validate = ({ products, protocols, testimonials, themes, config }) => {
   const themeId = process.env.SITE_THEME || config.theme;
   const theme = themes.find((candidate) => candidate.id === themeId);
@@ -212,6 +237,7 @@ const build = async () => {
     jsPath,
     ogImage: ogImage.original,
     siteUrl: SITE_URL,
+    criticalCss: criticalCss(theme),
   });
 
   await Promise.all([
