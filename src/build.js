@@ -122,7 +122,7 @@ h1{max-width:15ch;margin-bottom:24px;font-size:clamp(2.4rem,6.1vw,3.8rem)}
 .container{width:min(100% - 40px,1240px);margin-inline:auto}
 .site-header{position:sticky;z-index:50;top:0;border-bottom:1px solid var(--line);background:var(--bg)}
 .header-inner{display:grid;grid-template-columns:auto 1fr auto;min-height:80px;align-items:center;gap:32px}
-.wordmark{text-decoration:none}.wordmark__text{font-family:"Fraunces",Georgia,serif;font-size:1.75rem;font-weight:600;letter-spacing:-.04em}
+.wordmark{display:inline-flex;min-height:44px;align-items:center;text-decoration:none}.wordmark__text{font-family:"Fraunces",Georgia,serif;font-size:1.75rem;font-weight:600;letter-spacing:-.04em}
 .site-nav{display:flex;align-items:center;justify-content:center;gap:24px}.header-actions{display:flex;align-items:center;gap:12px}.menu-toggle{display:none}
 .hero{padding-top:clamp(2.5rem,5vw,4.5rem)}
 .hero__layout{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr);align-items:start;gap:clamp(40px,7vw,104px);min-height:540px}

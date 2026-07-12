@@ -10,10 +10,10 @@ button,input,select,textarea{font:inherit}
 button{color:inherit}
 :focus-visible{outline:3px solid var(--focus);outline-offset:3px}
 [hidden]{display:none!important}
-.skip-link{position:fixed;z-index:100;top:12px;left:12px;padding:10px 14px;border-radius:8px;background:var(--ink);color:var(--bg);transform:translateY(-160%)}
+.skip-link{position:fixed;z-index:100;top:12px;left:12px;display:inline-flex;min-height:44px;align-items:center;padding:10px 14px;border-radius:8px;background:var(--ink);color:var(--bg);transform:translateY(-160%)}
 .skip-link:focus{transform:none}
 .wordmark{color:var(--ink);font-family:"Fraunces",Georgia,serif;font-size:1.45rem;font-weight:600;letter-spacing:-.035em;text-decoration:none;white-space:nowrap}
-.button{display:inline-flex;min-height:40px;align-items:center;justify-content:center;gap:8px;padding:8px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-size:.875rem;font-weight:600;line-height:1.2;cursor:pointer}
+.button{display:inline-flex;min-height:44px;align-items:center;justify-content:center;gap:8px;padding:8px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-size:.875rem;font-weight:600;line-height:1.2;cursor:pointer}
 .button:hover{background:var(--surface-2)}
 .button:disabled{cursor:not-allowed;opacity:.5}
 .button--primary{border-color:var(--primary);background:var(--primary);color:var(--primary-ink)}
@@ -21,7 +21,7 @@ button{color:inherit}
 .button--quiet{background:var(--surface-2)}
 .button--text{border-color:transparent;background:transparent;color:var(--ink-muted)}
 .button--danger{border-color:var(--accent);background:transparent;color:var(--accent)}
-.icon-button{display:inline-grid;width:40px;height:40px;padding:0;place-items:center;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer}
+.icon-button{display:inline-grid;width:44px;height:44px;padding:0;place-items:center;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer}
 .icon-button:hover{background:var(--surface-2)}
 .icon-button svg,.button svg,.row-action svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .auth-shell{min-height:100vh;display:grid;padding:32px;place-items:center}
@@ -33,11 +33,11 @@ button{color:inherit}
 form{margin:0}
 label,.field-label{display:grid;gap:7px;color:var(--ink);font-size:.8125rem;font-weight:600}
 form>label+label{margin-top:18px}
-input,select,textarea{width:100%;min-height:42px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:.925rem;font-weight:400}
+input,select,textarea{width:100%;min-height:44px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:.925rem;font-weight:400}
 textarea{min-height:112px;resize:vertical}
 input::placeholder,textarea::placeholder{color:var(--ink-muted)}
-.checkbox-row{grid-template-columns:auto 1fr;align-items:start;gap:10px;font-weight:500}
-.checkbox-row input{width:18px;min-height:18px;margin-top:2px;accent-color:var(--primary)}
+.checkbox-row{grid-template-columns:auto 1fr;min-height:44px;align-items:center;gap:10px;font-weight:500}
+.checkbox-row input{width:20px;height:20px;min-height:20px;margin:0;accent-color:var(--primary)}
 .storage-warning,.help,.field-help{margin:8px 0 0;color:var(--ink-muted);font-size:.75rem;font-weight:400}
 .auth-card .button--primary{width:100%;margin-top:24px}
 .form-status{min-height:22px;margin:12px 0 0;color:var(--accent);font-size:.8125rem}
@@ -49,7 +49,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-muted)}
 .header-actions{display:flex;align-items:center;gap:8px}
 .app-body{display:grid;grid-template-columns:216px minmax(0,1fr);width:min(100% - 40px,1440px);margin:0 auto}
 .tab-nav{position:sticky;top:72px;align-self:start;display:grid;gap:4px;padding:32px 24px 32px 0}
-.tab-nav button{width:100%;padding:10px 12px;border:0;border-radius:8px;background:transparent;color:var(--ink-muted);font-size:.875rem;font-weight:600;text-align:left;cursor:pointer}
+.tab-nav button{width:100%;min-height:44px;padding:10px 12px;border:0;border-radius:8px;background:transparent;color:var(--ink-muted);font-size:.875rem;font-weight:600;text-align:left;cursor:pointer}
 .tab-nav button:hover{background:var(--surface-2);color:var(--ink)}
 .tab-nav button[aria-current="page"]{background:var(--primary-soft);color:var(--primary)}
 #admin-main{min-width:0;padding:32px 0 64px 32px;border-left:1px solid var(--line)}
@@ -70,7 +70,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-muted)}
 .badge--active{background:var(--primary-soft);color:var(--primary)}
 .badge--draft{color:var(--accent)}
 .row-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px}
-.row-action{display:inline-grid;width:34px;height:34px;padding:0;place-items:center;border:1px solid var(--line);border-radius:7px;background:var(--bg);cursor:pointer}
+.row-action{display:inline-grid;width:44px;height:44px;padding:0;place-items:center;border:1px solid var(--line);border-radius:7px;background:var(--bg);cursor:pointer}
 .row-action:hover{background:var(--surface-2)}
 .row-action:disabled{cursor:not-allowed;opacity:.35}
 .row-action--text{width:auto;padding:0 10px;font-size:.75rem;font-weight:600}

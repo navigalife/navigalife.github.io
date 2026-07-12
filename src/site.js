@@ -107,6 +107,21 @@
     event.preventDefault();
     closeProductRoute();
   });
+  dialog?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Tab') return;
+    const focusable = [...dialog.querySelectorAll('a[href], button:not([disabled]), summary, [tabindex]:not([tabindex="-1"])')]
+      .filter((element) => !element.closest('[hidden]') && element.getClientRects().length);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
   dialog?.addEventListener('click', (event) => {
     if (event.target === dialog) closeProductRoute();
   });
