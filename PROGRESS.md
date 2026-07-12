@@ -1,3 +1,20 @@
+# PROGRESS
+
+## Spec 002 — MediVasc pivot (advisor-implemented, 2026-07-12)
+
+- **Current phase**: Phase 5 — shipped
+- **Branch**: `feat/002-medivasc-pivot` (merged to `main`)
+- **Run type**: implemented directly by the advisor (no executor session);
+  spec 002 + Addendum A are the design record.
+
+| Date | Phase | Checkpoint | Evidence / notes |
+|---|---|---|---|
+| 2026-07-12 | 1 | Brand + evidence assets | `tools/prepare-brand.js` (mask-derived marks/favicons from the owner logo, no redraw) and `tools/prepare-evidence.js` (documented crops, EXIF strip, 4:5) committed with outputs; OG image rendered with real fonts via `tools/prepare-og.js`. |
+| 2026-07-12 | 2 | Data layer | company/site-config/testimonials/protocols/themes rewritten for MediVasc; 4 real recovery stories (story-001 featured, leg-color lightening noted per owner); 16 protocols across disease/elderly; run-1 placeholder quotes deleted; run-1 protocols+testimonials archived in `data/archive/`. All JSON parses. |
+| 2026-07-12 | 3 | Public site v2 | Trust-first narrative per Addendum A (hero → recoveries → approach with verbatim motto → conditions list → act-today band → fraternity → about → contact). `npm run build` exit 0; body 18px computed at 4 viewport/mode combos; zero console errors; zero "sequential", "Naviga Life", product, catalogue, or sports strings in dist; rendered screenshots reviewed desktop+mobile, light+dark. |
+| 2026-07-12 | 4 | Admin v2 | Passcode vault (PBKDF2-SHA-256 600k → AES-GCM; plain PAT never persisted; passcode-only unlock after reload; forget-device wipe), login theme toggle fixed (site tokens scoped to app view), Recoveries creation flow with Before/During/After 4:5 slots + featured uniqueness, protocols limited to two tracks, products preserved with archive notice, appearance rebuilt. 22/22 browser flow checks passed against a mocked GitHub API; no console errors. |
+| 2026-07-12 | 5 | Ship | README/AGENTS/PROGRESS updated; merged to `main`; workflow deploy verified live (see advisor review 002). |
+
 # PROGRESS — Spec 001 (initial site)
 
 > Executor: update at EVERY checkpoint, and before ending any session.

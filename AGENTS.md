@@ -1,4 +1,4 @@
-# AGENTS.md — Naviga Life website (navigalife.github.io)
+# AGENTS.md — MediVasc website (navigalife.github.io)
 
 You are the **executor** on this repo. The architecture, design system, and
 acceptance criteria were set by the advisor (a principal engineer). Your job is
@@ -6,19 +6,35 @@ faithful, high-craft implementation — not re-architecture. If a spec decision
 proves impossible, STOP, record the blocker in `PROGRESS.md`, and end the
 session cleanly; do not improvise around architectural decisions.
 
+The company is **MediVasc** (renamed from Naviga Life in run 2). Mission:
+prevention of foot and leg amputation; customized, affordable home therapy
+protocols with follow-up until the desired result. Products are archived from
+the public site (`productsEnabled: false` in `data/site-config.json`) — the
+data and admin tab remain, but nothing product-related may render publicly.
+
 ## Session start ritual (every session, no exceptions)
 
 1. Read this file fully.
 2. Read `PROGRESS.md` — it tells you the current phase and exact next step.
-3. Read ONLY the current phase's section of `docs/specs/001-initial-site.md`
+3. Read ONLY the current phase's section of the active spec in `docs/specs/`
    (plus §Design System and §Constraints if the phase touches UI). Do not
    re-read completed phases or paste large scraped files into context.
-4. Confirm you are on branch `codex/001-initial-site`. Never commit to `main`.
+4. Confirm you are on the run's work branch (`codex/<spec>-<slug>` or the
+   branch PROGRESS.md names). Never commit to `main`.
 
 ## Hard rules
 
-- **Branch**: all work on `codex/001-initial-site`. `main` deploys to GitHub
-  Pages — merging is the human's decision after advisor review.
+- **Branch**: never commit to `main` — it deploys to GitHub Pages; merging is
+  the human's decision after advisor review.
+- **Patient evidence**: photographs may be cropped, rotated, tonally
+  normalized, and metadata-stripped — never generated or generatively edited.
+  No fabricated testimonials, names, or quotes. "Identity protected" is the
+  placeholder for withheld names.
+- **Owner copy anchors**: the motto "A solution is not a solution unless it
+  is affordable" appears verbatim; the string "sequential compression" must
+  not appear in rendered output (`owner-assets/` docs are the source of
+  truth for owner-authored copy). `owner-assets/` is gitignored — never ship
+  raw owner files.
 - **No IndiaMart fingerprints** in anything shipped: no "indiamart"/"imimg"
   strings in code, data, filenames, alt text, or metadata; no verbatim copied
   descriptions (rewrite all copy); strip EXIF from every shipped image. The
