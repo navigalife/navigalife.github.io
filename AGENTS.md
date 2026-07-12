@@ -65,4 +65,21 @@ footer disclaimer specified in the spec.
 
 ## Lessons (advisor appends after each review)
 
-_(none yet — first run pending)_
+From run 1 (spec 001, signed off 2026-07-12):
+
+1. **Staged assets need an explicit lifecycle state machine.** Session-staged
+   uploads and base-tree files are different states with different delete
+   semantics; treating them uniformly produced invalid `sha:null` tombstones
+   at four call sites. When a feature holds "pending" objects, write down the
+   states and legal transitions before coding the handlers.
+2. **Markup/CSS drift is invisible to static checks.** The theme-preview mocks
+   shipped broken through multiple static-clean checkpoints because the CSS
+   targeted an element the markup never emitted. Any claim about a UI
+   component requires a rendered screenshot of that component in the real
+   page context (real stylesheet, real tokens) — `node --check`, builds, and
+   grep prove nothing about pixels.
+3. **Verification screenshots must come from the real page context.** A
+   harness render that omits the app's `:root` tokens produces convincing
+   but wrong evidence (non-token backdrop colors leaked into run 1's punch
+   verification). If a harness is unavoidable, it must load the full real
+   stylesheet and state the context it fakes.
