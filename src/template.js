@@ -163,9 +163,9 @@ const renderPage = ({
     .split(/\n\n+/)
     .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
     .join('');
-  const mark = (context) => `<span class="mark" aria-hidden="true">
-    <img class="mark--ink" src="${markPaths.ink}" alt="" width="44" height="44" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
-    <img class="mark--paper" src="${markPaths.paper}" alt="" width="44" height="44" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
+  const lockup = (context) => `<span class="lockup" aria-hidden="true">
+    <img class="lockup--ink" src="${markPaths.ink}" alt="" width="384" height="193" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
+    <img class="lockup--paper" src="${markPaths.paper}" alt="" width="384" height="193" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
   </span>`;
 
   return `<!doctype html>
@@ -206,7 +206,7 @@ const renderPage = ({
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header" data-header>
     <div class="container header-inner">
-      <a class="wordmark" href="#top" aria-label="MediVasc home">${mark('header')}<span class="wordmark__text" aria-hidden="true">MediVasc</span></a>
+      <a class="wordmark" href="#top" aria-label="MediVasc home">${lockup('header')}</a>
       <button class="icon-button menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-menu-toggle><span class="sr-only">Open navigation</span>${icon('menu')}</button>
       <nav class="site-nav" id="site-nav" aria-label="Main navigation" data-nav>
         <a href="#recoveries">Recoveries</a>
@@ -283,7 +283,7 @@ const renderPage = ({
           <li data-reveal style="--reveal-order:3"><span>04</span><div><h3>Follow-ups until the result</h3><p>We stay in touch at predefined regular intervals, monitor progress, take your feedback, and change the modalities if required — until the desired result is achieved.</p></div></li>
         </ol>
         <aside class="motto" data-reveal>
-          <p class="motto__line">“A solution is not a solution unless it is affordable”</p>
+          <p class="motto__line">A solution is not a solution unless it is affordable</p>
           <p>That is our motto, and we mean it literally. The solutions are designed not to pinch the pockets of patients and families already struggling with rising medical expenses.</p>
         </aside>
       </div>
@@ -365,7 +365,7 @@ const renderPage = ({
 
   <footer class="site-footer">
     <div class="container footer__top">
-      <span class="footer-brand">${mark('footer')}<span class="footer-wordmark" aria-label="MediVasc">MediVasc</span></span>
+      <span class="footer-brand">${lockup('footer')}<span class="sr-only">MediVasc</span></span>
       <p>${escapeHtml(company.tagline)}</p>
       <nav aria-label="Footer navigation"><a href="#recoveries">Recoveries</a><a href="#approach">Approach</a><a href="#conditions">Conditions</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
     </div>

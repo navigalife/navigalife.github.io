@@ -68,9 +68,9 @@ const buildImageMap = async (testimonials) => {
   return Object.fromEntries(entries);
 };
 
-const prepareMark = async (name) => {
+const prepareMark = async (name, width = 128) => {
   const buffer = await sharp(path.join(ROOT, 'assets', 'brand', `${name}.png`))
-    .resize({ width: 128, withoutEnlargement: true })
+    .resize({ width, withoutEnlargement: true })
     .png({ compressionLevel: 9 })
     .toBuffer();
   return writeHashed('assets/brand', name, 'png', buffer);
@@ -95,8 +95,8 @@ const copyBrandAssets = async () => {
   );
   const [ogImage, ink, paper] = await Promise.all([
     processImage('assets/brand/og-image.png'),
-    prepareMark('mark-ink'),
-    prepareMark('mark-paper'),
+    prepareMark('logo-ink', 384),
+    prepareMark('logo-paper', 384),
   ]);
   return { ogImage: ogImage.original, markPaths: { ink, paper } };
 };
@@ -128,10 +128,9 @@ h1{max-width:14ch;margin-bottom:28px;font-size:clamp(2.75rem,6.5vw,4.25rem)}
 .container{width:min(100% - 40px,1240px);margin-inline:auto}
 .site-header{position:sticky;z-index:50;top:0;border-bottom:1px solid var(--line);background:var(--bg)}
 .header-inner{display:grid;grid-template-columns:auto 1fr auto;min-height:84px;align-items:center;gap:32px}
-.wordmark{display:inline-flex;min-height:44px;align-items:center;gap:12px;text-decoration:none}
-.mark{display:inline-grid;width:44px;height:44px;place-items:center}.mark img{width:100%;height:100%;object-fit:contain}.mark--paper{display:none}
-[data-theme="dark"] .mark--ink{display:none}[data-theme="dark"] .mark--paper{display:block}
-.wordmark__text{font-family:"Fraunces",Georgia,serif;font-size:1.8rem;font-weight:600;letter-spacing:-.035em}
+.wordmark{display:inline-flex;min-height:44px;align-items:center;text-decoration:none}
+.lockup{display:inline-flex;align-items:center}.lockup img{width:auto;height:48px}.lockup--paper{display:none}
+[data-theme="dark"] .lockup--ink{display:none}[data-theme="dark"] .lockup--paper{display:block}
 .site-nav{display:flex;align-items:center;justify-content:center;gap:26px}.header-actions{display:flex;align-items:center;gap:12px}.menu-toggle{display:none}
 .kicker{margin-bottom:14px;color:var(--accent);font-size:.875rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
 .hero{padding-block:clamp(3rem,6vw,5.5rem) clamp(3.5rem,7vw,6rem)}

@@ -22,7 +22,7 @@ management are preserved for a possible return).
    commit, updating the branch ref only after every blob and tree is ready.
 6. `tools/prepare-evidence.js` and `tools/prepare-brand.js` are the one-off,
    documented pipelines that produced the patient-evidence WebPs and the brand
-   set from owner-supplied originals. `tools/prepare-og.js` renders the OG
+   set from owner-supplied originals. `tools/gen-brand.js` renders header lockups and the OG
    image with the real fonts.
 7. `tools/gen-pdfs.js` exits successfully without output while
    `productsEnabled` is false.
