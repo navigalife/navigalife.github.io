@@ -99,3 +99,18 @@ From run 1 (spec 001, signed off 2026-07-12):
    but wrong evidence (non-token backdrop colors leaked into run 1's punch
    verification). If a harness is unavoidable, it must load the full real
    stylesheet and state the context it fakes.
+
+From run 2 (spec 002, advisor-implemented, signed off 2026-07-12):
+
+4. **Brand/copy scrubs must cover rendered image assets, not just strings.**
+   The banned phrase survived inside the run-1 OG PNG after every text grep
+   came back clean. When a rule says "X must not appear anywhere", inspect
+   every shipped raster/SVG that carries text (OG images, icons, PDFs).
+5. **Scope runtime theme tokens to the subtree they style.** Writing token
+   overrides inline on `documentElement` pinned the admin login screen's
+   colors after logout and made its theme toggle appear dead (run-1 bug).
+   Dynamic tokens belong on the app view element, never the document root.
+6. **Escape `-` in HTML `pattern` character classes.** Current Chrome
+   compiles `pattern` with the stricter `/v` regex flag; an unescaped
+   trailing hyphen throws (console-only) and silently disables native form
+   validation.
