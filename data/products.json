@@ -1,62 +1,9 @@
 [
   {
-    "id": "kl-3000-pro-neo",
-    "sourceId": "2858790880862",
-    "name": "KL 3000 Pro Neo Limb Therapy System",
-    "tagline": "Six-chamber support for limb swelling and compromised circulation",
-    "category": "Sequential Compression Devices",
-    "model": "KL 3000 Pro Neo",
-    "description": "The KL 3000 Pro Neo provides adjustable sequential compression for the arms or legs. Its six-chamber garments support care plans for limb swelling, lymphedema, and circulation concerns associated with diabetic foot and gangrene risk. The LCD interface is designed for clear pressure and cycle setup.",
-    "conditions": [
-      "Lymphedema",
-      "Diabetic foot",
-      "Limb swelling",
-      "Compromised circulation"
-    ],
-    "images": [
-      "assets/products/kl-3000-pro-neo/01.webp"
-    ],
-    "specs": [
-      {
-        "key": "Application",
-        "value": "Arms and legs",
-        "visible": true
-      },
-      {
-        "key": "Chambers",
-        "value": "6 chambers",
-        "visible": true
-      },
-      {
-        "key": "Pressure range",
-        "value": "30–240 mmHg",
-        "visible": true
-      },
-      {
-        "key": "Cycle time",
-        "value": "30–45 minutes",
-        "visible": true
-      },
-      {
-        "key": "Display",
-        "value": "LCD",
-        "visible": true
-      },
-      {
-        "key": "Cuff sizes",
-        "value": "L and XL",
-        "visible": true
-      }
-    ],
-    "catalogue": true,
-    "featured": true,
-    "visible": true
-  },
-  {
     "id": "venogain-scd-500",
     "sourceId": "2858911675473",
     "name": "VenoGain SCD 500",
-    "tagline": "Sequential compression for DVT prevention and lymphedema care for guided home routines",
+    "tagline": "Sequential compression for DVT prevention and lymphedema care",
     "category": "DVT Pumps",
     "model": "SCD 500",
     "description": "The VenoGain SCD 500 delivers sequential pneumatic compression through a full-leg, four-chamber garment. It is designed for deep vein thrombosis prevention and lymphedema care in operating theatre, intensive care, and supervised home settings. Three timer options support treatment plans of different lengths.",
@@ -102,6 +49,59 @@
       {
         "key": "Use settings",
         "value": "OT, ICU, and home care",
+        "visible": true
+      }
+    ],
+    "catalogue": true,
+    "featured": true,
+    "visible": true
+  },
+  {
+    "id": "kl-3000-pro-neo",
+    "sourceId": "2858790880862",
+    "name": "KL 3000 Pro Neo Limb Therapy System",
+    "tagline": "Six-chamber support for limb swelling and compromised circulation",
+    "category": "Sequential Compression Devices",
+    "model": "KL 3000 Pro Neo",
+    "description": "The KL 3000 Pro Neo provides adjustable sequential compression for the arms or legs. Its six-chamber garments support care plans for limb swelling, lymphedema, and circulation concerns associated with diabetic foot and gangrene risk. The LCD interface is designed for clear pressure and cycle setup.",
+    "conditions": [
+      "Lymphedema",
+      "Diabetic foot",
+      "Limb swelling",
+      "Compromised circulation"
+    ],
+    "images": [
+      "assets/products/kl-3000-pro-neo/01.webp"
+    ],
+    "specs": [
+      {
+        "key": "Application",
+        "value": "Arms and legs",
+        "visible": true
+      },
+      {
+        "key": "Chambers",
+        "value": "6 chambers",
+        "visible": true
+      },
+      {
+        "key": "Pressure range",
+        "value": "30–240 mmHg",
+        "visible": true
+      },
+      {
+        "key": "Cycle time",
+        "value": "30–45 minutes",
+        "visible": true
+      },
+      {
+        "key": "Display",
+        "value": "LCD",
+        "visible": true
+      },
+      {
+        "key": "Cuff sizes",
+        "value": "L and XL",
         "visible": true
       }
     ],
