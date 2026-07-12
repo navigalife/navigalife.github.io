@@ -1,11 +1,12 @@
 import { ApiError, AuthError, BranchConflictError, GhApi } from './gh-api.js';
 import { blobToBase64, cropEvidenceImage, resizeProductImage } from './image-tools.js';
+import { createVault, forgetVault, unlockVault, vaultExists } from './vault.js';
 
 const OWNER = 'navigalife';
 const REPO = 'navigalife.github.io';
-const TOKEN_SESSION_KEY = 'naviga-admin-token-session';
-const TOKEN_LOCAL_KEY = 'naviga-admin-token-local';
-const BRANCH_KEY = 'naviga-admin-branch';
+const TOKEN_SESSION_KEY = 'medivasc-admin-token-session';
+const BRANCH_KEY = 'medivasc-admin-branch';
+const COLOR_KEY = 'medivasc-admin-color-mode';
 const FILES = {
   products: 'data/products.json',
   protocols: 'data/protocols.json',
@@ -14,6 +15,22 @@ const FILES = {
   config: 'data/site-config.json',
   themes: 'data/themes.json',
 };
+const STAGES = [
+  { key: 'before', label: 'Before therapy' },
+  { key: 'during', label: 'During therapy' },
+  { key: 'after', label: 'After therapy' },
+];
+
+// One-time migration off run-1 storage: keep the chosen color mode, drop
+// every legacy key (including any plain-text token from the old remember box).
+(() => {
+  const legacyMode = localStorage.getItem('naviga-admin-color-mode');
+  if (legacyMode && !localStorage.getItem(COLOR_KEY)) localStorage.setItem(COLOR_KEY, legacyMode);
+  for (const key of ['naviga-admin-token-local', 'naviga-admin-branch', 'naviga-admin-color-mode']) {
+    localStorage.removeItem(key);
+  }
+  sessionStorage.removeItem('naviga-admin-token-session');
+})();
 
 const state = {
   api: null,
@@ -23,7 +40,7 @@ const state = {
   dirty: new Set(),
   assetChanges: new Map(),
   assetPreviews: new Map(),
-  activeTab: 'products',
+  activeTab: 'testimonials',
   editor: null,
   loaded: false,
   publishing: false,
@@ -31,13 +48,17 @@ const state = {
 
 const authView = document.querySelector('#auth-view');
 const appView = document.querySelector('#app-view');
-const authForm = document.querySelector('#auth-form');
-const tokenInput = document.querySelector('#token-input');
-const branchInput = document.querySelector('#branch-input');
-const rememberInput = document.querySelector('#remember-input');
-const storageWarning = document.querySelector('#storage-warning');
+const setupForm = document.querySelector('#setup-form');
+const unlockForm = document.querySelector('#unlock-form');
+const setupToken = document.querySelector('#setup-token');
+const setupBranch = document.querySelector('#setup-branch');
+const setupPasscode = document.querySelector('#setup-passcode');
+const setupPasscodeConfirm = document.querySelector('#setup-passcode-confirm');
+const setupButton = document.querySelector('#setup-button');
+const unlockPasscode = document.querySelector('#unlock-passcode');
+const unlockButton = document.querySelector('#unlock-button');
+const forgetButton = document.querySelector('#forget-button');
 const authStatus = document.querySelector('#auth-status');
-const connectButton = document.querySelector('#connect-button');
 const loadingState = document.querySelector('#loading-state');
 const editorRoot = document.querySelector('#editor-root');
 const tabNav = document.querySelector('#tab-nav');
@@ -58,26 +79,38 @@ const h = (value = '') => String(value)
 
 const deepClone = (value) => structuredClone(value);
 const lines = (value) => String(value || '').split('\n').map((item) => item.trim()).filter(Boolean);
-const slugify = (value) => String(value || '').toLowerCase().trim()
-  .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
 const icon = (name) => {
   const paths = {
     up: '<path d="m7 14 5-5 5 5"/>',
     down: '<path d="m7 10 5 5 5-5"/>',
-    edit: '<path d="m4 20 4.2-1 10.6-10.6a2 2 0 0 0-2.8-2.8L5.4 16.2 4 20Z"/><path d="m14.5 7.1 2.8 2.8"/>',
     trash: '<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>',
     eye: '<path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/>',
-    hidden: '<path d="m3 3 18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6 0 9.5 6 9.5 6a18 18 0 0 1-2.6 3.2M6.2 6.2C3.8 8 2.5 12 2.5 12s3.5 6 9.5 6c1.2 0 2.3-.2 3.3-.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
     copy: '<rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
   };
   return '<svg viewBox="0 0 24 24" aria-hidden="true">' + paths[name] + '</svg>';
 };
 
+const stageKeyOf = (image) => STAGES.find((stage) => stage.label === image.stage)?.key || null;
+const imageForStage = (testimonial, key) => (testimonial.images || []).find((image) => stageKeyOf(image) === key);
+
+/* Site-theme tokens apply only inside the app view, so the login screen always
+ * uses the admin's own palette and its toggle works before any repo loads. */
+const applyThemeTokens = () => {
+  if (!state.loaded) return;
+  const selected = state.draft.themes.find((theme) => theme.id === state.draft.config.theme);
+  if (!selected) return;
+  const mode = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  for (const [token, value] of Object.entries(selected[mode])) {
+    appView.style.setProperty(token, value);
+  }
+};
+
 const setColorMode = (mode) => {
   document.documentElement.dataset.theme = mode;
-  localStorage.setItem('naviga-admin-color-mode', mode);
+  localStorage.setItem(COLOR_KEY, mode);
   applyThemeTokens();
+  render();
 };
 
 const toggleColorMode = () => {
@@ -99,25 +132,20 @@ const clearStatus = () => {
   publishStatus.replaceChildren();
 };
 
-const storeToken = (token, remember) => {
-  sessionStorage.setItem(TOKEN_SESSION_KEY, token);
-  if (remember) localStorage.setItem(TOKEN_LOCAL_KEY, token);
-  else localStorage.removeItem(TOKEN_LOCAL_KEY);
-};
-
-const clearTokens = () => {
-  sessionStorage.removeItem(TOKEN_SESSION_KEY);
-  localStorage.removeItem(TOKEN_LOCAL_KEY);
-};
-
-const currentToken = () => sessionStorage.getItem(TOKEN_SESSION_KEY) || localStorage.getItem(TOKEN_LOCAL_KEY) || '';
+const sessionToken = () => sessionStorage.getItem(TOKEN_SESSION_KEY) || '';
 
 const showAuth = (message = '') => {
   authView.hidden = false;
   appView.hidden = true;
-  tokenInput.value = '';
+  const hasVault = vaultExists();
+  setupForm.hidden = hasVault;
+  unlockForm.hidden = !hasVault;
+  unlockPasscode.value = '';
+  setupToken.value = '';
+  setupPasscode.value = '';
+  setupPasscodeConfirm.value = '';
   setAuthStatus(message);
-  tokenInput.focus();
+  (hasVault ? unlockPasscode : setupToken).focus();
 };
 
 const showApp = () => {
@@ -148,8 +176,8 @@ const loadRepository = async () => {
   renderUnsaved();
 };
 
-const authenticate = async (token, remember, branch) => {
-  connectButton.disabled = true;
+const connect = async (token, branch, { busyButton, onAuthFailure }) => {
+  busyButton.disabled = true;
   setAuthStatus('Validating repository access…');
   const api = new GhApi({ token, owner: OWNER, repo: REPO, branch });
   try {
@@ -158,16 +186,18 @@ const authenticate = async (token, remember, branch) => {
     state.api = api;
     state.branch = branch;
     localStorage.setItem(BRANCH_KEY, branch);
-    storeToken(token, remember);
+    sessionStorage.setItem(TOKEN_SESSION_KEY, token);
     showApp();
     if (!canResumeDraft) await loadRepository();
     else render();
     setAuthStatus('');
+    return true;
   } catch (error) {
     setAuthStatus(error.message);
-    showAuth(error.message);
+    if (onAuthFailure) onAuthFailure(error);
+    return false;
   } finally {
-    connectButton.disabled = false;
+    busyButton.disabled = false;
   }
 };
 
@@ -186,16 +216,6 @@ const renderUnsaved = () => {
   barPublishButton.disabled = !isDirty || state.publishing;
 };
 
-const applyThemeTokens = () => {
-  if (!state.loaded) return;
-  const selected = state.draft.themes.find((theme) => theme.id === state.draft.config.theme);
-  if (!selected) return;
-  const mode = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
-  for (const [token, value] of Object.entries(selected[mode])) {
-    document.documentElement.style.setProperty(token, value);
-  }
-};
-
 const rowActions = (kind, index, length, canToggle = true) => '<div class="row-actions">' +
   '<button class="row-action" type="button" data-action="move" data-kind="' + kind + '" data-index="' + index + '" data-direction="-1" aria-label="Move up" ' + (index === 0 ? 'disabled' : '') + '>' + icon('up') + '</button>' +
   '<button class="row-action" type="button" data-action="move" data-kind="' + kind + '" data-index="' + index + '" data-direction="1" aria-label="Move down" ' + (index === length - 1 ? 'disabled' : '') + '>' + icon('down') + '</button>' +
@@ -204,11 +224,11 @@ const rowActions = (kind, index, length, canToggle = true) => '<div class="row-a
   '<button class="row-action" type="button" data-action="delete" data-kind="' + kind + '" data-index="' + index + '" aria-label="Delete">' + icon('trash') + '</button>' +
   '</div>';
 
-const listPage = (kind, title, description, rows) => {
-  const label = kind === 'testimonials' ? 'testimonial' : kind.slice(0, -1);
+const listPage = (kind, title, description, rows, options = {}) => {
+  const label = options.itemLabel || kind.slice(0, -1);
   const content = rows.length ? '<div class="list-table" data-testid="' + kind + '-list"><div class="list-head"><span>Name</span><span>Type</span><span>Status</span><span>Actions</span></div>' + rows.join('') + '</div>' :
-    '<div class="empty-state"><h2>No ' + h(kind) + ' yet</h2><p>Add the first ' + h(label) + ' to begin.</p><button class="button button--primary" type="button" data-action="add" data-kind="' + kind + '">Add ' + h(label) + '</button></div>';
-  return '<section><div class="section-toolbar"><div><h1>' + h(title) + '</h1><p>' + h(description) + '</p></div><button class="button button--primary" type="button" data-action="add" data-kind="' + kind + '">Add ' + h(label) + '</button></div>' + content + '</section>';
+    '<div class="empty-state"><h2>Nothing here yet</h2><p>Add the first ' + h(label) + ' to begin.</p><button class="button button--primary" type="button" data-action="add" data-kind="' + kind + '">Add ' + h(label) + '</button></div>';
+  return '<section><div class="section-toolbar"><div><h1>' + h(title) + '</h1><p>' + h(description) + '</p></div><button class="button button--primary" type="button" data-action="add" data-kind="' + kind + '">Add ' + h(label) + '</button></div>' + (options.notice || '') + content + '</section>';
 };
 
 const renderProductsList = () => {
@@ -218,44 +238,39 @@ const renderProductsList = () => {
     '<div class="row-meta">' + h(product.category) + '</div>' +
     '<div class="status-badges"><span class="badge ' + (product.visible ? 'badge--active' : '') + '">' + (product.visible ? 'Visible' : 'Hidden') + '</span>' + (product.featured ? '<span class="badge">Featured</span>' : '') + '</div>' +
     rowActions('products', index, items.length) + '</div>');
-  return listPage('products', 'Products', 'Edit device details, specifications, images, order, and visibility.', rows);
+  return listPage('products', 'Products', 'Device details, specifications, images, order, and visibility.', rows, {
+    notice: '<div class="notice">Products are currently archived from the public site. Everything here is preserved and still publishes to the data files, but nothing renders publicly until products return.</div>',
+  });
 };
+
+const audienceLabel = (audience) => (audience === 'elderly' ? 'Bedridden & elderly' : 'Disease-specific');
 
 const renderProtocolsList = () => {
   const items = state.draft.protocols;
   const rows = items.map((protocol, index) => '<div class="list-row" data-testid="protocol-row">' +
     '<div class="row-title"><strong>' + h(protocol.condition) + '</strong><span>' + h(protocol.id) + '</span></div>' +
-    '<div class="row-meta">' + h(protocol.audience) + ' · ' + protocol.deviceIds.length + ' devices</div>' +
+    '<div class="row-meta">' + h(audienceLabel(protocol.audience)) + '</div>' +
     '<div class="status-badges"><span class="badge ' + (protocol.visible ? 'badge--active' : '') + '">' + (protocol.visible ? 'Visible' : 'Hidden') + '</span>' + (protocol.draft ? '<span class="badge badge--draft">Draft</span>' : '') + '</div>' +
     rowActions('protocols', index, items.length) + '</div>');
-  return listPage('protocols', 'Protocols', 'Manage audience pathways, engagement steps, related devices, and draft status.', rows);
+  return listPage('protocols', 'Protocols', 'The public site lists each protocol’s condition, grouped by track. Summaries stay internal.', rows);
+};
+
+const storyTypeLabel = (testimonial) => {
+  const count = (testimonial.images || []).length;
+  if (count >= 3) return '3-stage journey';
+  if (count === 2) return 'Before & after';
+  return 'Quote';
 };
 
 const renderTestimonialsList = () => {
   const items = state.draft.testimonials;
   const rows = items.map((testimonial, index) => '<div class="list-row" data-testid="testimonial-row">' +
-    '<div class="row-title"><strong>' + h(testimonial.name) + '</strong><span>' + h(testimonial.id) + '</span></div>' +
-    '<div class="row-meta">' + h(testimonial.type === 'before-after' ? 'Before / after' : 'Quote') + ' · ' + h(testimonial.location) + '</div>' +
-    '<div class="status-badges">' + (testimonial.placeholder ? '<span class="badge badge--draft">Placeholder</span>' : '<span class="badge badge--active">Verified</span>') + '</div>' +
+    '<div class="row-title"><strong>' + h(testimonial.name) + '</strong><span>' + h(testimonial.condition) + '</span></div>' +
+    '<div class="row-meta">' + h(storyTypeLabel(testimonial)) + ' · ' + h(testimonial.location) + '</div>' +
+    '<div class="status-badges">' + (testimonial.featured ? '<span class="badge badge--active">Featured</span>' : '') + ((testimonial.images || []).length ? '<span class="badge">Photographs</span>' : '') + '</div>' +
     rowActions('testimonials', index, items.length, false) + '</div>');
-  return listPage('testimonials', 'Testimonials', 'Publish quotes or real 4:5 before-and-after evidence pairs.', rows);
+  return listPage('testimonials', 'Recoveries', 'Real patient stories with photographic evidence and the clinical remark shown on each card.', rows, { itemLabel: 'recovery story' });
 };
-
-const productPrompt = (name) => [
-  'Use case: product-mockup',
-  'Asset type: medical-device catalogue and website product image',
-  'Input images: Image 1 is the edit target and exact product reference',
-  'Primary request: Restyle Image 1 as a clean studio product photograph of ' + (name || '{PRODUCT_NAME}') + '.',
-  'Device integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.',
-  '',
-  'Style/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.',
-  'Scene/backdrop: seamless warm off-white #F6F4EF studio background; the device rests on a low matte plinth in the same warm neutral family.',
-  'Composition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.',
-  'Lighting/mood: soft diffused key light from the upper left; quiet clinical warmth; controlled natural shadow; shallow depth of field while every functional device detail remains legible.',
-  'Color palette: muted clinical neutrals with restrained deep-teal accents echoing #0E6B63; accurate product colorway takes priority.',
-  'Materials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.',
-  'Constraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.',
-].join('\n');
 
 const defaultProduct = () => ({
   id: '',
@@ -278,12 +293,12 @@ const defaultProtocol = () => ({
   audience: 'disease',
   summary: '',
   engagement: [
-    'Assessment of the condition, current care plan, and home-use needs',
-    'Device and garment selection matched to the individual case',
-    'Guided home-use sessions under expert guidance',
-    'Review and adjustment based on progress and practical fit',
+    'Detailed case study of the condition, history, and current treatment',
+    'Customized, affordable protocol designed around the individual case',
+    'Guided therapy with expert supervision, at home wherever possible',
+    'Regular follow-ups until the desired result is achieved',
   ],
-  durationNote: '30–90 days, case to case',
+  durationNote: 'Customized case to case',
   deviceIds: [],
   visible: true,
   draft: true,
@@ -291,12 +306,14 @@ const defaultProtocol = () => ({
 
 const defaultTestimonial = () => ({
   id: '',
-  type: 'quote',
+  featured: false,
   name: '',
   location: '',
+  condition: '',
+  duration: '',
+  remark: '',
   quote: '',
-  context: '',
-  placeholder: true,
+  images: [],
 });
 
 const editorHeading = (kicker, title) => '<div class="editor-header"><div><p class="auth-kicker">' + h(kicker) + '</p><h1>' + h(title) + '</h1></div><button class="button button--quiet" type="button" data-action="back">Back to list</button></div>';
@@ -306,6 +323,22 @@ const imagePreview = (path, evidence = false) => {
   if (preview) return '<div class="image-preview ' + (evidence ? 'image-preview--evidence' : '') + '"><img src="' + h(preview) + '" alt=""></div>';
   return '<div class="image-preview ' + (evidence ? 'image-preview--evidence' : '') + '"><span class="help">Stored in repository</span></div>';
 };
+
+const productPrompt = (name) => [
+  'Use case: product-mockup',
+  'Asset type: medical-device catalogue and website product image',
+  'Input images: Image 1 is the edit target and exact product reference',
+  'Primary request: Restyle Image 1 as a clean studio product photograph of ' + (name || '{PRODUCT_NAME}') + '.',
+  'Device integrity: Keep this exact device. Preserve its shape, proportions, enclosure, controls, display, ports, tubing, cables, garments, attachments, materials, and colorway. Do not redesign, simplify, add, remove, relocate, or substitute any functional part. Change only the photographic setting, lighting, camera presentation, and removal of visible branding or text.',
+  '',
+  'Style/medium: restrained, photorealistic studio product photography for a trusted medical-device catalogue.',
+  'Scene/backdrop: seamless cool off-white #F5F8F9 studio background; the device rests on a low matte plinth in the same neutral family.',
+  'Composition/framing: slight three-quarter hero angle; complete device and all necessary tubing or garments visible; centered visual balance; generous safe space; 3:2 landscape aspect ratio.',
+  'Lighting/mood: soft diffused key light from the upper left; quiet clinical calm; controlled natural shadow; shallow depth of field while every functional device detail remains legible.',
+  'Color palette: muted clinical neutrals with restrained deep teal-blue accents echoing #0E5F76; accurate product colorway takes priority.',
+  'Materials/textures: truthful medical-grade plastics, fabric, tubing, and matte surfaces; realistic edges and contact shadows.',
+  'Constraints: no people; no hands; no text; no letters; no numbers; no logos; no trademarks; no watermark; no certification seal; no extra props; no packaging; no dramatic reflections; no gradient wash; no floating parts. Preserve product identity and functional geometry exactly.',
+].join('\n');
 
 const renderProductEditor = () => {
   const product = state.editor.buffer;
@@ -324,7 +357,7 @@ const renderProductEditor = () => {
   return '<section class="editor-shell" data-testid="product-editor">' + editorHeading(isNew ? 'New product' : 'Edit product', product.name || 'Untitled product') +
     '<form id="product-form"><div class="editor-grid">' +
     '<label>Product name<input name="name" value="' + h(product.name) + '" required></label>' +
-    '<label>Immutable slug<input name="id" value="' + h(product.id) + '" pattern="[a-z0-9-]+" required ' + (isNew && !hasStagedProductImage ? '' : 'readonly') + '><span class="field-help">' + (hasStagedProductImage ? 'Remove staged uploads before changing this slug.' : 'Lowercase letters, numbers, and hyphens.') + '</span></label>' +
+    '<label>Immutable slug<input name="id" value="' + h(product.id) + '" pattern="[a-z0-9\\-]+" required ' + (isNew && !hasStagedProductImage ? '' : 'readonly') + '><span class="field-help">' + (hasStagedProductImage ? 'Remove staged uploads before changing this slug.' : 'Lowercase letters, numbers, and hyphens.') + '</span></label>' +
     '<label>Tagline<input name="tagline" value="' + h(product.tagline) + '" required></label>' +
     '<label>Category<input name="category" value="' + h(product.category) + '" required></label>' +
     '<label>Model<input name="model" value="' + h(product.model || '') + '"></label>' +
@@ -342,41 +375,46 @@ const renderProductEditor = () => {
 const renderProtocolEditor = () => {
   const protocol = state.editor.buffer;
   const isNew = state.editor.index < 0;
-  const devices = state.draft.products.map((product) => '<label><input type="checkbox" name="deviceIds" value="' + h(product.id) + '" ' + (protocol.deviceIds.includes(product.id) ? 'checked' : '') + '><span>' + h(product.name) + '</span></label>').join('');
   return '<section class="editor-shell" data-testid="protocol-editor">' + editorHeading(isNew ? 'New protocol' : 'Edit protocol', protocol.condition || 'Untitled protocol') +
     '<div class="notice notice--warning">Keep protocol copy at the service level. Do not invent pressures, frequencies, session counts, or week-by-week regimens.</div>' +
     '<form id="protocol-form"><div class="editor-grid">' +
-    '<label>Condition or pathway<input name="condition" value="' + h(protocol.condition) + '" required></label>' +
-    '<label>Immutable slug<input name="id" value="' + h(protocol.id) + '" pattern="[a-z0-9-]+" required ' + (isNew ? '' : 'readonly') + '></label>' +
-    '<label>Audience<select name="audience"><option value="disease" ' + (protocol.audience === 'disease' ? 'selected' : '') + '>Disease-specific care</option><option value="wellbeing" ' + (protocol.audience === 'wellbeing' ? 'selected' : '') + '>Elderly wellbeing</option><option value="sports" ' + (protocol.audience === 'sports' ? 'selected' : '') + '>Sports recovery</option></select></label>' +
+    '<label>Condition or pathway<input name="condition" value="' + h(protocol.condition) + '" required><span class="field-help">This is the only text shown publicly, as one line in the conditions list.</span></label>' +
+    '<label>Immutable slug<input name="id" value="' + h(protocol.id) + '" pattern="[a-z0-9\\-]+" required ' + (isNew ? '' : 'readonly') + '></label>' +
+    '<label>Track<select name="audience"><option value="disease" ' + (protocol.audience === 'disease' ? 'selected' : '') + '>Disease-specific protocols</option><option value="elderly" ' + (protocol.audience === 'elderly' ? 'selected' : '') + '>Bedridden and elderly care</option></select></label>' +
     '<label>Duration note<input name="durationNote" value="' + h(protocol.durationNote) + '" required></label>' +
-    '<label class="field--full">Summary<textarea name="summary" required>' + h(protocol.summary) + '</textarea></label>' +
-    '<label class="field--full">Engagement steps<textarea name="engagement" required>' + h(protocol.engagement.join('\n')) + '</textarea><span class="field-help">One step per line.</span></label>' +
-    '<div class="field-group"><div class="field-group__heading"><div><h2>Related devices</h2><p>Choose every device that may support this pathway.</p></div></div><div class="device-select">' + devices + '</div></div>' +
+    '<label class="field--full">Summary (internal)<textarea name="summary" required>' + h(protocol.summary) + '</textarea></label>' +
+    '<label class="field--full">Engagement steps (internal)<textarea name="engagement" required>' + h(protocol.engagement.join('\n')) + '</textarea><span class="field-help">One step per line.</span></label>' +
     '<div class="field-group"><div class="inline-fields"><label class="checkbox-row"><input name="visible" type="checkbox" ' + (protocol.visible ? 'checked' : '') + '><span>Visible</span></label><label class="checkbox-row"><input name="draft" type="checkbox" ' + (protocol.draft ? 'checked' : '') + '><span>Draft content</span></label></div></div>' +
     '</div><div class="form-actions"><button class="button button--quiet" type="button" data-action="back">Cancel</button><button class="button button--primary" type="button" data-action="save-editor">Save protocol draft</button></div></form></section>';
 };
 
-const evidenceUpload = (testimonial, field, label) => {
-  const path = testimonial[field];
-  return '<div class="image-item">' + (path ? imagePreview(path, true) + '<code>' + h(path) + '</code><button class="button button--danger" type="button" data-action="evidence-delete" data-field="' + field + '">Remove</button>' : '') +
-    '<label class="upload-control"><input type="file" data-evidence-field="' + field + '" accept="image/jpeg,image/png,image/webp"><span>Upload ' + h(label) + ' image</span><small>You will crop it to 4:5 before saving.</small></label></div>';
+const stageSlot = (testimonial, stage) => {
+  const entry = imageForStage(testimonial, stage.key);
+  return '<div class="stage-slot" data-stage="' + stage.key + '"><span class="stage-slot__label">' + h(stage.label) + '</span>' +
+    (entry
+      ? imagePreview(entry.src, true) + '<code>' + h(entry.src) + '</code><button class="button button--danger" type="button" data-action="stage-delete" data-stage="' + stage.key + '">Remove</button>'
+      : '<label class="upload-control"><input type="file" data-stage-field="' + stage.key + '" accept="image/jpeg,image/png,image/webp"><span>Upload photograph</span><small>You will crop it to 4:5 before saving.</small></label>') +
+    '</div>';
 };
 
 const renderTestimonialEditor = () => {
   const testimonial = state.editor.buffer;
   const isNew = state.editor.index < 0;
-  return '<section class="editor-shell" data-testid="testimonial-editor">' + editorHeading(isNew ? 'New testimonial' : 'Edit testimonial', testimonial.name || 'Untitled testimonial') +
+  return '<section class="editor-shell" data-testid="testimonial-editor">' + editorHeading(isNew ? 'New recovery story' : 'Edit recovery story', testimonial.name || 'Untitled story') +
+    '<div class="notice">Real patients only. With photographs, the clinical remark is required and the quote is optional; without photographs, the quote is required. Name and location are always required — use “Identity protected” when the patient asked for privacy.</div>' +
     '<form id="testimonial-form"><div class="editor-grid">' +
-    '<div class="field--full"><span class="field-label">Testimonial type</span><div class="type-toggle"><label><input type="radio" name="type" value="quote" ' + (testimonial.type === 'quote' ? 'checked' : '') + '><span>Quote only</span></label><label><input type="radio" name="type" value="before-after" ' + (testimonial.type === 'before-after' ? 'checked' : '') + '><span>Before / after evidence</span></label></div></div>' +
-    '<label>Name<input name="name" value="' + h(testimonial.name) + '" required></label>' +
-    '<label>Immutable id<input name="id" value="' + h(testimonial.id) + '" pattern="[a-z0-9-]+" required ' + (isNew ? '' : 'readonly') + '></label>' +
+    '<label>Patient name<input name="name" value="' + h(testimonial.name) + '" required><span class="field-help">“Identity protected” is allowed.</span></label>' +
+    '<label>Immutable id<input name="id" value="' + h(testimonial.id) + '" pattern="[a-z0-9\\-]+" required ' + (isNew ? '' : 'readonly') + '></label>' +
     '<label>Location<input name="location" value="' + h(testimonial.location) + '" required></label>' +
-    '<label>Context or condition<input name="context" value="' + h(testimonial.context) + '" required></label>' +
-    '<label class="field--full">Quote<textarea name="quote" required>' + h(testimonial.quote) + '</textarea></label>' +
-    (testimonial.type === 'before-after' ? '<div class="field-group"><div class="field-group__heading"><div><h2>Matched evidence pair</h2><p>Real customer photos only. Both images are cropped client-side to 4:5 and encoded as WebP.</p></div></div><div class="evidence-uploads">' + evidenceUpload(testimonial, 'beforeImage', 'before') + evidenceUpload(testimonial, 'afterImage', 'after') + '</div></div>' : '') +
-    '<div class="field-group"><label class="checkbox-row"><input name="placeholder" type="checkbox" ' + (testimonial.placeholder ? 'checked' : '') + ' ' + (testimonial.type === 'before-after' ? 'disabled' : '') + '><span>Placeholder testimonial <small class="field-help">This badge appears in admin only.</small></span></label></div>' +
-    '</div><div class="form-actions"><button class="button button--quiet" type="button" data-action="back">Cancel</button><button class="button button--primary" type="button" data-action="save-editor">Save testimonial draft</button></div></form></section>';
+    '<label>Condition<input name="condition" value="' + h(testimonial.condition) + '" required><span class="field-help">Short clinical label shown on the card, e.g. “Venous ulcers from untreated varicose veins”.</span></label>' +
+    '<label class="field--full">Recovery duration (optional)<input name="duration" value="' + h(testimonial.duration || '') + '" placeholder="e.g. Signs of recovery within 30 days"></label>' +
+    '<label class="field--full">Clinical remark<textarea name="remark" rows="5">' + h(testimonial.remark || '') + '</textarea><span class="field-help">The company’s note on condition, treatment, and recovery — shown as the “MediVasc clinical note”.</span></label>' +
+    '<label class="field--full">Patient quote (optional with photographs)<textarea name="quote" rows="3">' + h(testimonial.quote || '') + '</textarea></label>' +
+    '<div class="field-group"><div class="field-group__heading"><div><h2>Evidence photographs</h2><p>Before and After are a pair — upload both or neither. During is optional and makes the story a 3-stage journey.</p></div></div><div class="stage-slots">' +
+    STAGES.map((stage) => stageSlot(testimonial, stage)).join('') +
+    '</div></div>' +
+    '<div class="field-group"><label class="checkbox-row"><input name="featured" type="checkbox" ' + (testimonial.featured ? 'checked' : '') + '><span>Featured story <small class="field-help">Renders as the large journey at the top of Recoveries. Only one story can be featured.</small></span></label></div>' +
+    '</div><div class="form-actions"><button class="button button--quiet" type="button" data-action="back">Cancel</button><button class="button button--primary" type="button" data-action="save-editor">Save story draft</button></div></form></section>';
 };
 
 const renderCompany = () => {
@@ -401,13 +439,16 @@ const renderCompany = () => {
 
 const renderAppearance = () => {
   const config = state.draft.config;
+  const colorMode = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
   const themes = state.draft.themes.map((theme) => {
-    const previewTokens = (mode) => '--preview-' + mode + '-bg:' + theme[mode]['--bg'] + ';--preview-' + mode + '-surface:' + theme[mode]['--surface'] + ';--preview-' + mode + '-surface-2:' + theme[mode]['--surface-2'] + ';--preview-' + mode + '-ink:' + theme[mode]['--ink'] + ';--preview-' + mode + '-muted:' + theme[mode]['--ink-muted'] + ';--preview-' + mode + '-line:' + theme[mode]['--line'];
+    const previewTokens = (mode) => '--preview-' + mode + '-bg:' + theme[mode]['--bg'] + ';--preview-' + mode + '-surface:' + theme[mode]['--surface'] + ';--preview-' + mode + '-surface-2:' + theme[mode]['--surface-2'] + ';--preview-' + mode + '-ink:' + theme[mode]['--ink'] + ';--preview-' + mode + '-muted:' + theme[mode]['--ink-muted'] + ';--preview-' + mode + '-line:' + theme[mode]['--line'] + ';--preview-' + mode + '-primary:' + theme[mode]['--primary'] + ';--preview-' + mode + '-good:' + theme[mode]['--good'];
     const style = previewTokens('light') + ';' + previewTokens('dark');
-    return '<button class="theme-option" type="button" data-action="select-theme" data-theme-id="' + h(theme.id) + '" aria-pressed="' + String(config.theme === theme.id) + '"><span class="theme-option__label">' + h(theme.label) + (config.theme === theme.id ? '<span class="badge badge--active">Active</span>' : '') + '</span><span class="theme-option__mock" style="' + h(style) + '" aria-hidden="true"><span class="theme-option__card"><span class="theme-option__image"></span><span class="theme-option__copy"><strong>Compression therapy system</strong><small>Guided care at home</small></span></span></span></button>';
+    return '<button class="theme-option" type="button" data-action="select-theme" data-theme-id="' + h(theme.id) + '" aria-pressed="' + String(config.theme === theme.id) + '"><span class="theme-option__label">' + h(theme.label) + (config.theme === theme.id ? '<span class="badge badge--active">Active</span>' : '') + '</span><span class="theme-option__mock" style="' + h(style) + '" aria-hidden="true"><span class="theme-option__bar"></span><span class="theme-option__card"><span class="theme-option__image"></span><span class="theme-option__copy"><strong>Recoveries you can see</strong><small>Documented home therapy</small><span class="theme-option__pill"></span></span></span></span></button>';
   }).join('');
-  return '<section class="editor-shell"><div class="section-toolbar"><div><h1>Appearance</h1><p>Theme, hero positioning, and search metadata.</p></div></div>' +
-    '<form id="appearance-form"><div class="editor-grid"><div class="field-group"><div class="field-group__heading"><div><h2>Site theme</h2><p>Each option includes its paired light and dark tokens.</p></div></div><div class="theme-grid">' + themes + '</div></div>' +
+  return '<section class="editor-shell"><div class="section-toolbar"><div><h1>Appearance</h1><p>Site theme, hero copy, search metadata, and this admin’s color mode.</p></div></div>' +
+    '<form id="appearance-form"><div class="editor-grid">' +
+    '<div class="field-group"><div class="field-group__heading"><div><h2>Site theme</h2><p>Each option pairs light and dark tokens; the preview follows this admin’s color mode.</p></div></div><div class="theme-grid">' + themes + '</div></div>' +
+    '<div class="field-group"><div class="field-group__heading"><div><h2>Admin color mode</h2><p>Only affects this editor on this device.</p></div></div><div class="mode-toggle"><button class="button ' + (colorMode === 'light' ? 'button--primary' : 'button--quiet') + '" type="button" data-action="set-color-mode" data-mode="light">Light</button><button class="button ' + (colorMode === 'dark' ? 'button--primary' : 'button--quiet') + '" type="button" data-action="set-color-mode" data-mode="dark">Dark</button></div></div>' +
     '<label class="field--full">Hero headline<textarea name="heroHeadline" required>' + h(config.heroHeadline) + '</textarea></label>' +
     '<label class="field--full">Hero supporting line<textarea name="heroSub" required>' + h(config.heroSub) + '</textarea></label>' +
     '<div class="field-group"><div class="field-group__heading"><div><h2>Search metadata</h2><p>Keep title and description specific and concise.</p></div></div><div class="editor-grid"><label class="field--full">SEO title<input name="seoTitle" value="' + h(config.seo.title) + '" required></label><label class="field--full">SEO description<textarea name="seoDescription" required>' + h(config.seo.description) + '</textarea></label></div></div>' +
@@ -479,13 +520,28 @@ const syncEditorFromForm = () => {
   } else if (state.editor.kind === 'protocols') {
     for (const key of ['id', 'condition', 'audience', 'summary', 'durationNote']) buffer[key] = String(data.get(key) || '').trim();
     buffer.engagement = lines(data.get('engagement'));
-    buffer.deviceIds = data.getAll('deviceIds').map(String);
     buffer.visible = data.has('visible');
     buffer.draft = data.has('draft');
   } else {
-    for (const key of ['id', 'type', 'name', 'location', 'quote', 'context']) buffer[key] = String(data.get(key) || '').trim();
-    buffer.placeholder = buffer.type === 'before-after' ? false : data.has('placeholder');
+    for (const key of ['id', 'name', 'location', 'condition', 'duration', 'remark', 'quote']) buffer[key] = String(data.get(key) || '').trim();
+    buffer.featured = data.has('featured');
   }
+};
+
+const validateStory = (buffer) => {
+  if (!buffer.name || !buffer.location || !buffer.condition) {
+    throw new Error('Name, location, and condition are required on every story.');
+  }
+  const byStage = Object.fromEntries(STAGES.map((stage) => [stage.key, imageForStage(buffer, stage.key)]));
+  const count = (buffer.images || []).length;
+  if (count === 1) throw new Error('A single photograph is not evidence of change — add both Before and After, or remove it.');
+  if (count > 0 && (!byStage.before || !byStage.after)) {
+    throw new Error('Photograph stories need the Before and After pair. During is optional.');
+  }
+  if (!count && !buffer.quote) throw new Error('Without photographs, the patient quote is required.');
+  if (count && !buffer.remark) throw new Error('Stories with photographs need the clinical remark.');
+  if (buffer.featured && count < 2) throw new Error('A featured story needs at least the Before and After photographs.');
+  buffer.images = STAGES.map((stage) => byStage[stage.key]).filter(Boolean);
 };
 
 const saveEditor = () => {
@@ -501,13 +557,17 @@ const saveEditor = () => {
   }
   if (kind === 'protocols') {
     if (!buffer.condition || !buffer.summary || !buffer.engagement.length || !buffer.durationNote) throw new Error('Complete every required protocol field.');
+    if (!['disease', 'elderly'].includes(buffer.audience)) throw new Error('Choose one of the two tracks.');
   }
   if (kind === 'testimonials') {
-    if (!buffer.name || !buffer.location || !buffer.quote || !buffer.context) throw new Error('Complete every required testimonial field.');
-    if (buffer.type === 'before-after' && (!buffer.beforeImage || !buffer.afterImage)) throw new Error('Before-and-after testimonials require both real images.');
-    if (buffer.type === 'quote') {
-      delete buffer.beforeImage;
-      delete buffer.afterImage;
+    validateStory(buffer);
+    if (buffer.featured) {
+      for (const [itemIndex, item] of state.draft.testimonials.entries()) {
+        if (itemIndex !== index && item.featured) {
+          item.featured = false;
+          showStatus('Featured story moved', h(item.name + ' (' + item.condition + ') is no longer featured — only one story can be.'));
+        }
+      }
     }
   }
   if (index < 0) state.draft[kind].push(deepClone(buffer));
@@ -529,7 +589,7 @@ const moveItem = (kind, index, direction) => {
 const deleteItem = (kind, index) => {
   const item = state.draft[kind][index];
   if (kind === 'products') {
-    const references = state.draft.protocols.filter((protocol) => protocol.deviceIds.includes(item.id));
+    const references = state.draft.protocols.filter((protocol) => (protocol.deviceIds || []).includes(item.id));
     if (references.length) {
       showStatus('Product is still referenced', 'Remove it from these protocols first: ' + h(references.map((protocol) => protocol.condition).join(', ')) + '.');
       return;
@@ -537,10 +597,7 @@ const deleteItem = (kind, index) => {
   }
   if (!confirm('Delete ' + (item.name || item.condition || item.id) + '? This will be included in the next publish.')) return;
   if (kind === 'products') for (const path of item.images) unstageOrDeleteAsset(path);
-  if (kind === 'testimonials') {
-    if (item.beforeImage) unstageOrDeleteAsset(item.beforeImage);
-    if (item.afterImage) unstageOrDeleteAsset(item.afterImage);
-  }
+  if (kind === 'testimonials') for (const image of item.images || []) unstageOrDeleteAsset(image.src);
   state.draft[kind].splice(index, 1);
   markDirty(kind);
   render();
@@ -601,17 +658,21 @@ const uploadProductImages = async (files) => {
   render();
 };
 
-const uploadEvidence = async (field, file) => {
+const uploadStagePhoto = async (stageKey, file) => {
   syncEditorFromForm();
   const testimonial = state.editor.buffer;
-  if (!testimonial.id || !/^[a-z0-9-]+$/.test(testimonial.id)) throw new Error('Enter a valid testimonial id before uploading images.');
-  const label = field === 'beforeImage' ? 'before' : 'after';
-  const blob = await cropEvidenceImage(file, label);
+  if (!testimonial.id || !/^[a-z0-9-]+$/.test(testimonial.id)) throw new Error('Enter a valid story id before uploading photographs.');
+  const duplicate = state.draft.testimonials.some((item, index) => item.id === testimonial.id && index !== state.editor.index);
+  if (duplicate) throw new Error('That story id is already in use. Choose a unique id before uploading photographs.');
+  const stage = STAGES.find((candidate) => candidate.key === stageKey);
+  const blob = await cropEvidenceImage(file, stage.key);
   if (!blob) return;
-  if (testimonial[field]) unstageOrDeleteAsset(testimonial[field]);
-  const path = 'assets/testimonials/' + testimonial.id + '-' + label + '.webp';
+  const existing = imageForStage(testimonial, stage.key);
+  if (existing) unstageOrDeleteAsset(existing.src);
+  const path = 'assets/testimonials/' + testimonial.id + '-' + stage.key + '.webp';
   await stageBlob(path, blob);
-  testimonial[field] = path;
+  testimonial.images = (testimonial.images || []).filter((image) => stageKeyOf(image) !== stage.key);
+  testimonial.images.push({ src: path, stage: stage.label });
   render();
 };
 
@@ -629,6 +690,7 @@ const handleEditorAction = async (button) => {
   if (action === 'save-editor') return saveEditor();
   if (action === 'save-company') return saveCompany(editorRoot.querySelector('#company-form'));
   if (action === 'save-appearance') return saveAppearance(editorRoot.querySelector('#appearance-form'));
+  if (action === 'set-color-mode') return setColorMode(button.dataset.mode);
   if (action === 'select-theme') {
     state.draft.config.theme = button.dataset.themeId;
     markDirty('config');
@@ -656,10 +718,12 @@ const handleEditorAction = async (button) => {
     const [path] = buffer.images.splice(Number(button.dataset.index), 1);
     unstageOrDeleteAsset(path);
   }
-  if (action === 'evidence-delete') {
-    const path = buffer[button.dataset.field];
-    if (path) unstageOrDeleteAsset(path);
-    delete buffer[button.dataset.field];
+  if (action === 'stage-delete') {
+    const existing = imageForStage(buffer, button.dataset.stage);
+    if (existing) {
+      unstageOrDeleteAsset(existing.src);
+      buffer.images = buffer.images.filter((image) => image !== existing);
+    }
   }
   if (action === 'copy-prompt') {
     await navigator.clipboard.writeText(productPrompt(buffer.name));
@@ -727,7 +791,7 @@ const pollActions = async (commitSha) => {
     await wait(3000);
   }
   if (!run) {
-    showStatus('No workflow run found', 'The branch update succeeded, but no workflow run was found for this commit. This is expected until the deploy workflow is added in Phase 5.');
+    showStatus('No workflow run found', 'The branch update succeeded, but no workflow run was found for this commit.');
     return;
   }
   for (let attempt = 0; attempt < 60; attempt += 1) {
@@ -792,24 +856,52 @@ const reloadAndReapply = async () => {
 
 const handleApiError = (error) => {
   if (error instanceof AuthError || error.status === 401) {
-    clearTokens();
-    showAuth('Your token expired. Reconnect to continue; the in-memory draft is preserved.');
+    sessionStorage.removeItem(TOKEN_SESSION_KEY);
+    showAuth('GitHub rejected the stored token. If it was rotated or expired, forget this device and set it up with the new token.');
     return;
   }
   const prefix = error instanceof ApiError && error.status ? 'GitHub returned ' + error.status + '. ' : '';
   showStatus('Request failed', h(prefix + error.message));
 };
 
-authForm.addEventListener('submit', (event) => {
+setupForm.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const token = tokenInput.value.trim();
-  const branch = branchInput.value.trim();
-  if (!token || !branch) return;
-  authenticate(token, rememberInput.checked, branch);
+  const token = setupToken.value.trim();
+  const branch = setupBranch.value.trim() || 'main';
+  const passcode = setupPasscode.value;
+  if (!token) return;
+  if (passcode.length < 8) return setAuthStatus('The passcode needs at least 8 characters.');
+  if (passcode !== setupPasscodeConfirm.value) return setAuthStatus('The passcodes do not match.');
+  const connected = await connect(token, branch, { busyButton: setupButton });
+  if (!connected) return;
+  setAuthStatus('');
+  try {
+    await createVault(token, passcode, branch);
+  } catch (error) {
+    showStatus('Vault not saved', h('The token works for this session, but encrypting it failed: ' + error.message));
+  }
 });
 
-rememberInput.addEventListener('change', () => {
-  storageWarning.hidden = !rememberInput.checked;
+unlockForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  unlockButton.disabled = true;
+  setAuthStatus('Decrypting token…');
+  try {
+    const { token, branch } = await unlockVault(unlockPasscode.value);
+    await connect(token, state.branch || branch, { busyButton: unlockButton });
+  } catch (error) {
+    setAuthStatus(error.message);
+    unlockPasscode.select();
+  } finally {
+    unlockButton.disabled = false;
+  }
+});
+
+forgetButton.addEventListener('click', () => {
+  if (!confirm('Forget this device? The encrypted token is deleted and you will need to paste the token again.')) return;
+  forgetVault();
+  sessionStorage.removeItem(TOKEN_SESSION_KEY);
+  showAuth('Device forgotten. Set it up again with your token.');
 });
 
 for (const toggle of [document.querySelector('#auth-theme-toggle'), document.querySelector('#theme-toggle')]) {
@@ -849,19 +941,7 @@ editorRoot.addEventListener('submit', (event) => {
 editorRoot.addEventListener('change', async (event) => {
   try {
     if (event.target.id === 'product-images') await uploadProductImages([...event.target.files]);
-    if (event.target.dataset.evidenceField && event.target.files[0]) await uploadEvidence(event.target.dataset.evidenceField, event.target.files[0]);
-    if (event.target.name === 'type' && state.editor?.kind === 'testimonials') {
-      syncEditorFromForm();
-      const testimonial = state.editor.buffer;
-      if (testimonial.type === 'quote') {
-        if (testimonial.beforeImage) unstageOrDeleteAsset(testimonial.beforeImage);
-        if (testimonial.afterImage) unstageOrDeleteAsset(testimonial.afterImage);
-        delete testimonial.beforeImage;
-        delete testimonial.afterImage;
-      }
-      testimonial.placeholder = testimonial.type === 'quote';
-      render();
-    }
+    if (event.target.dataset.stageField && event.target.files[0]) await uploadStagePhoto(event.target.dataset.stageField, event.target.files[0]);
   } catch (error) {
     showStatus('Image could not be processed', h(error.message));
   }
@@ -899,15 +979,15 @@ publishStatus.addEventListener('click', async (event) => {
   }
 });
 
-document.querySelector('#logout-button').addEventListener('click', () => {
-  if ((state.dirty.size || state.assetChanges.size) && !confirm('Log out and discard the in-memory draft?')) return;
-  clearTokens();
+document.querySelector('#lock-button').addEventListener('click', () => {
+  if ((state.dirty.size || state.assetChanges.size) && !confirm('Lock the admin and discard the in-memory draft?')) return;
+  sessionStorage.removeItem(TOKEN_SESSION_KEY);
   state.api = null;
   state.loaded = false;
   state.draft = {};
   state.dirty.clear();
   state.assetChanges.clear();
-  showAuth('Logged out.');
+  showAuth('Locked. Enter your passcode to continue.');
 });
 
 window.addEventListener('beforeunload', (event) => {
@@ -916,10 +996,12 @@ window.addEventListener('beforeunload', (event) => {
   event.returnValue = '';
 });
 
-branchInput.value = state.branch;
-rememberInput.checked = Boolean(localStorage.getItem(TOKEN_LOCAL_KEY));
-storageWarning.hidden = !rememberInput.checked;
-
-const savedToken = currentToken();
-if (savedToken) authenticate(savedToken, rememberInput.checked, state.branch);
-else showAuth();
+const savedToken = sessionToken();
+if (savedToken) {
+  connect(savedToken, state.branch, {
+    busyButton: unlockButton,
+    onAuthFailure: () => showAuth('The session token no longer works. Unlock with your passcode.'),
+  });
+} else {
+  showAuth();
+}

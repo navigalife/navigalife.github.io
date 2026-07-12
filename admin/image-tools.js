@@ -24,7 +24,7 @@ export const resizeProductImage = async (file) => {
   canvas.width = Math.max(1, Math.round(image.width * scale));
   canvas.height = Math.max(1, Math.round(image.height * scale));
   const context = canvas.getContext('2d', { alpha: false });
-  context.fillStyle = '#F6F4EF';
+  context.fillStyle = '#F5F8F9';
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   image.close();
@@ -54,7 +54,7 @@ export const cropEvidenceImage = async (file, label) => {
     const overflowY = Math.max(0, height - canvas.height);
     const x = -(overflowX / 2) + (Number(positionX.value) * overflowX / 2);
     const y = -(overflowY / 2) + (Number(positionY.value) * overflowY / 2);
-    context.fillStyle = '#F6F4EF';
+    context.fillStyle = '#F5F8F9';
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(image, x, y, width, height);
   };

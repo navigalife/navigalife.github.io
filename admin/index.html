@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <meta name="color-scheme" content="light dark">
-  <title>Naviga Life Admin</title>
+  <title>MediVasc Admin</title>
   <link rel="icon" href="../assets/brand/favicon.svg" type="image/svg+xml">
   <script>
     (() => {
-      const saved = localStorage.getItem('naviga-admin-color-mode');
+      const saved = localStorage.getItem('medivasc-admin-color-mode')
+        || localStorage.getItem('naviga-admin-color-mode');
       const mode = saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
       document.documentElement.dataset.theme = mode;
     })();
@@ -24,37 +25,55 @@
   <section class="auth-shell" id="auth-view" aria-labelledby="auth-title">
     <div class="auth-card">
       <div class="auth-brand">
-        <span class="wordmark">Naviga Life</span>
+        <span class="brand-row"><img src="../assets/brand/favicon.svg" alt="" width="36" height="36"><span class="wordmark">MediVasc</span></span>
         <button class="icon-button" id="auth-theme-toggle" type="button" aria-label="Toggle dark mode">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
         </button>
       </div>
-      <p class="auth-kicker">Repository editor</p>
-      <h1 id="auth-title">Connect to GitHub</h1>
-      <p>Paste a fine-grained token with Contents read/write access. The token is sent only to GitHub’s API.</p>
-      <form id="auth-form">
+      <p class="auth-kicker">Content admin</p>
+
+      <form id="setup-form" hidden>
+        <h1 id="auth-title">Set up this device</h1>
+        <p class="auth-lede">Paste your fine-grained token once. It is encrypted with a passcode you choose and never stored in plain text.</p>
         <label>
           Personal access token
-          <input id="token-input" name="token" type="password" autocomplete="off" spellcheck="false" required>
+          <input id="setup-token" name="token" type="password" autocomplete="off" spellcheck="false" required>
+          <span class="field-help">Needs Contents read/write on the repository. Sent only to GitHub&rsquo;s API.</span>
         </label>
         <label>
           Source and publish branch
-          <input id="branch-input" name="branch" type="text" value="main" autocomplete="off" spellcheck="false" required>
+          <input id="setup-branch" name="branch" type="text" value="main" autocomplete="off" spellcheck="false" required>
         </label>
-        <label class="checkbox-row">
-          <input id="remember-input" name="remember" type="checkbox">
-          <span>Remember on this device</span>
+        <label>
+          Device passcode
+          <input id="setup-passcode" name="passcode" type="password" autocomplete="new-password" minlength="8" required>
+          <span class="field-help">Minimum 8 characters. You will type this to unlock the admin on this device.</span>
         </label>
-        <p class="storage-warning" id="storage-warning" hidden>Warning: this stores the token unencrypted in this browser’s local storage.</p>
-        <button class="button button--primary" id="connect-button" type="submit">Connect and load content</button>
-        <p class="form-status" id="auth-status" role="status" aria-live="polite"></p>
+        <label>
+          Confirm passcode
+          <input id="setup-passcode-confirm" name="passcodeConfirm" type="password" autocomplete="new-password" minlength="8" required>
+        </label>
+        <button class="button button--primary" id="setup-button" type="submit">Encrypt token and connect</button>
       </form>
+
+      <form id="unlock-form" hidden>
+        <h1 id="unlock-title">Unlock the admin</h1>
+        <p class="auth-lede">Enter your device passcode to decrypt the stored token for this session.</p>
+        <label>
+          Device passcode
+          <input id="unlock-passcode" name="passcode" type="password" autocomplete="current-password" required>
+        </label>
+        <button class="button button--primary" id="unlock-button" type="submit">Unlock and load content</button>
+        <button class="button button--text" id="forget-button" type="button">Forget this device</button>
+      </form>
+
+      <p class="form-status" id="auth-status" role="status" aria-live="polite"></p>
     </div>
   </section>
 
   <div class="app-shell" id="app-view" hidden>
     <header class="app-header">
-      <a class="wordmark" href="../">Naviga Life</a>
+      <a class="brand-row" href="../"><img src="../assets/brand/favicon.svg" alt="" width="30" height="30"><span class="wordmark">MediVasc</span></a>
       <div class="header-context">
         <strong>Content admin</strong>
         <span id="branch-badge"></span>
@@ -65,17 +84,17 @@
         <button class="icon-button" id="theme-toggle" type="button" aria-label="Toggle dark mode">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
         </button>
-        <button class="button button--text" id="logout-button" type="button">Log out</button>
+        <button class="button button--text" id="lock-button" type="button">Lock</button>
       </div>
     </header>
 
     <div class="app-body">
       <nav class="tab-nav" aria-label="Content sections" id="tab-nav">
-        <button type="button" data-tab="products">Products</button>
+        <button type="button" data-tab="testimonials">Recoveries</button>
         <button type="button" data-tab="protocols">Protocols</button>
-        <button type="button" data-tab="testimonials">Testimonials</button>
         <button type="button" data-tab="company">Company</button>
         <button type="button" data-tab="appearance">Appearance</button>
+        <button type="button" data-tab="products">Products</button>
       </nav>
       <main id="admin-main" tabindex="-1">
         <div class="loading-state" id="loading-state">Loading repository content…</div>
