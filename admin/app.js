@@ -408,7 +408,7 @@ const renderTestimonialEditor = () => {
     '<label>Location<input name="location" value="' + h(testimonial.location) + '" required></label>' +
     '<label>Condition<input name="condition" value="' + h(testimonial.condition) + '" required><span class="field-help">Short clinical label shown on the card, e.g. “Venous ulcers from untreated varicose veins”.</span></label>' +
     '<label class="field--full">Recovery duration (optional)<input name="duration" value="' + h(testimonial.duration || '') + '" placeholder="e.g. Signs of recovery within 30 days"></label>' +
-    '<label class="field--full">Clinical remark<textarea name="remark" rows="5">' + h(testimonial.remark || '') + '</textarea><span class="field-help">The company’s note on condition, treatment, and recovery — shown as the “MediVasc clinical note”.</span></label>' +
+    '<label class="field--full">Clinical remark<textarea name="remark" rows="5">' + h(testimonial.remark || '') + '</textarea><span class="field-help">The company’s note on condition, treatment, and recovery — shown as the “Case note” on each story.</span></label>' +
     '<label class="field--full">Patient quote (optional with photographs)<textarea name="quote" rows="3">' + h(testimonial.quote || '') + '</textarea></label>' +
     '<div class="field-group"><div class="field-group__heading"><div><h2>Evidence photographs</h2><p>Before and After are a pair — upload both or neither. During is optional and makes the story a 3-stage journey.</p></div></div><div class="stage-slots">' +
     STAGES.map((stage) => stageSlot(testimonial, stage)).join('') +
