@@ -169,6 +169,38 @@ fonts. Old Naviga Life brand files replaced.
   the deploy workflow passes unmodified in behavior.
 - Live site serves the new landing page with all evidence images 200.
 
+## Addendum A (2026-07-12, owner note 2 — received mid-run)
+
+Source: `owner-assets/GENERAL INSTRUCTIONS & OUR APPROACH.docx.txt` + user relay.
+Applies to phase 3 (site) onward; phases 1–2 unaffected.
+
+1. **"Our approach" copy** is now owner-authored. The section must carry the
+   owner's narrative: hospital/clinic therapy is long-duration and in-person;
+   many patients can't attend (no nearby clinic, mobility, dependence on family,
+   waiting time, travel + therapy cost). MediVasc answers with a detailed
+   individual case study, customized device modalities where required, home
+   therapy under guidance without any break, and monitoring at predefined
+   regular intervals with modality changes on feedback. The motto must appear
+   **verbatim**: **"A solution is not a solution unless it is affordable"**.
+2. **Never name the therapy**: the string "sequential compression" (any casing)
+   must not appear anywhere in rendered `dist/` output. Copy refers to
+   "customized medical device modalities" / "therapy protocols" instead.
+   (Occurrences in spec 001, `data/archive/`, and `data/products.json` are
+   non-rendered and stay.)
+3. **Protocols render as a list only** — the section shows the conditions for
+   which protocols exist (grouped by the two tracks), with no per-protocol
+   explanation. `summary`/`engagement` stay in the data for admin and possible
+   future use.
+4. **Landing narrative arc** (user-journey order, replaces the section order in
+   Architecture → Public page): land on hope (hero) → **trust** (real
+   recoveries with evidence) → **what to expect** (the approach: case study →
+   customized home protocol → follow-ups) → **affordability** (motto) →
+   **conditions we cover** (protocol list) → **act now** (contact CTA framed as
+   preventing amputation by acting today) → fraternity → about → footer.
+5. **Story-001 caption note**: the after-therapy photo shows the affected leg's
+   color visibly lightening — worth stating in the featured story's clinical
+   remark as an observable recovery sign.
+
 ## Out of scope
 
 - GitHub account/repo rename or custom domain (owner/user decision).

@@ -1,83 +1,59 @@
 [
   {
-    "id": "t-001",
-    "type": "quote",
-    "name": "Meera Sethi",
-    "location": "Pune, Maharashtra",
-    "quote": "The leg sleeve took a few sessions to position quickly, but the controls were straightforward once my therapist showed me. I now use the pump during my evening reading, and the swelling feels easier to manage.",
-    "context": "Lymphedema home care, 5 months",
-    "placeholder": true
+    "id": "story-001",
+    "featured": true,
+    "name": "Identity protected",
+    "location": "India",
+    "condition": "Diabetic foot with CKD — below-knee amputation advised",
+    "duration": "Signs of recovery within 30 days",
+    "remark": "Patients with prolonged insulin-dependent diabetes and chronic kidney disease are especially vulnerable to peripheral vascular and arterial disease. This case had progressed to the pre-sepsis stage, and the vascular surgeon had referred the patient for below-knee amputation. Under our guidance the chronic condition was treated instead: signs of recovery appeared within 30 days, the threat of septicemia passed, and vascularity resumed. In the after-therapy photograph the color of the affected leg has visibly lightened — a direct sign of restored circulation. The patient recovered fully from the chronic condition, and amputation was prevented.",
+    "quote": "",
+    "images": [
+      { "src": "assets/testimonials/story-001-before.webp", "stage": "Before therapy" },
+      { "src": "assets/testimonials/story-001-during.webp", "stage": "During therapy" },
+      { "src": "assets/testimonials/story-001-after.webp", "stage": "After therapy" }
+    ]
   },
   {
-    "id": "t-002",
-    "type": "quote",
-    "name": "Rajesh Nair",
-    "location": "Kochi, Kerala",
-    "quote": "My surgeon recommended a regular compression routine after the operation. The timer makes it easier to stay consistent without watching the clock.",
-    "context": "Post-surgical DVT prevention, 8 weeks",
-    "placeholder": true
+    "id": "story-002",
+    "featured": false,
+    "name": "Identity protected",
+    "location": "India",
+    "condition": "Venous ulcers from untreated varicose veins",
+    "duration": "Chronic case, treated successfully",
+    "remark": "Varicose veins left untreated can progress into venous ulcers, with itching and skin disorders that lead to oozing wounds. In this chronic case the venous ulcers and oozing wounds were treated successfully — a long treatment that could have been far shorter had the disease been addressed in its primary or secondary stage.",
+    "quote": "",
+    "images": [
+      { "src": "assets/testimonials/story-002-before.webp", "stage": "Before therapy" },
+      { "src": "assets/testimonials/story-002-after.webp", "stage": "After therapy" }
+    ]
   },
   {
-    "id": "t-003",
-    "type": "quote",
-    "name": "Anita Verma",
-    "location": "Jaipur, Rajasthan",
-    "quote": "The arm cuff feels supportive without making the routine complicated. I appreciate being able to complete the session at home on the schedule my clinician gave me.",
-    "context": "Post-mastectomy arm lymphedema, 4 months",
-    "placeholder": true
-  },
-  {
-    "id": "t-004",
-    "type": "quote",
-    "name": "Suresh Iyer",
-    "location": "Chennai, Tamil Nadu",
-    "quote": "The pump is not silent, especially in a quiet room, but the sound is steady and I got used to it. The pressure controls are clear, and my leg-care routine now feels more structured.",
-    "context": "Chronic venous insufficiency, 6 months",
-    "placeholder": true
-  },
-  {
-    "id": "t-005",
-    "type": "quote",
-    "name": "Farida Khan",
-    "location": "Lucknow, Uttar Pradesh",
-    "quote": "The full-leg garment looked intimidating at first, but the markings helped me learn the setup. Regular sessions fit comfortably into my morning routine.",
-    "context": "Filariasis-related leg swelling, 7 months",
-    "placeholder": true
-  },
-  {
-    "id": "t-006",
-    "type": "quote",
-    "name": "Devendra Shah",
-    "location": "Ahmedabad, Gujarat",
-    "quote": "I use the device as one part of the diabetic-foot plan my doctor set out. The display is readable, and the cuff is simple to check before each session.",
-    "context": "Diabetic-foot and circulation care, 3 months",
-    "placeholder": true
-  },
-  {
-    "id": "t-007",
-    "type": "quote",
-    "name": "Karthik Rao",
-    "location": "Hyderabad, Telangana",
-    "quote": "The adjustable timer is useful on days when my therapist changes the session length. I can follow the plan without changing the rest of my routine.",
-    "context": "Varicose veins and leg swelling, 4 months",
-    "placeholder": true
-  },
-  {
-    "id": "t-008",
-    "type": "quote",
-    "name": "Prakash Bedi",
-    "location": "Chandigarh",
-    "quote": "The two cuff sizes helped us find a better fit for my father. We still check the settings each time, but the sequence itself is easy to follow.",
-    "context": "Venous-ulcer support, 10 weeks",
-    "placeholder": true
-  },
-  {
-    "id": "t-009",
-    "type": "quote",
-    "name": "Nandini Bose",
+    "id": "story-003",
+    "featured": false,
+    "name": "Identity protected",
     "location": "Kolkata, West Bengal",
-    "quote": "I wanted a routine I could manage at home after my lumpectomy. The arm sleeve needs careful positioning, but the session feels calm once it starts.",
-    "context": "Post-lumpectomy arm swelling, 12 weeks",
-    "placeholder": true
+    "condition": "Unilateral left-leg lymphedema, patient aged 20",
+    "duration": "3 months of persistent therapy",
+    "remark": "After an early-childhood injury with no other medical explanation, this patient developed pronounced lymphedema in the left leg over many years. Treatment at several hospitals brought no results, and signs of vascular choke had appeared. After three months of persistent therapy the recovery is clearly visible, and the patient has been advised intermittent therapy from here.",
+    "quote": "",
+    "images": [
+      { "src": "assets/testimonials/story-003-before.webp", "stage": "Before therapy" },
+      { "src": "assets/testimonials/story-003-after.webp", "stage": "After therapy" }
+    ]
+  },
+  {
+    "id": "story-004",
+    "featured": false,
+    "name": "Identity protected",
+    "location": "Bihar",
+    "condition": "Lymphedema with venous ulcers, patient aged 32",
+    "duration": "Significant improvement in 4 weeks",
+    "remark": "This patient reported lymphedema with venous ulcers and no explaining medical background, after visits to top hospitals in Delhi NCR brought no recovery. Four weeks into our therapy the improvement was significant, and the patient has since almost fully recovered, as the post-therapy images show.",
+    "quote": "",
+    "images": [
+      { "src": "assets/testimonials/story-004-before.webp", "stage": "Before therapy" },
+      { "src": "assets/testimonials/story-004-after.webp", "stage": "After therapy" }
+    ]
   }
 ]

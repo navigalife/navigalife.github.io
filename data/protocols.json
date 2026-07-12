@@ -1,170 +1,258 @@
 [
   {
-    "id": "lymphedema-support",
-    "condition": "Lymphedema",
-    "audience": "disease",
-    "summary": "A customized home-use pathway for people managing arm or leg lymphedema, including swelling after breast surgery. Guidance covers assessment, machine and garment selection, supported home use, and review as needs change.",
-    "engagement": [
-      "Assessment of the condition, current care plan, and home-use needs",
-      "Device and garment selection matched to the individual case",
-      "Guided home-use sessions under expert guidance",
-      "Review and adjustment based on progress and practical fit"
-    ],
-    "durationNote": "30–90 days, case to case",
-    "deviceIds": [
-      "kl-5000-pro-neo",
-      "limb-lymphedema-8",
-      "post-mastectomy-arm"
-    ],
-    "visible": true,
-    "draft": true
-  },
-  {
-    "id": "dvt-prevention-support",
-    "condition": "DVT prevention",
-    "audience": "disease",
-    "summary": "A guided pathway for people who have been advised to include sequential compression in a DVT-prevention plan. The service focuses on assessment, suitable equipment selection, supported home use, and review alongside the existing care plan.",
-    "engagement": [
-      "Assessment of the condition, current care plan, and home-use needs",
-      "Device and garment selection matched to the individual case",
-      "Guided home-use sessions under expert guidance",
-      "Review and adjustment based on progress and practical fit"
-    ],
-    "durationNote": "30–90 days, case to case",
-    "deviceIds": [
-      "venogain-scd-500",
-      "venous-ulcer-dvt-care"
-    ],
-    "visible": true,
-    "draft": true
-  },
-  {
-    "id": "varicose-vein-support",
-    "condition": "Varicose veins",
-    "audience": "disease",
-    "summary": "A customized support pathway for people managing varicose veins as part of a clinician-directed care plan. Naviga Life helps assess practical needs, select an appropriate machine and garment, guide home use, and review the plan.",
-    "engagement": [
-      "Assessment of the condition, current care plan, and home-use needs",
-      "Device and garment selection matched to the individual case",
-      "Guided home-use sessions under expert guidance",
-      "Review and adjustment based on progress and practical fit"
-    ],
-    "durationNote": "30–90 days, case to case",
-    "deviceIds": [
-      "varicose-vein-care",
-      "venous-care-6"
-    ],
-    "visible": true,
-    "draft": true
-  },
-  {
-    "id": "venous-ulcer-support",
-    "condition": "Venous ulcers",
-    "audience": "disease",
-    "summary": "A guided service for people whose venous-ulcer care plan includes compression support. The protocol is customized around the individual case, suitable equipment, home-use guidance, and review with the wider care plan kept in view.",
-    "engagement": [
-      "Assessment of the condition, current care plan, and home-use needs",
-      "Device and garment selection matched to the individual case",
-      "Guided home-use sessions under expert guidance",
-      "Review and adjustment based on progress and practical fit"
-    ],
-    "durationNote": "30–90 days, case to case",
-    "deviceIds": [
-      "venous-ulcer-compression",
-      "venous-ulcer-cvi-fluid",
-      "venous-ulcer-dvt-care"
-    ],
-    "visible": true,
-    "draft": true
-  },
-  {
-    "id": "chronic-venous-insufficiency-support",
-    "condition": "Chronic venous insufficiency",
-    "audience": "disease",
-    "summary": "A customized home-use pathway for people managing chronic venous insufficiency. Guidance stays at the service level: assess the case, select the machine and garment, support use at home, and review what needs adjustment.",
-    "engagement": [
-      "Assessment of the condition, current care plan, and home-use needs",
-      "Device and garment selection matched to the individual case",
-      "Guided home-use sessions under expert guidance",
-      "Review and adjustment based on progress and practical fit"
-    ],
-    "durationNote": "30–90 days, case to case",
-    "deviceIds": [
-      "cvi-cellulitis-care",
-      "venous-care-6",
-      "venous-ulcer-cvi-fluid"
-    ],
-    "visible": true,
-    "draft": true
-  },
-  {
-    "id": "diabetic-foot-amputation-prevention-support",
+    "id": "diabetic-foot-amputation-prevention",
     "condition": "Diabetic foot and amputation prevention",
     "audience": "disease",
-    "summary": "A guided pathway for people considering circulation support within a diabetic-foot or amputation-prevention plan. Naviga Life customizes equipment selection, home-use guidance, and review around the individual case and existing medical advice.",
+    "summary": "Prolonged diabetes, especially with chronic kidney disease, leaves the feet vulnerable to peripheral vascular and arterial disease — and neglect can end in a referral for amputation. Our protocols aim squarely at preventing that outcome and restoring vascularity.",
     "engagement": [
-      "Assessment of the condition, current care plan, and home-use needs",
-      "Device and garment selection matched to the individual case",
-      "Guided home-use sessions under expert guidance",
-      "Review and adjustment based on progress and practical fit"
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
     ],
-    "durationNote": "30–90 days, case to case",
-    "deviceIds": [
-      "kl-2000-pro-neo",
-      "diabetic-foot-pad-8",
-      "foot-amputation-prevention-4"
-    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
     "visible": true,
-    "draft": true
+    "draft": false
   },
   {
-    "id": "filariasis-support",
-    "condition": "Filariasis-related swelling",
+    "id": "lymphedema",
+    "condition": "Lymphedema (arm and leg)",
     "audience": "disease",
-    "summary": "A customized support pathway for people managing chronic leg swelling associated with filariasis. The service covers assessment, machine and garment selection, guided home use, and case-by-case review without replacing medical care.",
+    "summary": "Swelling of the arm or leg from impaired lymphatic drainage, including cases that have progressed over many years without results elsewhere. We assess the limb, the history, and the stage, then design a therapy protocol matched to the case.",
     "engagement": [
-      "Assessment of the condition, current care plan, and home-use needs",
-      "Device and garment selection matched to the individual case",
-      "Guided home-use sessions under expert guidance",
-      "Review and adjustment based on progress and practical fit"
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
     ],
-    "durationNote": "30–90 days, case to case",
-    "deviceIds": [
-      "filariasis-leg-compression"
-    ],
-    "visible": true,
-    "draft": true
-  },
-  {
-    "id": "elderly-wellbeing-support",
-    "condition": "Elderly wellbeing",
-    "audience": "wellbeing",
-    "summary": "A guided pathway for older adults whose goals include balance, mobility, circulation, and everyday wellbeing. The service begins with assessment and remains customized; device and garment options are introduced only when relevant to the individual case.",
-    "engagement": [
-      "Assessment of wellbeing goals, current care, and home-use needs",
-      "Device and garment selection only where relevant to the individual case",
-      "Guided home use under expert guidance",
-      "Review and adjustment based on progress and practical fit"
-    ],
-    "durationNote": "30–90 days, case to case",
+    "durationNote": "Customized case to case",
     "deviceIds": [],
     "visible": true,
-    "draft": true
+    "draft": false
   },
   {
-    "id": "sports-recovery-support",
-    "condition": "Sports injury rehabilitation and recovery",
-    "audience": "sports",
-    "summary": "A customized pathway for people working through sports injury rehabilitation or athletic recovery with professional guidance. Naviga Life assesses the goal, identifies whether a device belongs in the plan, supports home use, and reviews the approach case by case.",
+    "id": "venous-ulcers-wound-healing",
+    "condition": "Venous ulcers and wound healing",
+    "audience": "disease",
+    "summary": "Neglected venous disease progresses to itching, skin disorders, and oozing wounds. We have treated chronic venous ulcers successfully, and every such protocol includes staged wound-healing support.",
     "engagement": [
-      "Assessment of the recovery goal, current plan, and home-use needs",
-      "Device and garment selection only where relevant to the individual case",
-      "Guided home use under expert guidance",
-      "Review and adjustment based on progress and practical fit"
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
     ],
-    "durationNote": "30–90 days, case to case",
+    "durationNote": "Customized case to case",
     "deviceIds": [],
     "visible": true,
-    "draft": true
+    "draft": false
+  },
+  {
+    "id": "varicose-veins",
+    "condition": "Varicose veins and spider veins",
+    "audience": "disease",
+    "summary": "Primary varicose and spider veins turn prominent when neglected, leading to skin issues and venous ulcers. Early, guided care prevents the long treatment that chronic stages demand.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "post-mastectomy-lymphedema",
+    "condition": "Post-mastectomy arm swelling",
+    "audience": "disease",
+    "summary": "Axillary-clearance lymphedema after breast-cancer surgery responds to consistent therapy. The protocol is designed around the surgery, the arm, and the person.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "post-hysterectomy-lumpectomy-lymphedema",
+    "condition": "Post-hysterectomy and lumpectomy lymphedema",
+    "audience": "disease",
+    "summary": "Lymphedema following hysterectomy or lumpectomy is common and treatable. We match the protocol to the surgical history and the current stage of the swelling.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "post-prostatectomy-lymphedema",
+    "condition": "Post-prostatectomy lymphedema",
+    "audience": "disease",
+    "summary": "Swelling after prostatectomy, along with vascular complications of other post-oncology surgeries, handled case by case with the treating team's plan kept in view.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "dvt-vte-prevention",
+    "condition": "DVT and VTE prevention",
+    "audience": "disease",
+    "summary": "Prevention protocols for deep vein thrombosis and venous thromboembolism, designed alongside the existing medical plan rather than in place of it.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "chronic-venous-insufficiency",
+    "condition": "Chronic venous insufficiency",
+    "audience": "disease",
+    "summary": "Poor venous return builds swelling, skin change, and ulcer risk over time. Guided protocols improve venous return and day-to-day comfort.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "pad-pvd-arterial-flow",
+    "condition": "Peripheral artery disease (PAD / PVD)",
+    "audience": "disease",
+    "summary": "Arterial-flow conditions of the limbs, assessed and supported with protocols that respect the vascular surgeon's plan and the patient's comorbidities.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "cellulitis-hyperkeratosis",
+    "condition": "Cellulitis and hyperkeratosis",
+    "audience": "disease",
+    "summary": "Chronic cellulitis and hyperkeratosis have benefited from our approach much sooner than expected, treated as part of a complete limb-care protocol.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "filariasis-elephantiasis",
+    "condition": "Filariasis and elephantiasis",
+    "audience": "disease",
+    "summary": "Chronic swollen legs from filariasis or elephantiasis are managed with persistent, staged therapy — moving patients from immobility back toward independence.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "lymphatic-drainage-vascular",
+    "condition": "Lymphatic drainage and vascular disorders",
+    "audience": "disease",
+    "summary": "Lymphatic-drainage support for vascular disorders that do not fit a single label. The case study decides the protocol.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "bedridden-immobile-care",
+    "condition": "Bedridden and immobile patient care",
+    "audience": "elderly",
+    "summary": "For patients confined to bed — by disease, age, or years of neglect — we build mobility-first protocols with the family, aimed at restoring independence step by step.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "paralytic-arthritis-joint-care",
+    "condition": "Paralytic care, arthritis, and joint pains",
+    "audience": "elderly",
+    "summary": "Care protocols for paralytic patients, and for the arthritis and joint pain that limit everyday movement in older adults.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "restless-legs-low-energy",
+    "condition": "Restless legs and low energy in limbs",
+    "audience": "elderly",
+    "summary": "Restless legs syndrome and persistent heaviness or low energy in the limbs, assessed for underlying vascular causes and supported with guided therapy.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
   }
 ]

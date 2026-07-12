@@ -1,0 +1,83 @@
+[
+  {
+    "id": "t-001",
+    "type": "quote",
+    "name": "Meera Sethi",
+    "location": "Pune, Maharashtra",
+    "quote": "The leg sleeve took a few sessions to position quickly, but the controls were straightforward once my therapist showed me. I now use the pump during my evening reading, and the swelling feels easier to manage.",
+    "context": "Lymphedema home care, 5 months",
+    "placeholder": true
+  },
+  {
+    "id": "t-002",
+    "type": "quote",
+    "name": "Rajesh Nair",
+    "location": "Kochi, Kerala",
+    "quote": "My surgeon recommended a regular compression routine after the operation. The timer makes it easier to stay consistent without watching the clock.",
+    "context": "Post-surgical DVT prevention, 8 weeks",
+    "placeholder": true
+  },
+  {
+    "id": "t-003",
+    "type": "quote",
+    "name": "Anita Verma",
+    "location": "Jaipur, Rajasthan",
+    "quote": "The arm cuff feels supportive without making the routine complicated. I appreciate being able to complete the session at home on the schedule my clinician gave me.",
+    "context": "Post-mastectomy arm lymphedema, 4 months",
+    "placeholder": true
+  },
+  {
+    "id": "t-004",
+    "type": "quote",
+    "name": "Suresh Iyer",
+    "location": "Chennai, Tamil Nadu",
+    "quote": "The pump is not silent, especially in a quiet room, but the sound is steady and I got used to it. The pressure controls are clear, and my leg-care routine now feels more structured.",
+    "context": "Chronic venous insufficiency, 6 months",
+    "placeholder": true
+  },
+  {
+    "id": "t-005",
+    "type": "quote",
+    "name": "Farida Khan",
+    "location": "Lucknow, Uttar Pradesh",
+    "quote": "The full-leg garment looked intimidating at first, but the markings helped me learn the setup. Regular sessions fit comfortably into my morning routine.",
+    "context": "Filariasis-related leg swelling, 7 months",
+    "placeholder": true
+  },
+  {
+    "id": "t-006",
+    "type": "quote",
+    "name": "Devendra Shah",
+    "location": "Ahmedabad, Gujarat",
+    "quote": "I use the device as one part of the diabetic-foot plan my doctor set out. The display is readable, and the cuff is simple to check before each session.",
+    "context": "Diabetic-foot and circulation care, 3 months",
+    "placeholder": true
+  },
+  {
+    "id": "t-007",
+    "type": "quote",
+    "name": "Karthik Rao",
+    "location": "Hyderabad, Telangana",
+    "quote": "The adjustable timer is useful on days when my therapist changes the session length. I can follow the plan without changing the rest of my routine.",
+    "context": "Varicose veins and leg swelling, 4 months",
+    "placeholder": true
+  },
+  {
+    "id": "t-008",
+    "type": "quote",
+    "name": "Prakash Bedi",
+    "location": "Chandigarh",
+    "quote": "The two cuff sizes helped us find a better fit for my father. We still check the settings each time, but the sequence itself is easy to follow.",
+    "context": "Venous-ulcer support, 10 weeks",
+    "placeholder": true
+  },
+  {
+    "id": "t-009",
+    "type": "quote",
+    "name": "Nandini Bose",
+    "location": "Kolkata, West Bengal",
+    "quote": "I wanted a routine I could manage at home after my lumpectomy. The arm sleeve needs careful positioning, but the session feels calm once it starts.",
+    "context": "Post-lumpectomy arm swelling, 12 weeks",
+    "placeholder": true
+  }
+]

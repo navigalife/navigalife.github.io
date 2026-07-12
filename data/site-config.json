@@ -1,9 +1,10 @@
 {
-  "theme": "meridian",
-  "heroHeadline": "Expert-guided protocols for circulation, mobility, and recovery",
-  "heroSub": "We build a customized plan around your condition, goals, and home routine, then guide device selection, home use, and review.",
+  "theme": "medivasc",
+  "productsEnabled": false,
+  "heroHeadline": "Amputation is not the only outcome",
+  "heroSub": "We are medical engineering professionals specializing in vascular and lymphatic disorders. When years of treatment have brought no improvement, we study the case, design a customized and affordable protocol, and follow up until the desired result is achieved.",
   "seo": {
-    "title": "Naviga Life | Guided Compression Therapy Protocols",
-    "description": "Customized, expert-guided protocols for lymphedema, venous conditions, DVT prevention, diabetic foot care, elderly wellbeing, and sports recovery."
+    "title": "MediVasc | Prevention of Foot and Leg Amputation",
+    "description": "MediVasc designs customized, affordable protocols for lymphedema, venous ulcers, diabetic foot, DVT, filariasis, and bedridden or elderly patients — with documented recoveries and follow-up until the desired result."
   }
 }

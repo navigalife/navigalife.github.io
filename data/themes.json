@@ -1,11 +1,52 @@
 [
   {
+    "id": "medivasc",
+    "label": "MediVasc Clinical",
+    "light": {
+      "--bg": "#F5F8F9",
+      "--surface": "#FFFFFF",
+      "--surface-2": "#E9F0F2",
+      "--surface-raised": "#FDFEFE",
+      "--ink": "#132430",
+      "--ink-muted": "#48626D",
+      "--line": "#D5E0E4",
+      "--primary": "#0E5F76",
+      "--primary-ink": "#F2FAFC",
+      "--primary-soft": "#DEEDF2",
+      "--accent": "#B25738",
+      "--good": "#256B46",
+      "--good-soft": "#DFF0E5",
+      "--alert": "#A63A2B",
+      "--alert-soft": "#F7E5E0",
+      "--focus": "#0E5F76"
+    },
+    "dark": {
+      "--bg": "#0C161B",
+      "--surface": "#13222A",
+      "--surface-2": "#1B2F38",
+      "--surface-raised": "#172931",
+      "--ink": "#E6EDF0",
+      "--ink-muted": "#9EB4BD",
+      "--line": "#2A3F49",
+      "--primary": "#5FB8D2",
+      "--primary-ink": "#0A161B",
+      "--primary-soft": "#143441",
+      "--accent": "#D69070",
+      "--good": "#74C497",
+      "--good-soft": "#15382A",
+      "--alert": "#E28D7C",
+      "--alert-soft": "#40201B",
+      "--focus": "#5FB8D2"
+    }
+  },
+  {
     "id": "meridian",
     "label": "Meridian",
     "light": {
       "--bg": "#F6F4EF",
       "--surface": "#FDFCF9",
       "--surface-2": "#EEEAE2",
+      "--surface-raised": "#FBFAF5",
       "--ink": "#182A2E",
       "--ink-muted": "#55666B",
       "--line": "#DDD6CA",
@@ -13,12 +54,17 @@
       "--primary-ink": "#F6FBFA",
       "--primary-soft": "#E3EFED",
       "--accent": "#B25A38",
+      "--good": "#2F7A4E",
+      "--good-soft": "#E2EFE4",
+      "--alert": "#A8402E",
+      "--alert-soft": "#F6E4DE",
       "--focus": "#0E6B63"
     },
     "dark": {
       "--bg": "#10181A",
       "--surface": "#172124",
       "--surface-2": "#1E2A2E",
+      "--surface-raised": "#1A2529",
       "--ink": "#E9E6DF",
       "--ink-muted": "#9AA8AB",
       "--line": "#2A373B",
@@ -26,37 +72,11 @@
       "--primary-ink": "#0C1517",
       "--primary-soft": "#16302D",
       "--accent": "#D98E68",
+      "--good": "#7FBE8E",
+      "--good-soft": "#173322",
+      "--alert": "#DB8B77",
+      "--alert-soft": "#3D201A",
       "--focus": "#4FB3A6"
-    }
-  },
-  {
-    "id": "clinic",
-    "label": "Clinic",
-    "light": {
-      "--bg": "#F3F5F6",
-      "--surface": "#FBFCFC",
-      "--surface-2": "#E5EAED",
-      "--ink": "#1D2933",
-      "--ink-muted": "#4F606C",
-      "--line": "#D5DDE1",
-      "--primary": "#315D75",
-      "--primary-ink": "#F7FBFC",
-      "--primary-soft": "#DFE9EE",
-      "--accent": "#A55345",
-      "--focus": "#315D75"
-    },
-    "dark": {
-      "--bg": "#10171C",
-      "--surface": "#182126",
-      "--surface-2": "#202B31",
-      "--ink": "#E9EDF0",
-      "--ink-muted": "#A2AFB6",
-      "--line": "#303C43",
-      "--primary": "#7FB2CC",
-      "--primary-ink": "#0E171C",
-      "--primary-soft": "#1B3543",
-      "--accent": "#D78C79",
-      "--focus": "#7FB2CC"
     }
   },
   {
@@ -66,19 +86,25 @@
       "--bg": "#F4F1E8",
       "--surface": "#FCFBF6",
       "--surface-2": "#E8E3D5",
+      "--surface-raised": "#FAF9F2",
       "--ink": "#253026",
-      "--ink-muted": "#586259",
+      "--ink-muted": "#566053",
       "--line": "#D7D0BE",
       "--primary": "#476545",
       "--primary-ink": "#F8FBF6",
       "--primary-soft": "#E2E9DE",
       "--accent": "#A35E3B",
+      "--good": "#2E7A4C",
+      "--good-soft": "#E0EDDC",
+      "--alert": "#A8402E",
+      "--alert-soft": "#F4E3DC",
       "--focus": "#476545"
     },
     "dark": {
       "--bg": "#141A15",
       "--surface": "#1D251E",
       "--surface-2": "#273029",
+      "--surface-raised": "#212A22",
       "--ink": "#ECEAE2",
       "--ink-muted": "#A7B0A5",
       "--line": "#354037",
@@ -86,6 +112,10 @@
       "--primary-ink": "#101711",
       "--primary-soft": "#263B28",
       "--accent": "#D4936D",
+      "--good": "#8CC29A",
+      "--good-soft": "#1B3524",
+      "--alert": "#D9917A",
+      "--alert-soft": "#3C221C",
       "--focus": "#91B28D"
     }
   },
@@ -96,6 +126,7 @@
       "--bg": "#F2F1ED",
       "--surface": "#FAF9F6",
       "--surface-2": "#E4E2DC",
+      "--surface-raised": "#F8F7F3",
       "--ink": "#242628",
       "--ink-muted": "#595E61",
       "--line": "#D2CFC7",
@@ -103,12 +134,17 @@
       "--primary-ink": "#FAFBFA",
       "--primary-soft": "#E1E4E5",
       "--accent": "#A7671C",
+      "--good": "#2F7250",
+      "--good-soft": "#E0ECE3",
+      "--alert": "#9E4433",
+      "--alert-soft": "#F3E4DE",
       "--focus": "#3F464A"
     },
     "dark": {
       "--bg": "#111315",
       "--surface": "#1A1D20",
       "--surface-2": "#24282B",
+      "--surface-raised": "#1F2225",
       "--ink": "#ECEAE4",
       "--ink-muted": "#A6AAAC",
       "--line": "#30363A",
@@ -116,6 +152,10 @@
       "--primary-ink": "#111315",
       "--primary-soft": "#2B3134",
       "--accent": "#D6A257",
+      "--good": "#85C29E",
+      "--good-soft": "#1E3529",
+      "--alert": "#D89680",
+      "--alert-soft": "#3A231D",
       "--focus": "#BCC4C8"
     }
   }
