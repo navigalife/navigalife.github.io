@@ -114,3 +114,38 @@ From run 2 (spec 002, advisor-implemented, signed off 2026-07-12):
    compiles `pattern` with the stricter `/v` regex flag; an unescaped
    trailing hyphen throws (console-only) and silently disables native form
    validation.
+
+From run 3 (design overhaul, advisor-implemented, 2026-07-12):
+
+7. **No design change ships without full-surface browser verification.**
+   Run 2 shipped with the admin flow untested — the owner caught it. The
+   bar now: exact-viewport screenshots at 1600px AND 390px in light AND
+   dark, plus scripted interaction tests of the public site and the ENTIRE
+   admin flow (vault create/unlock/forget, story CRUD incl. the crop
+   dialog, appearance, publish plumbing) against a mocked GitHub API —
+   a fake token plus request interception exercises everything up to and
+   including the commit calls without touching the real repo.
+8. **Screenshot tooling lies at mobile widths.** Chrome enforces a ~500px
+   minimum window width: `--headless --window-size=390,...` lays the page
+   out at ~500 and clips the capture (fake horizontal-overflow "bugs"),
+   and the extension's window resize can silently no-op. macOS dark mode
+   also leaks into headless `prefers-color-scheme`. Reliable harness:
+   puppeteer-core with `page.setViewport` + `emulateMediaFeatures`.
+9. **Media-query blocks leak into narrower breakpoints.** `align-items:
+   start` set on `.pair-story` in the ≤1000px grid layout still applied in
+   the ≤760px flex-column layout, collapsing children to content width
+   (0px before lazy images load). When the same selector changes display
+   model across breakpoints, explicitly reset every layout property the
+   wider block set.
+10. **`src/build.js` criticalCss is a manual mirror of `src/styles.css`.**
+    Any change to header/hero/reveal styles must be resynced there in the
+    same commit, or first paint diverges from the stylesheet (FOUC/layout
+    shift). The reveal-hide rule (`:where(.js) [data-reveal]`) must be in
+    critical CSS and gated on the `.js` class the inline head script sets.
+11. **The brand lockup is the owner's image, not a rebuild.** Header and
+    footer use `assets/brand/logo-{ink,paper}.png`, generated from the
+    owner's `logo-full.png` by `tools/gen-brand.js` (chain documented in
+    its header). Never recompose the logo from mark + typeset text.
+12. **Public label renames have admin copy references.** The clinical-note
+    → case-note rename left stale help text in `admin/app.js`; grep
+    `admin/` for the old label whenever public UI concepts are renamed.

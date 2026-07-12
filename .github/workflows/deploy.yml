@@ -1,4 +1,4 @@
-name: Build and deploy Naviga Life
+name: Build and deploy MediVasc
 
 on:
   push:
