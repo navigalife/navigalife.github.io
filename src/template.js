@@ -167,6 +167,7 @@ const renderJsonLd = ({ company, products, imageMap, siteUrl }) => {
       position: index + 1,
       item: {
         '@type': 'Product',
+        additionalType: 'https://schema.org/MedicalDevice',
         name: product.name,
         description: product.description,
         image: `${siteUrl}${imageMap[product.images[0]][1200] || imageMap[product.images[0]][640]}`,
@@ -191,6 +192,7 @@ const renderPage = ({
   jsPath,
   ogImage,
   siteUrl,
+  criticalCss,
 }) => {
   const featured = products.find((product) => product.featured) || products[0];
   const groups = [...new Set(products.map((product) => product.category))];
@@ -232,18 +234,29 @@ const renderPage = ({
   <script>(function(){try{var s=localStorage.getItem('naviga-color-scheme');var d=s?s==='dark':matchMedia('(prefers-color-scheme:dark)').matches;if(d)document.documentElement.dataset.theme='dark'}catch(e){}})()</script>
   <title>${escapeHtml(config.seo.title)}</title>
   <meta name="description" content="${escapeHtml(config.seo.description)}">
+  <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#F6F4EF">
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="${escapeHtml(company.name)}">
   <meta property="og:title" content="${escapeHtml(config.seo.title)}">
   <meta property="og:description" content="${escapeHtml(config.seo.description)}">
   <meta property="og:url" content="${siteUrl}">
   <meta property="og:image" content="${siteUrl}${ogImage}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Naviga Life guided compression therapy protocols and medical devices">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(config.seo.title)}">
+  <meta name="twitter:description" content="${escapeHtml(config.seo.description)}">
+  <meta name="twitter:image" content="${siteUrl}${ogImage}">
+  <meta name="twitter:image:alt" content="Naviga Life guided compression therapy protocols and medical devices">
   <link rel="canonical" href="${siteUrl}">
   <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="assets/brand/favicon-32.png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/brand/apple-touch-icon.png">
   <link rel="preload" href="assets/fonts/fraunces-latin-600.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/instrument-sans-latin-400-600.woff2" as="font" type="font/woff2" crossorigin>
+  <style>${criticalCss}</style>
   <link rel="stylesheet" href="${cssPath}">
   <script type="application/ld+json">${renderJsonLd({ company, products, imageMap, siteUrl })}</script>
 </head>
