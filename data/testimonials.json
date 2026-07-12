@@ -79,14 +79,5 @@
     "quote": "I wanted a routine I could manage at home after my lumpectomy. The arm sleeve needs careful positioning, but the session feels calm once it starts.",
     "context": "Post-lumpectomy arm swelling, 12 weeks",
     "placeholder": true
-  },
-  {
-    "id": "t-010",
-    "type": "quote",
-    "name": "Checkpoint Four Review",
-    "location": "New Delhi",
-    "quote": "The guided setup made the home routine easier to follow.",
-    "context": "Guided home-use routine",
-    "placeholder": true
   }
 ]
