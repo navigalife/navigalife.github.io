@@ -1,8 +1,8 @@
 {
-  "name": "naviga-life-site",
+  "name": "medivasc-site",
   "version": "1.0.0",
   "private": true,
-  "description": "Static product site and catalogue build for Naviga Life",
+  "description": "MediVasc static site build — prevention of foot and leg amputation",
   "scripts": {
     "build": "node src/build.js",
     "pdfs": "node tools/gen-pdfs.js",

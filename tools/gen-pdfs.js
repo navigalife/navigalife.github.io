@@ -61,6 +61,11 @@ const browserExecutable = () => {
 };
 
 const main = async () => {
+  const config = JSON.parse(await fsp.readFile(path.join(ROOT, 'data', 'site-config.json'), 'utf8'));
+  if (!config.productsEnabled) {
+    console.log('productsEnabled is false — catalogue PDFs skipped (nothing to generate).');
+    return;
+  }
   const products = JSON.parse(await fsp.readFile(path.join(ROOT, 'data', 'products.json'), 'utf8'));
   const catalogueProducts = products.filter((product) => product.visible && product.catalogue);
   if (!catalogueProducts.length) throw new Error('No visible catalogue products found.');
