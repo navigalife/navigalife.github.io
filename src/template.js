@@ -7,6 +7,11 @@ const escapeHtml = (value = '') =>
     .replaceAll("'", '&#039;');
 
 const icon = (name) => {
+  if (name === 'whatsapp') {
+    // Official WhatsApp glyph is a filled path, not a stroke — the old stroked
+    // chat-bubble stand-in rendered as a malformed squiggle.
+    return '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/></svg>';
+  }
   const paths = {
     arrow: '<path d="M5 12h14M14 6l6 6-6 6"/>',
     arrowDown: '<path d="M12 5v14M6 13l6 6 6-6"/>',
@@ -14,12 +19,21 @@ const icon = (name) => {
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/>',
     map: '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
     menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
-    message: '<path d="M20 11.5a8 8 0 0 1-11.8 7L3 20l1.5-5.1A8 8 0 1 1 20 11.5Z"/><path d="M8.5 9.3c.8 2 2.2 3.4 4.2 4.2"/>',
     moon: '<path d="M20.2 15.2A8.5 8.5 0 0 1 8.8 3.8a8.5 8.5 0 1 0 11.4 11.4Z"/>',
     sun: '<circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   };
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg>`;
+};
+
+// Wraps the first whole-word occurrence of `accentWord` in <em> (escaped text
+// in, HTML out). Degrades to plain text when the word is absent, so admin
+// edits to the headline can never break the render.
+const accentuate = (text, accentWord) => {
+  const safe = escapeHtml(text);
+  if (!accentWord) return safe;
+  const target = escapeHtml(accentWord).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return safe.replace(new RegExp(`\\b(${target})\\b`, 'i'), '<em>$1</em>');
 };
 
 const phoneHref = (number) => {
@@ -49,7 +63,6 @@ const evidenceFrame = (entry, testimonial, imageMap, options = {}) => {
   const slug = stageSlug(entry.stage);
   return `
     <figure class="evidence" data-stage="${slug}">
-      <figcaption class="evidence__stage">${escapeHtml(entry.stage)}</figcaption>
       <div class="evidence__image">
         <div class="evidence__fill" aria-hidden="true">${image(entry.src, imageMap, { alt: '', sizes: options.sizes, eager: options.eager })}</div>
         ${image(entry.src, imageMap, {
@@ -58,14 +71,12 @@ const evidenceFrame = (entry, testimonial, imageMap, options = {}) => {
           eager: options.eager,
         })}
       </div>
+      <figcaption class="evidence__stage">${escapeHtml(entry.stage.split(' ')[0])}</figcaption>
     </figure>`;
 };
 
-const clinicalNote = (remark) => `
-  <div class="clinical-note">
-    <span class="clinical-note__label">MediVasc clinical note</span>
-    <p>${escapeHtml(remark)}</p>
-  </div>`;
+const caseNote = (remark) => `
+  <p class="case-note"><span class="case-note__label">Case note</span>${escapeHtml(remark)}</p>`;
 
 const storyMeta = (testimonial) => {
   const parts = [testimonial.location, testimonial.duration].filter(Boolean);
@@ -86,8 +97,8 @@ const renderJourney = (testimonial, imageMap) => `
         .map((entry) => evidenceFrame(entry, testimonial, imageMap, { sizes: '(max-width: 720px) 88vw, 28vw' }))
         .join('')}
     </div>
-    ${clinicalNote(testimonial.remark)}
-    ${testimonial.quote ? `<blockquote class="story-quote">“${escapeHtml(testimonial.quote)}”</blockquote>` : ''}
+    ${caseNote(testimonial.remark)}
+    ${testimonial.quote ? `<blockquote class="story-quote">${escapeHtml(testimonial.quote)}</blockquote>` : ''}
   </article>`;
 
 const renderPairStory = (testimonial, imageMap, index) => `
@@ -99,13 +110,13 @@ const renderPairStory = (testimonial, imageMap, index) => `
     </div>
     <h3>${escapeHtml(testimonial.condition)}</h3>
     ${storyMeta(testimonial)}
-    ${clinicalNote(testimonial.remark)}
-    ${testimonial.quote ? `<blockquote class="story-quote">“${escapeHtml(testimonial.quote)}”</blockquote>` : ''}
+    ${caseNote(testimonial.remark)}
+    ${testimonial.quote ? `<blockquote class="story-quote">${escapeHtml(testimonial.quote)}</blockquote>` : ''}
   </article>`;
 
 const renderQuoteStory = (testimonial, index) => `
   <figure class="quote-story" data-reveal style="--reveal-order:${index % 3}">
-    <blockquote>“${escapeHtml(testimonial.quote)}”</blockquote>
+    <blockquote>${escapeHtml(testimonial.quote)}</blockquote>
     <figcaption><strong>${escapeHtml(testimonial.name)}</strong><span>${escapeHtml(testimonial.location)}</span><span>${escapeHtml(testimonial.condition)}</span></figcaption>
   </figure>`;
 
@@ -136,6 +147,7 @@ const renderPage = ({
   ogImage,
   siteUrl,
   criticalCss,
+  themeBg,
 }) => {
   const featured = testimonials.find((testimonial) => testimonial.featured);
   const pairStories = testimonials.filter(
@@ -173,11 +185,11 @@ const renderPage = ({
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script>(function(){try{var s=localStorage.getItem('medivasc-color-scheme')||localStorage.getItem('naviga-color-scheme');var d=s?s==='dark':matchMedia('(prefers-color-scheme:dark)').matches;if(d)document.documentElement.dataset.theme='dark'}catch(e){}})()</script>
+  <script>(function(){document.documentElement.classList.add('js');try{var s=localStorage.getItem('medivasc-color-scheme')||localStorage.getItem('naviga-color-scheme');var d=s?s==='dark':matchMedia('(prefers-color-scheme:dark)').matches;if(d)document.documentElement.dataset.theme='dark'}catch(e){}})()</script>
   <title>${escapeHtml(config.seo.title)}</title>
   <meta name="description" content="${escapeHtml(config.seo.description)}">
   <meta name="robots" content="index,follow">
-  <meta name="theme-color" content="#F5F8F9">
+  <meta name="theme-color" content="${escapeHtml(themeBg)}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="${escapeHtml(company.name)}">
   <meta property="og:title" content="${escapeHtml(config.seo.title)}">
@@ -197,6 +209,7 @@ const renderPage = ({
   <link rel="icon" href="assets/brand/favicon-32.png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/brand/apple-touch-icon.png">
   <link rel="preload" href="assets/fonts/fraunces-latin-600.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/fraunces-latin-600-italic.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/instrument-sans-latin-400-600.woff2" as="font" type="font/woff2" crossorigin>
   <style>${criticalCss}</style>
   <link rel="stylesheet" href="${cssPath}">
@@ -220,7 +233,7 @@ const renderPage = ({
         <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme">
           <span class="theme-toggle__sun">${icon('sun')}</span><span class="theme-toggle__moon">${icon('moon')}</span>
         </button>
-        <a class="button header-cta" href="${waPatient}" target="_blank" rel="noreferrer">${icon('message')} Talk to us</a>
+        <a class="button header-cta" href="${waPatient}" target="_blank" rel="noreferrer">${icon('whatsapp')} Talk to us</a>
       </div>
     </div>
   </header>
@@ -230,11 +243,11 @@ const renderPage = ({
       <div class="container hero__layout">
         <div class="hero__copy" data-reveal>
           <p class="kicker">Prevention of foot and leg amputation</p>
-          <h1>${escapeHtml(config.heroHeadline)}</h1>
+          <h1>${accentuate(config.heroHeadline, config.heroAccent)}</h1>
           <p>${escapeHtml(config.heroSub)}</p>
           <div class="hero__actions">
             <a class="button" href="#recoveries">See the recoveries ${icon('arrowDown')}</a>
-            <a class="button button--outline" href="${waPatient}" target="_blank" rel="noreferrer">${icon('message')} WhatsApp us</a>
+            <a class="button button--outline" href="${waPatient}" target="_blank" rel="noreferrer">${icon('whatsapp')} WhatsApp us</a>
           </div>
           <ul class="chip-list hero__chips" aria-label="Conditions we treat">
             ${heroChips.map((chip) => `<li>${escapeHtml(chip)}</li>`).join('')}
@@ -257,7 +270,7 @@ const renderPage = ({
         <div class="section-heading" data-reveal>
           <div>
             <p class="kicker">Documented recoveries</p>
-            <h2>Recoveries you can see</h2>
+            <h2>Recoveries you can <em>see</em></h2>
           </div>
           <p>Every story below is a real MediVasc case, shown exactly as photographed — before, during, and after therapy. We never generate or edit outcome images. Names are withheld where patients asked for privacy.</p>
         </div>
@@ -272,7 +285,7 @@ const renderPage = ({
         <div class="section-heading" data-reveal>
           <div>
             <p class="kicker">What to expect</p>
-            <h2>The therapy comes to you</h2>
+            <h2>The therapy comes <em>to you</em></h2>
           </div>
           <p>Hospital and clinic therapy for these conditions runs long, and every session means a visit. Many patients never manage it — there is no clinic in the vicinity, mobility is already limited, a family member must give up the whole day, and the travel and therapy costs deter treatment altogether. Our approach removes every one of those barriers.</p>
         </div>
@@ -283,7 +296,7 @@ const renderPage = ({
           <li data-reveal style="--reveal-order:3"><span>04</span><div><h3>Follow-ups until the result</h3><p>We stay in touch at predefined regular intervals, monitor progress, take your feedback, and change the modalities if required — until the desired result is achieved.</p></div></li>
         </ol>
         <aside class="motto" data-reveal>
-          <p class="motto__line">A solution is not a solution unless it is affordable</p>
+          <p class="motto__line">A solution is not a solution unless it is <em>affordable</em></p>
           <p>That is our motto, and we mean it literally. The solutions are designed not to pinch the pockets of patients and families already struggling with rising medical expenses.</p>
         </aside>
       </div>
@@ -315,14 +328,18 @@ const renderPage = ({
     </section>
 
     <section class="section act" id="act">
-      <div class="container act__layout" data-reveal>
-        <div>
-          <h2>If amputation has been advised, talk to us today</h2>
-          <p>The featured recovery above began after a vascular surgeon had already referred the patient for below-knee amputation. The earlier therapy starts, the shorter it is and the more of the limb it protects. One message is enough to begin.</p>
-        </div>
-        <div class="act__actions">
-          <a class="button button--inverse" href="${waPatient}" target="_blank" rel="noreferrer">${icon('message')} WhatsApp us now</a>
-          <a class="button button--inverse-outline" href="tel:${telephone}">${icon('call')} Call +91 ${escapeHtml(company.phone)}</a>
+      <div class="container">
+        <div class="act__panel" data-reveal>
+          <div class="act__layout">
+            <div>
+              <h2>If amputation has been advised, talk to us <em>today</em></h2>
+              <p>The featured recovery above began after a vascular surgeon had already referred the patient for below-knee amputation. The earlier therapy starts, the shorter it is and the more of the limb it protects. One message is enough to begin.</p>
+            </div>
+            <div class="act__actions">
+              <a class="button button--inverse" href="${waPatient}" target="_blank" rel="noreferrer">${icon('whatsapp')} WhatsApp us now</a>
+              <a class="button button--inverse-outline" href="tel:${telephone}">${icon('call')} Call +91 ${escapeHtml(company.phone)}</a>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -350,12 +367,12 @@ const renderPage = ({
     <section class="contact" id="contact">
       <div class="container contact__layout">
         <div class="contact__intro" data-reveal>
-          <h2>Start with your case</h2>
+          <h2>Start with <em>your case</em></h2>
           <p>Tell us the condition, how long it has persisted, and what treatment has been tried. We will study the case and tell you honestly what a protocol can do.</p>
         </div>
         <div class="contact__details" data-reveal style="--reveal-order:1">
           <a class="contact-row" href="tel:${telephone}">${icon('call')}<span><small>Call</small>+91 ${escapeHtml(company.phone)}</span></a>
-          <a class="contact-row" href="${waPatient}" target="_blank" rel="noreferrer">${icon('message')}<span><small>WhatsApp</small>+91 ${escapeHtml(company.whatsapp)}</span></a>
+          <a class="contact-row" href="${waPatient}" target="_blank" rel="noreferrer">${icon('whatsapp')}<span><small>WhatsApp</small>+91 ${escapeHtml(company.whatsapp)}</span></a>
           ${company.email ? `<a class="contact-row" href="mailto:${escapeHtml(company.email)}">${icon('mail')}<span><small>Email</small>${escapeHtml(company.email)}</span></a>` : ''}
           <a class="contact-row" href="${escapeHtml(company.mapsUrl)}" target="_blank" rel="noreferrer">${icon('map')}<span><small>Location</small>${escapeHtml(company.address)}</span></a>
         </div>

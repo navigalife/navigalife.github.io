@@ -43,6 +43,11 @@
     if (event.key === 'Escape' && navigation?.classList.contains('is-open')) closeMenu();
   });
 
+  const header = document.querySelector('[data-header]');
+  const refreshHeader = () => header?.classList.toggle('is-scrolled', window.scrollY > 8);
+  document.addEventListener('scroll', refreshHeader, { passive: true });
+  refreshHeader();
+
   const revealItems = [...document.querySelectorAll('[data-reveal]')];
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
     revealItems.forEach((item) => item.classList.add('is-visible'));
