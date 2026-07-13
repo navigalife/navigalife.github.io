@@ -8,7 +8,7 @@ const escapeHtml = (value = '') =>
 
 const icon = (name) => {
   if (name === 'whatsapp') {
-    // Official WhatsApp glyph is a filled path, not a stroke — the old stroked
+    // Official WhatsApp glyph is a filled path, not a stroke; the old stroked
     // chat-bubble stand-in rendered as a malformed squiggle.
     return '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/></svg>';
   }
@@ -66,7 +66,7 @@ const evidenceFrame = (entry, testimonial, imageMap, options = {}) => {
       <div class="evidence__image">
         <div class="evidence__fill" aria-hidden="true">${image(entry.src, imageMap, { alt: '', sizes: options.sizes, eager: options.eager })}</div>
         ${image(entry.src, imageMap, {
-          alt: `${entry.stage} photograph — ${testimonial.condition}`,
+          alt: `${entry.stage} photograph: ${testimonial.condition}`,
           sizes: options.sizes,
           eager: options.eager,
         })}
@@ -78,17 +78,28 @@ const evidenceFrame = (entry, testimonial, imageMap, options = {}) => {
 const caseNote = (remark) => `
   <p class="case-note"><span class="case-note__label">Case note</span>${escapeHtml(remark)}</p>`;
 
+// Identity line: a real name when we have one, otherwise "Patient aged N" when
+// an age is on record, otherwise nothing. No "Identity protected" placeholder.
+const patientLabel = (testimonial) => {
+  if (testimonial.name) return testimonial.name;
+  if (testimonial.age) return `Patient aged ${testimonial.age}`;
+  return '';
+};
+
 const storyMeta = (testimonial) => {
+  const lead = patientLabel(testimonial);
   const parts = [testimonial.location, testimonial.duration].filter(Boolean);
-  return `<p class="story-meta"><strong>${escapeHtml(testimonial.name)}</strong>${parts
-    .map((part) => `<span aria-hidden="true">·</span>${escapeHtml(part)}`)
-    .join('')}</p>`;
+  const items = [
+    ...(lead ? [`<strong>${escapeHtml(lead)}</strong>`] : []),
+    ...parts.map((part) => escapeHtml(part)),
+  ];
+  if (!items.length) return '';
+  return `<p class="story-meta">${items.join('<span aria-hidden="true">·</span>')}</p>`;
 };
 
 const renderJourney = (testimonial, imageMap) => `
   <article class="journey" data-reveal aria-labelledby="journey-title">
     <div class="journey__intro">
-      <p class="kicker">Featured recovery</p>
       <h3 id="journey-title">${escapeHtml(testimonial.condition)}</h3>
       ${storyMeta(testimonial)}
     </div>
@@ -117,7 +128,7 @@ const renderPairStory = (testimonial, imageMap, index) => `
 const renderQuoteStory = (testimonial, index) => `
   <figure class="quote-story" data-reveal style="--reveal-order:${index % 3}">
     <blockquote>${escapeHtml(testimonial.quote)}</blockquote>
-    <figcaption><strong>${escapeHtml(testimonial.name)}</strong><span>${escapeHtml(testimonial.location)}</span><span>${escapeHtml(testimonial.condition)}</span></figcaption>
+    <figcaption>${patientLabel(testimonial) ? `<strong>${escapeHtml(patientLabel(testimonial))}</strong>` : ''}<span>${escapeHtml(testimonial.location)}</span><span>${escapeHtml(testimonial.condition)}</span></figcaption>
   </figure>`;
 
 const renderJsonLd = ({ company, siteUrl }) => {
@@ -198,12 +209,12 @@ const renderPage = ({
   <meta property="og:image" content="${siteUrl}${ogImage}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="MediVasc — prevention of foot and leg amputation">
+  <meta property="og:image:alt" content="MediVasc: prevention of foot and leg amputation">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(config.seo.title)}">
   <meta name="twitter:description" content="${escapeHtml(config.seo.description)}">
   <meta name="twitter:image" content="${siteUrl}${ogImage}">
-  <meta name="twitter:image:alt" content="MediVasc — prevention of foot and leg amputation">
+  <meta name="twitter:image:alt" content="MediVasc: prevention of foot and leg amputation">
   <link rel="canonical" href="${siteUrl}">
   <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="assets/brand/favicon-32.png" sizes="32x32">
@@ -260,7 +271,7 @@ const renderPage = ({
               .map((entry) => evidenceFrame(entry, featured, imageMap, { sizes: '(max-width: 720px) 30vw, 13vw', eager: true }))
               .join('')}
           </div>
-          <p><strong>A documented MediVasc recovery.</strong> Below-knee amputation was advised — therapy prevented it. See the full story ${icon('arrow')}</p>
+          <p><strong>A documented MediVasc recovery.</strong> Below-knee amputation was advised. Therapy prevented it. See the full story ${icon('arrow')}</p>
         </a>` : ''}
       </div>
     </section>
@@ -272,7 +283,7 @@ const renderPage = ({
             <p class="kicker">Documented recoveries</p>
             <h2>Recoveries you can <em>see</em></h2>
           </div>
-          <p>Every story below is a real MediVasc case, shown exactly as photographed — before, during, and after therapy. We never generate or edit outcome images. Names are withheld where patients asked for privacy.</p>
+          <p>Every story below is a real MediVasc case, shown exactly as photographed: before, during, and after therapy. We never generate or edit outcome images. Names are withheld where patients asked for privacy.</p>
         </div>
         ${featured ? renderJourney(featured, imageMap) : ''}
         ${pairStories.length ? `<div class="pair-story-row">${pairStories.map((testimonial, index) => renderPairStory(testimonial, imageMap, index)).join('')}</div>` : ''}
@@ -287,13 +298,13 @@ const renderPage = ({
             <p class="kicker">What to expect</p>
             <h2>The therapy comes <em>to you</em></h2>
           </div>
-          <p>Hospital and clinic therapy for these conditions runs long, and every session means a visit. Many patients never manage it — there is no clinic in the vicinity, mobility is already limited, a family member must give up the whole day, and the travel and therapy costs deter treatment altogether. Our approach removes every one of those barriers.</p>
+          <p>Hospital and clinic therapy for these conditions runs long, and every session means a visit. Many patients never manage it: there is no clinic in the vicinity, mobility is already limited, a family member must give up the whole day, and the travel and therapy costs deter treatment altogether. Our approach removes every one of those barriers.</p>
         </div>
         <ol class="pathway" aria-label="How a MediVasc engagement works">
-          <li data-reveal style="--reveal-order:0"><span>01</span><div><h3>Detailed case study</h3><p>We begin with your individual case — the condition, its history, current treatment, and reports. No two protocols are the same because no two cases are.</p></div></li>
-          <li data-reveal style="--reveal-order:1"><span>02</span><div><h3>A customized, affordable solution</h3><p>Where required, we customize the medical device modalities for your therapy — designed around your case, your home, and your budget.</p></div></li>
-          <li data-reveal style="--reveal-order:2"><span>03</span><div><h3>Therapy at home, under our guidance</h3><p>You take the therapy at home, guided by us, without any break — no travel, no waiting rooms, no dependence on anyone to get you there.</p></div></li>
-          <li data-reveal style="--reveal-order:3"><span>04</span><div><h3>Follow-ups until the result</h3><p>We stay in touch at predefined regular intervals, monitor progress, take your feedback, and change the modalities if required — until the desired result is achieved.</p></div></li>
+          <li data-reveal style="--reveal-order:0"><span>01</span><div><h3>Detailed case study</h3><p>We begin with your individual case: the condition, its history, current treatment, and reports. No two protocols are the same because no two cases are.</p></div></li>
+          <li data-reveal style="--reveal-order:1"><span>02</span><div><h3>A customized, affordable solution</h3><p>Where required, we customize the medical device modalities for your therapy, designed around your case, your home, and your budget.</p></div></li>
+          <li data-reveal style="--reveal-order:2"><span>03</span><div><h3>Therapy at home, under our guidance</h3><p>You take the therapy at home, guided by us, without any break: no travel, no waiting rooms, no dependence on anyone to get you there.</p></div></li>
+          <li data-reveal style="--reveal-order:3"><span>04</span><div><h3>Follow-ups until the result</h3><p>We stay in touch at predefined regular intervals, monitor progress, take your feedback, and change the modalities if required, until the desired result is achieved.</p></div></li>
         </ol>
         <aside class="motto" data-reveal>
           <p class="motto__line">A solution is not a solution unless it is <em>affordable</em></p>
@@ -309,7 +320,7 @@ const renderPage = ({
             <p class="kicker">Protocols available</p>
             <h2>Conditions we treat</h2>
           </div>
-          <p>Every protocol starts with the same detailed case study. If your condition is not listed here, ask us — the case study decides what is possible.</p>
+          <p>Every protocol starts with the same detailed case study. If your condition is not listed here, ask us. The case study decides what is possible.</p>
         </div>
         <div class="condition-tracks">
           ${tracks
@@ -333,7 +344,7 @@ const renderPage = ({
           <div class="act__layout">
             <div>
               <h2>If amputation has been advised, talk to us <em>today</em></h2>
-              <p>The featured recovery above began after a vascular surgeon had already referred the patient for below-knee amputation. The earlier therapy starts, the shorter it is and the more of the limb it protects. One message is enough to begin.</p>
+              <p>The recovery shown above began after a vascular surgeon had already referred the patient for below-knee amputation. The earlier therapy starts, the shorter it is and the more of the limb it protects. One message is enough to begin.</p>
             </div>
             <div class="act__actions">
               <a class="button button--inverse" href="${waPatient}" target="_blank" rel="noreferrer">${icon('whatsapp')} WhatsApp us now</a>
@@ -351,7 +362,7 @@ const renderPage = ({
           <h2>Join hands with us</h2>
         </div>
         <div data-reveal style="--reveal-order:1">
-          <p>We invite vascular surgeons, physicians, and wound-care and lymphedema practitioners to study our methodology and our results. Our protocols work alongside your treatment plan, never in place of it — and your long-suffering patients gain an affordable option and the awareness they have been deprived of.</p>
+          <p>We invite vascular surgeons, physicians, and wound-care and lymphedema practitioners to study our methodology and our results. Our protocols work alongside your treatment plan, never in place of it, and your long-suffering patients gain an affordable option and the awareness they have been deprived of.</p>
           <a class="text-link" href="${waDoctor}" target="_blank" rel="noreferrer">Collaborate with MediVasc ${icon('arrow')}</a>
         </div>
       </div>

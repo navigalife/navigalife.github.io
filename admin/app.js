@@ -87,6 +87,7 @@ const icon = (name) => {
     trash: '<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>',
     eye: '<path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/>',
     copy: '<rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
+    check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   };
   return '<svg viewBox="0 0 24 24" aria-hidden="true">' + paths[name] + '</svg>';
 };
@@ -262,10 +263,18 @@ const storyTypeLabel = (testimonial) => {
   return 'Quote';
 };
 
+// A real name when we have one, otherwise "Patient aged N" when an age is on
+// record, otherwise nothing. No "Identity protected" placeholder.
+const patientLabel = (testimonial) => {
+  if (testimonial.name) return testimonial.name;
+  if (testimonial.age) return 'Patient aged ' + testimonial.age;
+  return '';
+};
+
 const renderTestimonialsList = () => {
   const items = state.draft.testimonials;
   const rows = items.map((testimonial, index) => '<div class="list-row" data-testid="testimonial-row">' +
-    '<div class="row-title"><strong>' + h(testimonial.name) + '</strong><span>' + h(testimonial.condition) + '</span></div>' +
+    '<div class="row-title"><strong>' + h(testimonial.condition) + '</strong><span>' + h(patientLabel(testimonial) || 'Anonymous') + '</span></div>' +
     '<div class="row-meta">' + h(storyTypeLabel(testimonial)) + ' · ' + h(testimonial.location) + '</div>' +
     '<div class="status-badges">' + (testimonial.featured ? '<span class="badge badge--active">Featured</span>' : '') + ((testimonial.images || []).length ? '<span class="badge">Photographs</span>' : '') + '</div>' +
     rowActions('testimonials', index, items.length, false) + '</div>');
@@ -308,6 +317,7 @@ const defaultTestimonial = () => ({
   id: '',
   featured: false,
   name: '',
+  age: '',
   location: '',
   condition: '',
   duration: '',
@@ -400,17 +410,18 @@ const stageSlot = (testimonial, stage) => {
 const renderTestimonialEditor = () => {
   const testimonial = state.editor.buffer;
   const isNew = state.editor.index < 0;
-  return '<section class="editor-shell" data-testid="testimonial-editor">' + editorHeading(isNew ? 'New recovery story' : 'Edit recovery story', testimonial.name || 'Untitled story') +
-    '<div class="notice">Real patients only. With photographs, the clinical remark is required and the quote is optional; without photographs, the quote is required. Name and location are always required — use “Identity protected” when the patient asked for privacy.</div>' +
+  return '<section class="editor-shell" data-testid="testimonial-editor">' + editorHeading(isNew ? 'New recovery story' : 'Edit recovery story', testimonial.name || testimonial.condition || 'Untitled story') +
+    '<div class="notice">Real patients only. Names are optional and patients stay anonymous by default; add a patient age to show “Patient aged N” on the card instead. With photographs, the clinical remark is required and the quote is optional; without photographs, the quote is required. Location and condition are always required.</div>' +
     '<form id="testimonial-form"><div class="editor-grid">' +
-    '<label>Patient name<input name="name" value="' + h(testimonial.name) + '" required><span class="field-help">“Identity protected” is allowed.</span></label>' +
+    '<label>Patient name (optional)<input name="name" value="' + h(testimonial.name || '') + '"><span class="field-help">Leave blank to keep the patient anonymous.</span></label>' +
+    '<label>Patient age (optional)<input name="age" value="' + h(testimonial.age || '') + '" inputmode="numeric"><span class="field-help">Shown as “Patient aged N”. Leave blank to omit.</span></label>' +
     '<label>Immutable id<input name="id" value="' + h(testimonial.id) + '" pattern="[a-z0-9\\-]+" required ' + (isNew ? '' : 'readonly') + '></label>' +
     '<label>Location<input name="location" value="' + h(testimonial.location) + '" required></label>' +
-    '<label>Condition<input name="condition" value="' + h(testimonial.condition) + '" required><span class="field-help">Short clinical label shown on the card, e.g. “Venous ulcers from untreated varicose veins”.</span></label>' +
+    '<label class="field--full">Condition<input name="condition" value="' + h(testimonial.condition) + '" required><span class="field-help">Short clinical label shown on the card, e.g. “Venous ulcers from untreated varicose veins”. Do not put the age here.</span></label>' +
     '<label class="field--full">Recovery duration (optional)<input name="duration" value="' + h(testimonial.duration || '') + '" placeholder="e.g. Signs of recovery within 30 days"></label>' +
-    '<label class="field--full">Clinical remark<textarea name="remark" rows="5">' + h(testimonial.remark || '') + '</textarea><span class="field-help">The company’s note on condition, treatment, and recovery — shown as the “Case note” on each story.</span></label>' +
+    '<label class="field--full">Clinical remark<textarea name="remark" rows="5">' + h(testimonial.remark || '') + '</textarea><span class="field-help">The company’s note on condition, treatment, and recovery, shown as the “Case note” on each story.</span></label>' +
     '<label class="field--full">Patient quote (optional with photographs)<textarea name="quote" rows="3">' + h(testimonial.quote || '') + '</textarea></label>' +
-    '<div class="field-group"><div class="field-group__heading"><div><h2>Evidence photographs</h2><p>Before and After are a pair — upload both or neither. During is optional and makes the story a 3-stage journey.</p></div></div><div class="stage-slots">' +
+    '<div class="field-group"><div class="field-group__heading"><div><h2>Evidence photographs</h2><p>Before and After are a pair: upload both or neither. During is optional and makes the story a 3-stage journey.</p></div></div><div class="stage-slots">' +
     STAGES.map((stage) => stageSlot(testimonial, stage)).join('') +
     '</div></div>' +
     '<div class="field-group"><label class="checkbox-row"><input name="featured" type="checkbox" ' + (testimonial.featured ? 'checked' : '') + '><span>Featured story <small class="field-help">Renders as the large journey at the top of Recoveries. Only one story can be featured.</small></span></label></div>' +
@@ -440,10 +451,23 @@ const renderCompany = () => {
 const renderAppearance = () => {
   const config = state.draft.config;
   const colorMode = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  const aliases = [
+    ['bg', '--bg'], ['surface', '--surface'], ['surface-2', '--surface-2'],
+    ['ink', '--ink'], ['muted', '--ink-muted'], ['line', '--line'],
+    ['primary', '--primary'], ['accent', '--accent'], ['good', '--good'],
+  ];
   const themes = state.draft.themes.map((theme) => {
-    const previewTokens = (mode) => '--preview-' + mode + '-bg:' + theme[mode]['--bg'] + ';--preview-' + mode + '-surface:' + theme[mode]['--surface'] + ';--preview-' + mode + '-surface-2:' + theme[mode]['--surface-2'] + ';--preview-' + mode + '-ink:' + theme[mode]['--ink'] + ';--preview-' + mode + '-muted:' + theme[mode]['--ink-muted'] + ';--preview-' + mode + '-line:' + theme[mode]['--line'] + ';--preview-' + mode + '-primary:' + theme[mode]['--primary'] + ';--preview-' + mode + '-good:' + theme[mode]['--good'];
+    const previewTokens = (mode) => aliases
+      .map(([alias, token]) => '--preview-' + mode + '-' + alias + ':' + theme[mode][token])
+      .join(';');
     const style = previewTokens('light') + ';' + previewTokens('dark');
-    return '<button class="theme-option" type="button" data-action="select-theme" data-theme-id="' + h(theme.id) + '" aria-pressed="' + String(config.theme === theme.id) + '"><span class="theme-option__label">' + h(theme.label) + (config.theme === theme.id ? '<span class="badge badge--active">Active</span>' : '') + '</span><span class="theme-option__mock" style="' + h(style) + '" aria-hidden="true"><span class="theme-option__bar"></span><span class="theme-option__card"><span class="theme-option__image"></span><span class="theme-option__copy"><strong>Recoveries you can see</strong><small>Documented home therapy</small><span class="theme-option__pill"></span></span></span></span></button>';
+    const active = config.theme === theme.id;
+    const swatch = (name) => '<span style="background:var(--preview-' + name + ')"></span>';
+    return '<button class="theme-option" type="button" data-action="select-theme" data-theme-id="' + h(theme.id) + '" aria-pressed="' + String(active) + '" style="' + h(style) + '">' +
+      '<span class="theme-option__top"><span class="theme-option__label">' + h(theme.label) + '</span>' + (active ? '<span class="theme-option__check">' + icon('check') + 'Active</span>' : '') + '</span>' +
+      '<span class="theme-option__mock" aria-hidden="true"><span class="theme-option__bar"></span><span class="theme-option__card"><span class="theme-option__image"></span><span class="theme-option__copy"><strong>Recoveries you can <em>see</em></strong><small>Documented home therapy</small><span class="theme-option__btn">Talk to us</span></span></span></span>' +
+      '<span class="theme-option__swatches" aria-hidden="true">' + ['bg', 'surface', 'primary', 'accent', 'good', 'ink'].map(swatch).join('') + '</span>' +
+      '</button>';
   }).join('');
   return '<section class="editor-shell"><div class="section-toolbar"><div><h1>Appearance</h1><p>Site theme, hero copy, search metadata, and this admin’s color mode.</p></div></div>' +
     '<form id="appearance-form"><div class="editor-grid">' +
@@ -523,18 +547,18 @@ const syncEditorFromForm = () => {
     buffer.visible = data.has('visible');
     buffer.draft = data.has('draft');
   } else {
-    for (const key of ['id', 'name', 'location', 'condition', 'duration', 'remark', 'quote']) buffer[key] = String(data.get(key) || '').trim();
+    for (const key of ['id', 'name', 'age', 'location', 'condition', 'duration', 'remark', 'quote']) buffer[key] = String(data.get(key) || '').trim();
     buffer.featured = data.has('featured');
   }
 };
 
 const validateStory = (buffer) => {
-  if (!buffer.name || !buffer.location || !buffer.condition) {
-    throw new Error('Name, location, and condition are required on every story.');
+  if (!buffer.location || !buffer.condition) {
+    throw new Error('Location and condition are required on every story.');
   }
   const byStage = Object.fromEntries(STAGES.map((stage) => [stage.key, imageForStage(buffer, stage.key)]));
   const count = (buffer.images || []).length;
-  if (count === 1) throw new Error('A single photograph is not evidence of change — add both Before and After, or remove it.');
+  if (count === 1) throw new Error('A single photograph is not evidence of change: add both Before and After, or remove it.');
   if (count > 0 && (!byStage.before || !byStage.after)) {
     throw new Error('Photograph stories need the Before and After pair. During is optional.');
   }
@@ -565,7 +589,7 @@ const saveEditor = () => {
       for (const [itemIndex, item] of state.draft.testimonials.entries()) {
         if (itemIndex !== index && item.featured) {
           item.featured = false;
-          showStatus('Featured story moved', h(item.name + ' (' + item.condition + ') is no longer featured — only one story can be.'));
+          showStatus('Featured story moved', h(item.condition + ' is no longer featured. Only one story can be.'));
         }
       }
     }

@@ -83,6 +83,10 @@ const copyBrandAssets = async () => {
     'apple-touch-icon.png',
     'icon-192.png',
     'icon-512.png',
+    // Plain lockups (non-hashed) so the admin can reference the owner's real
+    // logo directly via ../assets/brand/logo-{ink,paper}.png.
+    'logo-ink.png',
+    'logo-paper.png',
   ];
   await fs.mkdir(path.join(DIST, 'assets', 'brand'), { recursive: true });
   await Promise.all(
@@ -128,7 +132,7 @@ a{color:inherit}
 h1,h2,h3,p{margin-top:0}
 h1,h2{font-family:"Fraunces",Georgia,serif;font-weight:600;letter-spacing:-.03em;line-height:1.06}
 h1{max-width:14ch;margin-bottom:28px;font-size:clamp(2.75rem,6.5vw,4.25rem)}
-h1 em{font-style:italic;color:var(--accent);background:linear-gradient(to top,color-mix(in srgb,var(--accent) 16%,transparent) 32%,transparent 32%);border-radius:3px;padding:0 .05em}
+h1 em{font-style:italic;color:var(--accent)}
 .container{width:min(100% - 40px,1240px);margin-inline:auto}
 .site-header{position:sticky;z-index:50;top:0;border-bottom:1px solid transparent;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 .header-inner{display:grid;grid-template-columns:auto 1fr auto;min-height:84px;align-items:center;gap:32px}
@@ -136,14 +140,14 @@ h1 em{font-style:italic;color:var(--accent);background:linear-gradient(to top,co
 .lockup{display:inline-flex;align-items:center}.lockup img{width:auto;height:62px}.lockup--paper{display:none}
 [data-theme="dark"] .lockup--ink{display:none}[data-theme="dark"] .lockup--paper{display:block}
 .site-nav{display:flex;align-items:center;justify-content:center;gap:26px}.header-actions{display:flex;align-items:center;gap:12px}.menu-toggle{display:none}
-.kicker{display:flex;align-items:center;gap:12px;margin-bottom:16px;color:var(--accent);font-size:.8125rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
-.kicker::before{content:"";width:26px;height:2px;flex:none;border-radius:2px;background:var(--accent);opacity:.85}
+.kicker{display:inline-flex;align-items:center;gap:10px;margin-bottom:20px;padding:7px 15px 7px 12px;border-radius:999px;background:color-mix(in srgb,var(--surface) 66%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 85%,transparent);color:var(--ink);font-size:.75rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
+.kicker::before{content:"";width:8px;height:8px;flex:none;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 15%,transparent)}
 .button{display:inline-flex;min-height:52px;align-items:center;justify-content:center;gap:10px;padding:14px 26px;border:0;border-radius:999px;background:var(--primary);color:var(--primary-ink);font-size:1.0625rem;font-weight:600;line-height:1.2;text-decoration:none}
 .button--outline{background:transparent;color:var(--primary);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--primary) 55%,transparent)}
 .header-cta{min-height:46px;padding:10px 20px;font-size:1rem}
 .icon{width:1.2em;height:1.2em;flex:none}
 .hero{padding-block:clamp(3rem,6vw,5.5rem) clamp(3.5rem,7vw,6rem)}
-.hero__layout{display:grid;grid-template-columns:minmax(0,1.04fr) minmax(400px,.96fr);align-items:center;gap:clamp(40px,6vw,92px)}
+.hero__layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(430px,1.06fr);align-items:center;gap:clamp(40px,6vw,92px)}
 .hero__copy>p:not(.kicker){max-width:52ch;margin-bottom:36px;color:var(--ink-muted);font-size:clamp(1.125rem,1.7vw,1.3125rem)}
 .hero__evidence{position:relative;display:block;min-width:0;padding:18px;border-radius:26px;background:color-mix(in srgb,var(--surface) 94%,transparent);text-decoration:none;box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 7%,transparent),0 28px 70px -26px color-mix(in srgb,var(--ink) 32%,transparent)}
 .hero__evidence-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
@@ -190,8 +194,8 @@ const validate = ({ products, protocols, testimonials, themes, config }) => {
       throw new Error(`Invalid testimonial id: ${label}`);
     }
     testimonialIds.add(testimonial.id);
-    if (!testimonial.name || !testimonial.location || !testimonial.condition) {
-      throw new Error(`Testimonial ${label} requires name, location, and condition.`);
+    if (!testimonial.location || !testimonial.condition) {
+      throw new Error(`Testimonial ${label} requires location and condition.`);
     }
     const images = testimonial.images || [];
     if (images.length === 1) {
