@@ -7,7 +7,7 @@ const { renderPage } = require('./template');
 
 const ROOT = path.resolve(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
-const SITE_URL = 'https://navigalife.github.io/';
+const SITE_URL = 'https://medivasc.in/';
 
 const readJson = async (relativePath) =>
   JSON.parse(await fs.readFile(path.join(ROOT, relativePath), 'utf8'));
