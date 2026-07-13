@@ -4,6 +4,9 @@ import { createVault, forgetVault, unlockVault, vaultExists } from './vault.js';
 
 const OWNER = 'navigalife';
 const REPO = 'navigalife.github.io';
+// Public raw host — the repo is public, so committed assets can be previewed
+// directly with a plain <img> (no token, no CORS). Pinned to the loaded commit.
+const RAW_ROOT = `https://raw.githubusercontent.com/${OWNER}/${REPO}/`;
 const TOKEN_SESSION_KEY = 'medivasc-admin-token-session';
 const BRANCH_KEY = 'medivasc-admin-branch';
 const COLOR_KEY = 'medivasc-admin-color-mode';
@@ -328,10 +331,21 @@ const defaultTestimonial = () => ({
 
 const editorHeading = (kicker, title) => '<div class="editor-header"><div><p class="auth-kicker">' + h(kicker) + '</p><h1>' + h(title) + '</h1></div><button class="button button--quiet" type="button" data-action="back">Back to list</button></div>';
 
+// URL for an already-committed asset. Pinned to the loaded commit (baseSha) so
+// the preview always matches what is checked in, and never shows a stale cache.
+const committedAssetUrl = (path) =>
+  RAW_ROOT + encodeURIComponent(state.baseSha || state.branch) + '/' +
+  path.split('/').map(encodeURIComponent).join('/');
+
 const imagePreview = (path, evidence = false) => {
-  const preview = state.assetPreviews.get(path);
-  if (preview) return '<div class="image-preview ' + (evidence ? 'image-preview--evidence' : '') + '"><img src="' + h(preview) + '" alt=""></div>';
-  return '<div class="image-preview ' + (evidence ? 'image-preview--evidence' : '') + '"><span class="help">Stored in repository</span></div>';
+  const cls = 'image-preview' + (evidence ? ' image-preview--evidence' : '');
+  const staged = state.assetPreviews.get(path);
+  // Newly uploaded (not yet published): show the in-memory object URL.
+  if (staged) return '<div class="' + cls + '"><img src="' + h(staged) + '" alt=""></div>';
+  // Already committed: load the real photograph from the repo. If it can't load
+  // (offline, or path not committed yet) the delegated error handler swaps in
+  // the "Stored in repository" label.
+  return '<div class="' + cls + '"><img src="' + h(committedAssetUrl(path)) + '" alt="" loading="lazy" data-asset-fallback="1"></div>';
 };
 
 const productPrompt = (name) => [
@@ -804,32 +818,53 @@ const collectChanges = () => {
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
+const ACTIONS_URL = `https://github.com/${OWNER}/${REPO}/actions/workflows/deploy.yml`;
+// GitHub can lag before it even registers the run (busy queue, or the previous
+// deploy still holding the `pages` concurrency group), and a hosted runner can
+// take many minutes to be assigned. These budgets are generous on purpose so a
+// slow-but-healthy build is never reported as a failure or "no run found".
+const POLL_INTERVAL = 5000;
+const DISCOVER_DEADLINE = 4 * 60 * 1000; // wait this long for the run to appear
+const COMPLETE_DEADLINE = 20 * 60 * 1000; // total budget through completion
+
 const pollActions = async (commitSha) => {
-  let run;
-  for (let attempt = 0; attempt < 10; attempt += 1) {
+  const started = Date.now();
+  const actionsLink = '<a href="' + h(ACTIONS_URL) + '" target="_blank" rel="noreferrer">Watch on GitHub</a>';
+
+  // Phase 1 — wait for GitHub to create the workflow run for this commit.
+  // The commit is already safe on the branch; we are only waiting for CI to
+  // pick it up, which can take minutes when GitHub is busy or a prior deploy
+  // is still finishing (the workflow queues on the `pages` concurrency group).
+  let run = null;
+  while (!run) {
     const runs = await state.api.listRuns(commitSha);
-    if (runs.length) {
-      [run] = runs;
-      break;
-    }
-    await wait(3000);
-  }
-  if (!run) {
-    showStatus('No workflow run found', 'The branch update succeeded, but no workflow run was found for this commit.');
-    return;
-  }
-  for (let attempt = 0; attempt < 60; attempt += 1) {
-    const runs = await state.api.listRuns(commitSha);
-    run = runs.find((candidate) => candidate.id === run.id) || run;
-    if (run.status === 'completed') {
-      if (run.conclusion === 'success') showStatus('Publish complete', 'The commit and site build succeeded. <a href="' + h(run.html_url) + '" target="_blank" rel="noreferrer">View run</a>.');
-      else showStatus('Build failed', 'The commit was published, but GitHub Actions reported ' + h(run.conclusion) + '. <a href="' + h(run.html_url) + '" target="_blank" rel="noreferrer">View run</a>.');
+    if (runs.length) { [run] = runs; break; }
+    if (Date.now() - started > DISCOVER_DEADLINE) {
+      showStatus('Build hasn’t started yet', 'Your changes are committed and safe — GitHub just hasn’t picked them up yet (it can be slow when busy). The site will rebuild once it does. ' + actionsLink + '.');
       return;
     }
-    showStatus('Site build in progress', 'GitHub Actions is building this commit. <a href="' + h(run.html_url) + '" target="_blank" rel="noreferrer">View run</a>.');
-    await wait(3000);
+    showStatus('Waiting for the build to start', 'Saved. Waiting for GitHub Actions to pick up the change… this can take a few minutes when GitHub is busy. ' + actionsLink + '.');
+    await wait(POLL_INTERVAL);
   }
-  showStatus('Site build still in progress', 'The workflow is still running after three minutes. <a href="' + h(run.html_url) + '" target="_blank" rel="noreferrer">View run</a>.');
+
+  // Phase 2 — follow the run through queued → building → completed.
+  for (;;) {
+    const runs = await state.api.listRuns(commitSha);
+    run = runs.find((candidate) => candidate.id === run.id) || run;
+    const runLink = '<a href="' + h(run.html_url) + '" target="_blank" rel="noreferrer">View run</a>.';
+    if (run.status === 'completed') {
+      if (run.conclusion === 'success') showStatus('Publish complete', 'Your changes are live — the site built and deployed successfully. ' + runLink);
+      else showStatus('Build failed', 'The commit was published, but GitHub Actions reported ' + h(run.conclusion) + '. Open the run to see why. ' + runLink);
+      return;
+    }
+    if (Date.now() - started > COMPLETE_DEADLINE) {
+      showStatus('Build still running', 'The build has been running unusually long — GitHub may be under load. It should still finish on its own; check the run for progress. ' + runLink);
+      return;
+    }
+    if (run.status === 'in_progress') showStatus('Building and deploying', 'GitHub Actions is building and deploying your changes now. ' + runLink);
+    else showStatus('Waiting for a runner', 'GitHub has queued the build and is assigning a machine — this can take several minutes when GitHub is busy. ' + runLink);
+    await wait(POLL_INTERVAL);
+  }
 };
 
 const publish = async () => {
@@ -971,6 +1006,16 @@ editorRoot.addEventListener('change', async (event) => {
   }
 });
 
+// A committed-asset preview that fails to load falls back to the text label.
+// `error` does not bubble, so this listens in the capture phase.
+editorRoot.addEventListener('error', (event) => {
+  const img = event.target;
+  if (img?.tagName !== 'IMG' || !img.dataset.assetFallback || img.dataset.assetFailed) return;
+  img.dataset.assetFailed = '1';
+  img.insertAdjacentHTML('afterend', '<span class="help">Stored in repository</span>');
+  img.remove();
+}, true);
+
 editorRoot.addEventListener('input', (event) => {
   if (state.editor?.kind === 'products' && event.target.name === 'name') {
     state.editor.buffer.name = event.target.value.trim();
@@ -987,7 +1032,7 @@ rebuildButton.addEventListener('click', async () => {
   showStatus('Starting rebuild', 'Requesting the deploy workflow on main.');
   try {
     await state.api.dispatchWorkflow();
-    showStatus('Rebuild requested', 'GitHub accepted the workflow dispatch.');
+    showStatus('Rebuild requested', 'GitHub is rebuilding and redeploying the current site (no content change). It can take a few minutes to start. <a href="' + h(ACTIONS_URL) + '" target="_blank" rel="noreferrer">Watch on GitHub</a>.');
   } catch (error) {
     handleApiError(error);
   } finally {
