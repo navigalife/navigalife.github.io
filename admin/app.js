@@ -578,7 +578,7 @@ const validateStory = (buffer) => {
   }
   if (!count && !buffer.quote) throw new Error('Without photographs, the patient quote is required.');
   if (count && !buffer.remark) throw new Error('Stories with photographs need the clinical remark.');
-  if (buffer.featured && count < 2) throw new Error('A featured story needs at least the Before and After photographs.');
+  if (buffer.featured && count !== 3) throw new Error('The featured story fills the hero’s three-up strip, so it needs all three photographs: Before, During, and After.');
   buffer.images = STAGES.map((stage) => byStage[stage.key]).filter(Boolean);
 };
 
@@ -599,6 +599,11 @@ const saveEditor = () => {
   }
   if (kind === 'testimonials') {
     validateStory(buffer);
+    const wasFeatured = index >= 0 && state.draft.testimonials[index].featured;
+    const othersFeatured = state.draft.testimonials.some((testimonial, itemIndex) => itemIndex !== index && testimonial.featured);
+    if (wasFeatured && !buffer.featured && !othersFeatured) {
+      throw new Error('One story must stay featured to anchor the hero. Feature another story first, then remove this one from featured.');
+    }
     if (buffer.featured) {
       for (const [itemIndex, item] of state.draft.testimonials.entries()) {
         if (itemIndex !== index && item.featured) {
@@ -632,6 +637,10 @@ const deleteItem = (kind, index) => {
       showStatus('Product is still referenced', 'Remove it from these protocols first: ' + h(references.map((protocol) => protocol.condition).join(', ')) + '.');
       return;
     }
+  }
+  if (kind === 'testimonials' && item.featured && !state.draft.testimonials.some((testimonial, itemIndex) => itemIndex !== index && testimonial.featured)) {
+    showStatus('The featured story can’t be deleted', 'One story must stay featured to anchor the hero. Feature another story first, then delete this one.');
+    return;
   }
   if (!confirm('Delete ' + (item.name || item.condition || item.id) + '? This will be included in the next publish.')) return;
   if (kind === 'products') for (const path of item.images) unstageOrDeleteAsset(path);

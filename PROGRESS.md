@@ -1,5 +1,16 @@
 # PROGRESS
 
+## Spec 004 — Admin validation sync
+
+- **Current phase**: Phase 1 checkpoint complete
+- **Branch**: `codex/004-admin-validation-sync`
+- **Next action**: Implement Phase 2 `validateDraft(testimonials)` and the pre-publish guard.
+- **Blockers**: None.
+
+| Date | Phase | Checkpoint | Evidence / notes |
+|---|---|---|---|
+| 2026-07-13 | 1 | Point-of-action guards complete | D1 now rejects a featured story unless it has exactly 3 images with the specified message; exactly 3 proceeds past that guard. D2 checks the saved story and other featured stories before the cross-unset loop, so un-featuring the sole featured story throws before draft mutation, while a second featured story makes the guard false. D3 checks before `confirm`, asset removal, and list mutation, so deleting the sole featured story shows the specified status and returns, while another featured story makes the guard false. The existing 1-image rejection is unchanged and still runs before D2. `npm run build` exited 0: `Built MediVasc landing: 4 recovery stories, 16 protocols, theme meridian.` and `Client JavaScript: 2528 bytes (2.47 KB).` `node --check admin/app.js` and `git diff --check` passed; `cmp -s admin/app.js dist/admin/app.js` confirmed byte-identical copy-through. Stage labels remain exactly `Before therapy`, `During therapy`, and `After therapy`. Manual reasoning covers acceptance criteria 1–6; no browser harness was added per spec. |
+
 ## Spec 002 — MediVasc pivot (advisor-implemented, 2026-07-12)
 
 - **Current phase**: Phase 5 — shipped
