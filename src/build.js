@@ -124,7 +124,7 @@ const criticalCss = (theme) => `${themeCss(theme)}
 @font-face{font-family:"Instrument Sans";font-style:normal;font-weight:400 600;font-display:swap;src:url("assets/fonts/instrument-sans-latin-400-600.woff2") format("woff2")}
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-padding-top:100px}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Instrument Sans",system-ui,sans-serif;font-size:1.125rem;line-height:1.7}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Instrument Sans",system-ui,sans-serif;font-size:1.125rem;line-height:1.7;overflow-wrap:break-word}
 body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(52rem 36rem at 88% -6%,color-mix(in srgb,var(--primary) 8%,transparent),transparent 62%),radial-gradient(44rem 32rem at -12% 28%,color-mix(in srgb,var(--accent) 6%,transparent),transparent 60%),radial-gradient(56rem 42rem at 108% 82%,color-mix(in srgb,var(--good) 6%,transparent),transparent 62%)}
 [data-theme="dark"] body::before{background:radial-gradient(52rem 36rem at 88% -6%,color-mix(in srgb,var(--primary) 13%,transparent),transparent 62%),radial-gradient(44rem 32rem at -12% 28%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 60%),radial-gradient(56rem 42rem at 108% 82%,color-mix(in srgb,var(--good) 8%,transparent),transparent 62%)}
 img{display:block;max-width:100%}
@@ -217,12 +217,18 @@ const validate = ({ products, protocols, testimonials, themes, config }) => {
     }
     if (testimonial.featured) {
       featuredCount += 1;
-      if (images.length < 2) {
-        throw new Error(`Testimonial ${label}: featured stories need at least 2 images.`);
+      if (images.length !== 3) {
+        throw new Error(
+          `Testimonial ${label}: the featured story fills the hero's three-up strip, so it needs exactly 3 stage images (has ${images.length}).`,
+        );
       }
     }
   }
-  if (featuredCount > 1) throw new Error('At most one featured testimonial.');
+  if (featuredCount !== 1) {
+    throw new Error(
+      `Exactly one featured testimonial is required (found ${featuredCount}); it anchors the hero panel and the lead recovery journey.`,
+    );
+  }
 
   return { theme, themeId, visibleProtocols };
 };

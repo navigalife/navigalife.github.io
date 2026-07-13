@@ -3,7 +3,7 @@
 @font-face{font-family:"Instrument Sans";font-style:normal;font-weight:400 600;font-display:swap;src:url("fonts/instrument-sans-latin-400-600.woff2") format("woff2")}
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:100px}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Instrument Sans",system-ui,sans-serif;font-size:1.125rem;line-height:1.7;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Instrument Sans",system-ui,sans-serif;font-size:1.125rem;line-height:1.7;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;overflow-wrap:break-word}
 body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(52rem 36rem at 88% -6%,color-mix(in srgb,var(--primary) 8%,transparent),transparent 62%),radial-gradient(44rem 32rem at -12% 28%,color-mix(in srgb,var(--accent) 6%,transparent),transparent 60%),radial-gradient(56rem 42rem at 108% 82%,color-mix(in srgb,var(--good) 6%,transparent),transparent 62%)}
 [data-theme="dark"] body::before{background:radial-gradient(52rem 36rem at 88% -6%,color-mix(in srgb,var(--primary) 13%,transparent),transparent 62%),radial-gradient(44rem 32rem at -12% 28%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 60%),radial-gradient(56rem 42rem at 108% 82%,color-mix(in srgb,var(--good) 8%,transparent),transparent 62%)}
 img{display:block;max-width:100%}

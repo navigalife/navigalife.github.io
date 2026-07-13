@@ -324,15 +324,17 @@ const renderPage = ({
         </div>
         <div class="condition-tracks">
           ${tracks
-            .map((track) => {
-              const trackProtocols = protocols.filter((protocol) => protocol.audience === track.id);
-              return `<section class="condition-track" aria-labelledby="track-${track.id}-title">
+            .map((track) => ({
+              track,
+              trackProtocols: protocols.filter((protocol) => protocol.audience === track.id),
+            }))
+            .filter(({ trackProtocols }) => trackProtocols.length > 0)
+            .map(({ track, trackProtocols }) => `<section class="condition-track" aria-labelledby="track-${track.id}-title">
               <h3 id="track-${track.id}-title">${escapeHtml(track.label)}</h3>
               <ul class="condition-list">
                 ${trackProtocols.map((protocol) => `<li>${icon('check')}${escapeHtml(protocol.condition)}</li>`).join('')}
               </ul>
-            </section>`;
-            })
+            </section>`)
             .join('')}
         </div>
       </div>
