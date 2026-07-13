@@ -582,6 +582,28 @@ const validateStory = (buffer) => {
   buffer.images = STAGES.map((stage) => byStage[stage.key]).filter(Boolean);
 };
 
+const validateDraft = (testimonials) => {
+  let featuredCount = 0;
+  for (const testimonial of testimonials) {
+    const images = testimonial.images || [];
+    if (images.length === 1) {
+      throw new Error(`Story “${testimonial.id}” has a single photograph; use 0, 2, or 3.`);
+    }
+    if (images.length > 3) {
+      throw new Error(`Story “${testimonial.id}” has more than 3 photographs; use 0, 2, or 3.`);
+    }
+    if (testimonial.featured) {
+      featuredCount += 1;
+      if (images.length !== 3) {
+        throw new Error(`The featured story “${testimonial.id}” needs exactly 3 photographs to fill the hero strip (has ${images.length}).`);
+      }
+    }
+  }
+  if (featuredCount !== 1) {
+    throw new Error(`Exactly one story must be featured before publishing (currently ${featuredCount}). The featured story anchors the hero.`);
+  }
+};
+
 const saveEditor = () => {
   syncEditorFromForm();
   const { kind, index, buffer } = state.editor;
@@ -879,6 +901,12 @@ const pollActions = async (commitSha) => {
 const publish = async () => {
   if (state.publishing) return;
   if (state.editor) return showStatus('Open editor not saved', 'Save or cancel the open editor first.');
+  try {
+    validateDraft(state.draft.testimonials);
+  } catch (error) {
+    showStatus('Cannot publish yet', h(error.message));
+    return;
+  }
   const changes = collectChanges();
   if (!changes.length) return showStatus('Nothing to publish', 'Make a content change first.');
   state.publishing = true;
