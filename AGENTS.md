@@ -57,6 +57,26 @@ data and admin tab remain, but nothing product-related may render publicly.
 - **Verify before declaring done**: every phase has verify commands in the
   spec. Run them. Paste real output into PROGRESS.md. "Should work" is not done.
 
+## Content invariants (build-enforced — the admin mirrors these)
+
+`src/build.js validate()` is the backstop: a violating content state fails
+`npm run build`, so the deploy job (`needs: build`) never runs and GitHub Pages
+keeps serving the last good deploy. The admin (`admin/app.js`) enforces the same
+rules client-side (spec 004) so the owner is stopped at edit time, not at a
+failed publish. Both must hold — when you touch either validator, keep them in
+sync (see Lesson 13).
+
+- **Exactly one featured testimonial** — not zero (the hero's right column
+  empties and the lead recovery story drops), not more than one. The admin
+  blocks un-featuring or deleting the sole featured story, and a publish-time
+  backstop refuses a draft that isn't exactly-one-featured.
+- **The featured story has exactly 3 stage images** (Before, During, After) so
+  it fills the hero three-up strip; 2 leaves an empty slot.
+- **Every testimonial has 0, 2, or 3 images — never 1.** A single photo is not
+  evidence of change; 2 = Before + After (During optional), 3 = all stages.
+- **Protocol tracks with no visible items are skipped** (`src/template.js`), not
+  rendered as a section heading over an empty list.
+
 ## Design authority
 
 The design system in spec §Design System is binding: exact palette tokens,
@@ -149,3 +169,22 @@ From run 3 (design overhaul, advisor-implemented, 2026-07-12):
 12. **Public label renames have admin copy references.** The clinical-note
     → case-note rename left stale help text in `admin/app.js`; grep
     `admin/` for the old label whenever public UI concepts are renamed.
+
+From spec 004 (admin validation sync — first Codex-executed spec, signed off
+2026-07-13):
+
+13. **The admin and the build hold the same content invariants; keep them in
+    lockstep.** Shipping the layout-integrity build guards (f54a287) without
+    updating the admin left the owner able to save states the build now rejects
+    → a confusing failed publish. Spec 004 resynced the admin (see §Content
+    invariants). Whenever you tighten one validator, mirror it in the other in
+    the same change, and remember the split: pure validation logic is cleanly
+    executor-work even though the admin is otherwise advisor-implemented.
+14. **CI run registration and hosted-runner assignment lag by minutes; publish
+    polling must tolerate it.** `admin/app.js pollActions` uses a ~4-min run
+    discovery window and ~20-min completion window and distinguishes queued
+    ("Waiting for a runner") from in_progress ("Building and deploying"). Do not
+    shorten these or read a not-yet-registered run as failure. The Node-20
+    deprecation warnings in the Actions log are cosmetic (actions' runtime 20→24
+    + punycode DEP0040) and are NOT the runner-queue cause — never set
+    `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION`.
