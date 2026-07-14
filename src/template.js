@@ -278,8 +278,7 @@ const renderPage = ({
     <section class="hero" id="top">
       <div class="container hero__layout">
         <div class="hero__copy" data-reveal>
-          <p class="kicker">Prevention of foot and leg amputation</p>
-          <h1>${accentuate(config.heroHeadline, config.heroAccent)}</h1>
+          <h1><span class="hero__lead">Prevention of foot and leg amputation</span>${accentuate(config.heroHeadline, config.heroAccent)}</h1>
           <p>${escapeHtml(config.heroSub)}</p>
           <div class="hero__actions">
             <a class="button" href="#recoveries">See the recoveries ${icon('arrowDown')}</a>

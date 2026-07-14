@@ -67,6 +67,8 @@ section[id]{scroll-margin-top:92px}
 
 .hero{padding-block:clamp(2.5rem,5vw,4.25rem) clamp(2.75rem,5vw,4.5rem)}
 .hero__layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(430px,1.06fr);align-items:center;gap:clamp(40px,6vw,92px)}
+.hero h1{font-size:clamp(2.2rem,5vw,3.1rem);max-width:24ch;margin-bottom:24px;text-wrap:balance}
+.hero__lead{display:block;margin-bottom:.35em}
 .hero__copy>p:not(.kicker){max-width:52ch;margin-bottom:36px;color:var(--ink-muted);font-size:clamp(1.125rem,1.7vw,1.3125rem)}
 .hero__actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:36px}
 .chip-list{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
@@ -239,8 +241,7 @@ section[id]{scroll-margin-top:92px}
   .lockup img{height:58px}
   .header-cta{display:none}
   .hero{padding-top:40px}
-  /* The hero kicker copy is long; shrink it on phones so the pill stays one line. */
-  .hero .kicker{font-size:11px;letter-spacing:.02em;padding:6px 12px 6px 10px;margin-bottom:16px}
+  .hero__lead{margin-bottom:.3em}
   .hero__actions .button{flex:1 1 auto}
   /* Keep the counter as one tidy row on phones (Praan-style), just compact. */
   .hero__stats-wrap{margin-top:2rem}
