@@ -7,12 +7,21 @@
     "location": "India",
     "condition": "Diabetic foot with CKD, below-knee amputation advised",
     "duration": "Signs of recovery within 30 days",
-    "remark": "Patients with prolonged insulin-dependent diabetes and chronic kidney disease are especially vulnerable to peripheral vascular and arterial disease. This case had progressed to the pre-sepsis stage, and the vascular surgeon had referred the patient for below-knee amputation. Under our guidance the chronic condition was treated instead: signs of recovery appeared within 30 days, the threat of septicemia passed, and vascularity resumed. In the after-therapy photograph the color of the affected leg has visibly lightened, a direct sign of restored circulation. The patient recovered fully from the chronic condition, and amputation was prevented.",
+    "remark": "Patients of prolonged diabetes who are insulin dependent & also suffering from CKD – Chronic Kidney Disease are essentially vulnerable to PVD – Peripheral Vascular Disease & PAD – Peripheral Artery Disease. Out of negligence, the progression of disease in such patients lead to pre-sepsis stage and Vascular Surgeon referred for below knee amputation.  However patient followed our guidance to treat this chronic condition and showed signs of recovery within 30 days and came out of vulnerability of septicemia  ( chronic infection leading to blood poising which is life threatening ) and hence  the resumption of vascularity.  In many pre-treatment cases the loss of tissue is so grave stage that the Fibula, tibia & surrounding ligaments are exposed which are emphatically vulnerable to chronic septicemia. Post case study & subsequent therapy patients fully recovered from the chronic condition & amputation prevented.",
     "quote": "",
     "images": [
-      { "src": "assets/testimonials/story-001-before.webp", "stage": "Before therapy" },
-      { "src": "assets/testimonials/story-001-during.webp", "stage": "During therapy" },
-      { "src": "assets/testimonials/story-001-after.webp", "stage": "After therapy" }
+      {
+        "src": "assets/testimonials/story-001-before.webp",
+        "stage": "Before therapy"
+      },
+      {
+        "src": "assets/testimonials/story-001-during.webp",
+        "stage": "During therapy"
+      },
+      {
+        "src": "assets/testimonials/story-001-after.webp",
+        "stage": "After therapy"
+      }
     ]
   },
   {
@@ -26,8 +35,14 @@
     "remark": "Varicose veins left untreated can progress into venous ulcers, with itching and skin disorders that lead to oozing wounds. In this chronic case the venous ulcers and oozing wounds were treated successfully. It was a long treatment that could have been far shorter had the disease been addressed in its primary or secondary stage.",
     "quote": "",
     "images": [
-      { "src": "assets/testimonials/story-002-before.webp", "stage": "Before therapy" },
-      { "src": "assets/testimonials/story-002-after.webp", "stage": "After therapy" }
+      {
+        "src": "assets/testimonials/story-002-before.webp",
+        "stage": "Before therapy"
+      },
+      {
+        "src": "assets/testimonials/story-002-after.webp",
+        "stage": "After therapy"
+      }
     ]
   },
   {
@@ -41,8 +56,14 @@
     "remark": "After an early-childhood injury with no other medical explanation, this patient developed pronounced lymphedema in the left leg over many years. Treatment at several hospitals brought no results, and signs of vascular choke had appeared. After three months of persistent therapy the recovery is clearly visible, and the patient has been advised intermittent therapy from here.",
     "quote": "",
     "images": [
-      { "src": "assets/testimonials/story-003-before.webp", "stage": "Before therapy" },
-      { "src": "assets/testimonials/story-003-after.webp", "stage": "After therapy" }
+      {
+        "src": "assets/testimonials/story-003-before.webp",
+        "stage": "Before therapy"
+      },
+      {
+        "src": "assets/testimonials/story-003-after.webp",
+        "stage": "After therapy"
+      }
     ]
   },
   {
@@ -56,8 +77,14 @@
     "remark": "This patient reported lymphedema with venous ulcers and no explaining medical background, after visits to top hospitals in Delhi NCR brought no recovery. Four weeks into our therapy the improvement was significant, and the patient has since almost fully recovered, as the post-therapy images show.",
     "quote": "",
     "images": [
-      { "src": "assets/testimonials/story-004-before.webp", "stage": "Before therapy" },
-      { "src": "assets/testimonials/story-004-after.webp", "stage": "After therapy" }
+      {
+        "src": "assets/testimonials/story-004-before.webp",
+        "stage": "Before therapy"
+      },
+      {
+        "src": "assets/testimonials/story-004-after.webp",
+        "stage": "After therapy"
+      }
     ]
   }
 ]
