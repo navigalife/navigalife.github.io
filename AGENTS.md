@@ -188,3 +188,40 @@ From spec 004 (admin validation sync — first Codex-executed spec, signed off
     deprecation warnings in the Actions log are cosmetic (actions' runtime 20→24
     + punycode DEP0040) and are NOT the runner-queue cause — never set
     `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION`.
+
+From the design/mobile/email bundle + custom-domain migration (advisor-implemented,
+2026-07-13):
+
+15. **Custom domain (`medivasc.in`) contract.** This repo deploys via GitHub
+    Actions, so GitHub **ignores any `CNAME` file in the build artifact** — the
+    custom domain lives ONLY in repo Settings → Pages (no workflow/build change
+    sets it). `src/build.js:10 SITE_URL` is the **single source** of canonical /
+    `og:url` / `og:image` / JSON-LD `url`+`logo`; changing the canonical origin
+    is that one edit. The repo is **deliberately not renamed** — `admin/app.js`
+    `REPO` const and the `raw.githubusercontent.com` photo-preview paths are
+    load-bearing on the `navigalife.github.io` name. The `www` cert SAN folds in
+    only when `www` CNAMEs to `<user>.github.io` (NOT the apex) **and** the custom
+    domain is re-saved after that DNS is correct; Enforce HTTPS stays ON.
+16. **criticalCss is above-the-fold ONLY; below-the-fold styles are
+    `styles.css`-only.** Lesson 10's mirror rule applies to header/hero/reveal —
+    and now the hero stat counters (`.hero__stats*`), whose `≤760`/`≤400` rules
+    DO belong in `build.js` criticalCss. Section styles below the fold
+    (recoveries/journey/pair-story/approach/pathway/conditions/about/contact/
+    footer, incl. their media-query rules) live **only** in `src/styles.css` —
+    do NOT duplicate them into criticalCss. Before editing criticalCss, confirm
+    the selector is genuinely above the fold; a below-fold rule there is dead
+    weight and a second place to drift.
+17. **Mobile breakpoint ladder + the pathway "spine" pattern.** Breakpoints are
+    `≤1000` (nav collapses, grids → 1–2 col), `≤760` (phone), `≤400` (tightest
+    hero/stat compaction). A new section's phone treatment goes in `≤760`. The
+    "What to expect" approach list becomes an **editorial vertical-spine
+    timeline** on phones: each `.pathway>li` is a `44px | 1fr` grid, the Fraunces
+    serif numerals become ring-disc nodes threaded by a gradient `::before`
+    spine; desktop keeps the 4-across grid. This is intentionally NOT the
+    reference's orange-disc/gray-card look — keep the editorial voice.
+18. **Email-first CTAs + medical-photo edits are tone-only.** With phone/WhatsApp
+    cleared, CTAs resolve to `mailto:contact@medivasc.in`; the `cta` helper
+    auto-restores a WhatsApp action if a number returns, and JSON-LD omits a
+    blank `telephone`. Patient photo adjustments are **brightness/tone only**
+    (e.g. a γ<1 tone-preserving lift) — never generative, consistent with the
+    Hard-rules evidence policy.
