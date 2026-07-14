@@ -1,0 +1,50 @@
+#!/bin/sh
+# pre-push guard for MediVasc (navigalife.github.io)
+# -------------------------------------------------------------------
+# `main` has TWO writers: the admin CMS (commits data/*.json via the
+# GitHub API + auto-deploys) and the advisor (code from this clone).
+# This hook refuses any push to `main` that is NOT a fast-forward over
+# the current origin/main — which blocks both a stale push AND a force
+# push over the owner's admin commits (the one irreversible mistake).
+#
+# Fix when blocked:  git pull --rebase origin main && node src/build.js && git push
+# Re-arm on a fresh clone:  git config core.hooksPath tools/hooks
+# Rationale: AGENTS.md "STOP" block + Hard rules + Lesson 19.
+# -------------------------------------------------------------------
+remote="$1"
+z40="0000000000000000000000000000000000000000"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+	[ "$remote_ref" = "refs/heads/main" ] || continue
+
+	if [ "$local_sha" = "$z40" ]; then
+		echo "pre-push BLOCKED: refusing to delete origin/main." >&2
+		exit 1
+	fi
+
+	# What does origin actually have right now?
+	git fetch -q "$remote" main 2>/dev/null
+	origin_main="$(git rev-parse --verify -q FETCH_HEAD 2>/dev/null)"
+
+	# Allow only if origin/main is an ancestor of what we're pushing
+	# (i.e. a clean fast-forward). Anything else = behind or diverged.
+	if [ -n "$origin_main" ] && ! git merge-base --is-ancestor "$origin_main" "$local_sha"; then
+		echo "──────────────────────────────────────────────────────────────" >&2
+		echo "  pre-push BLOCKED: push to main is NOT a fast-forward." >&2
+		echo "" >&2
+		echo "  origin/main has commit(s) you don't have — almost certainly" >&2
+		echo "  admin-CMS content publishes. Pushing would reject; forcing" >&2
+		echo "  would ERASE the owner's published content." >&2
+		echo "" >&2
+		echo "  Do this instead:" >&2
+		echo "    git pull --rebase origin main   # replay your commits on top" >&2
+		echo "    node src/build.js               # revalidate merged content" >&2
+		echo "    git push                        # now a clean fast-forward" >&2
+		echo "" >&2
+		echo "  Never --force this repo. See AGENTS.md (STOP block / Lesson 19)." >&2
+		echo "──────────────────────────────────────────────────────────────" >&2
+		exit 1
+	fi
+done
+
+exit 0

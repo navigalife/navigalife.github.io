@@ -12,6 +12,27 @@ protocols with follow-up until the desired result. Products are archived from
 the public site (`productsEnabled: false` in `data/site-config.json`) — the
 data and admin tab remain, but nothing product-related may render publicly.
 
+## ⚠️ STOP — before you push to `main` (read this first)
+
+`main` is written by **TWO** actors: the **admin CMS** (the owner publishes
+content — it commits `data/*.json` straight to `main` via the GitHub API and
+auto-deploys) and **you/the advisor** (code from a local clone). Your clone goes
+**stale the moment the owner publishes**, so:
+
+- **Never `git push --force` (or `--force-with-lease`) to `main`.** That is the one
+  action that can permanently erase the owner's published content. There is no
+  reason to force-push this repo — ever.
+- **Before every push to `main`:** `git commit` your work → `git fetch` →
+  `git pull --rebase origin main` → `node src/build.js` (revalidate merged
+  content) → `git push`. A rejected push means the owner published; rebase and
+  retry. `pull --rebase` needs a clean tree, so **commit before you rebase.**
+- **Codex never pushes `main` at all** (work on `codex/<spec>-<slug>`); this block
+  is chiefly for advisor/design pushes. Full rationale: **Hard rules** + **Lesson 19**.
+- A `pre-push` guard hook is wired in this clone (`core.hooksPath=tools/hooks`) and
+  will block a non-fast-forward push to `main`. If you cloned fresh, re-arm it:
+  `git config core.hooksPath tools/hooks`. Server-side, `main` also blocks force
+  pushes — do not try to work around either; they are protecting live data.
+
 ## Session start ritual (every session, no exceptions)
 
 1. Read this file fully.
@@ -26,6 +47,12 @@ data and admin tab remain, but nothing product-related may render publicly.
 
 - **Branch**: never commit to `main` — it deploys to GitHub Pages; merging is
   the human's decision after advisor review.
+- **`main` has two writers — sync before pushing, never force** (advisor pushes):
+  the admin CMS commits `data/*.json` to `main` out-of-band. `git commit → fetch →
+  pull --rebase origin main → node src/build.js → push` every time; **never
+  `--force`** (the one irreversible mistake — it erases the owner's published
+  content). Enforced by the `pre-push` hook + server-side force-push block. See the
+  STOP block above and Lesson 19.
 - **Patient evidence**: photographs may be cropped, rotated, tonally
   normalized, and metadata-stripped — never generated or generatively edited.
   No fabricated testimonials, names, or quotes. "Identity protected" is the
