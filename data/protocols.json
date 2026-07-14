@@ -16,10 +16,10 @@
     "draft": false
   },
   {
-    "id": "lymphedema",
-    "condition": "Lymphedema (arm and leg)",
+    "id": "venous-ulcers-wound-healing",
+    "condition": "Venous ulcers and wound healing",
     "audience": "disease",
-    "summary": "Swelling of the arm or leg from impaired lymphatic drainage, including cases that have progressed over many years without results elsewhere. We assess the limb, the history, and the stage, then design a therapy protocol matched to the case.",
+    "summary": "Neglected venous disease progresses to itching, skin disorders, and oozing wounds. We have treated chronic venous ulcers successfully, and every such protocol includes staged wound-healing support.",
     "engagement": [
       "Detailed case study of the condition, history, and current treatment",
       "Customized, affordable protocol designed around the individual case",
@@ -32,10 +32,26 @@
     "draft": false
   },
   {
-    "id": "venous-ulcers-wound-healing",
-    "condition": "Venous ulcers and wound healing",
+    "id": "pad-pvd-arterial-flow",
+    "condition": "Peripheral artery disease (PAD / PVD)",
     "audience": "disease",
-    "summary": "Neglected venous disease progresses to itching, skin disorders, and oozing wounds. We have treated chronic venous ulcers successfully, and every such protocol includes staged wound-healing support.",
+    "summary": "Arterial-flow conditions of the limbs, assessed and supported with protocols that respect the vascular surgeon's plan and the patient's comorbidities.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "lymphedema",
+    "condition": "Lymphedema (arm and leg)",
+    "audience": "disease",
+    "summary": "Swelling of the arm or leg from impaired lymphatic drainage, including cases that have progressed over many years without results elsewhere. We assess the limb, the history, and the stage, then design a therapy protocol matched to the case.",
     "engagement": [
       "Detailed case study of the condition, history, and current treatment",
       "Customized, affordable protocol designed around the individual case",
@@ -132,22 +148,6 @@
     "condition": "Chronic venous insufficiency",
     "audience": "disease",
     "summary": "Poor venous return builds swelling, skin change, and ulcer risk over time. Guided protocols improve venous return and day-to-day comfort.",
-    "engagement": [
-      "Detailed case study of the condition, history, and current treatment",
-      "Customized, affordable protocol designed around the individual case",
-      "Guided therapy with expert supervision, at home wherever possible",
-      "Regular follow-ups until the desired result is achieved"
-    ],
-    "durationNote": "Customized case to case",
-    "deviceIds": [],
-    "visible": true,
-    "draft": false
-  },
-  {
-    "id": "pad-pvd-arterial-flow",
-    "condition": "Peripheral artery disease (PAD / PVD)",
-    "audience": "disease",
-    "summary": "Arterial-flow conditions of the limbs, assessed and supported with protocols that respect the vascular surgeon's plan and the patient's comorbidities.",
     "engagement": [
       "Detailed case study of the condition, history, and current treatment",
       "Customized, affordable protocol designed around the individual case",
