@@ -5,9 +5,21 @@
   "heroAccent": "only",
   "heroSub": "We are medical engineering professionals specializing in vascular and lymphatic disorders. When years of treatment have brought no improvement, we study the case, design a customized and affordable protocol, and follow up until the desired result is achieved.",
   "heroStats": [
-    { "icon": "pulse", "value": "500+", "label": "Recoveries" },
-    { "icon": "clipboard", "value": "15+", "label": "Conditions treated" },
-    { "icon": "clock", "value": "20+", "label": "Years improving lives" }
+    {
+      "icon": "pulse",
+      "value": "500+",
+      "label": "Recoveries"
+    },
+    {
+      "icon": "clipboard",
+      "value": "15+",
+      "label": "Conditions treated"
+    },
+    {
+      "icon": "clock",
+      "value": "20+",
+      "label": "Years improving lives"
+    }
   ],
   "seo": {
     "title": "MediVasc | Prevention of Foot and Leg Amputation",
