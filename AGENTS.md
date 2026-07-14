@@ -225,3 +225,28 @@ From the design/mobile/email bundle + custom-domain migration (advisor-implement
     blank `telephone`. Patient photo adjustments are **brightness/tone only**
     (e.g. a γ<1 tone-preserving lift) — never generative, consistent with the
     Hard-rules evidence policy.
+
+From advisor-implemented work colliding with live owner admin edits (2026-07-14):
+
+19. **`main` has two writers — the advisor syncs before every write.** The admin
+    CMS commits `data/*.json` straight to `main` via the GitHub API (each an
+    `"Update site content from admin"` commit) and auto-deploys; the advisor
+    commits code/design (and occasionally data) from a local clone, so that clone
+    goes **stale the instant the owner publishes**. **Before starting work AND
+    before every commit/push: `git fetch && git pull --rebase origin main`**
+    (rebase, not merge — keeps advisor commits linear on top of admin commits),
+    then `node src/build.js` so the owner's new content passes `validate()`
+    *together with* your change, then push. A rejected (non-fast-forward) push
+    means the owner published mid-session — pull --rebase, rebuild, push again;
+    **never `--force`.** Treat `data/*.json` as the admin's domain: avoid
+    hand-editing it, and when a structural change is unavoidable (e.g. emptying
+    `heroStats`) keep it to a tight isolated commit, **match the admin's JSON
+    serialization** (2-space indent, expanded arrays — a compact hand-edit turns
+    a same-value reformat into a needless conflict), push promptly, and ask the
+    owner to hold admin edits on that field until it lands. Rely on the asymmetry:
+    the admin publish is resilient to your pushes (`updateRef` `force:false` → 409
+    `BranchConflictError` → reload+reapply, so the owner never clobbers your code),
+    but your push is protected only by git's non-fast-forward rejection — the sync
+    burden is **entirely the advisor's.** Precedent: this session's hero change hit
+    a `heroStats` conflict against 4 queued admin commits; commit → `pull --rebase`
+    → keep `[]` → rebuild resolved it with zero owner content lost.
