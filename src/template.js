@@ -22,9 +22,20 @@ const icon = (name) => {
     moon: '<path d="M20.2 15.2A8.5 8.5 0 0 1 8.8 3.8a8.5 8.5 0 1 0 11.4 11.4Z"/>',
     sun: '<circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+    // Hero counter glyphs (editable per-stat in the admin Appearance tab).
+    pulse: '<path d="M3 12h4l2.5-6 4 12 2.5-6H21"/>',
+    clipboard: '<path d="M9 4h6v3H9z"/><path d="M9 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-3"/><path d="M9 12h6M9 16h4"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3.5 2"/>',
+    heart: '<path d="M12 20s-7-4.5-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5c0 5-7 9.5-7 9.5Z"/>',
+    shield: '<path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/>',
+    users: '<circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.5a3 3 0 0 1 0 5.8M15.5 20a5.5 5.5 0 0 0-2-4.2"/>',
   };
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg>`;
 };
+
+// Curated glyphs the hero counter tiles may use; anything else falls back to
+// `pulse` so an unexpected admin value can never break the render.
+const STAT_ICONS = new Set(['pulse', 'clipboard', 'clock', 'heart', 'shield', 'users']);
 
 // Wraps the first whole-word occurrence of `accentWord` in <em> (escaped text
 // in, HTML out). Degrades to plain text when the word is absent, so admin
@@ -138,7 +149,8 @@ const renderJsonLd = ({ company, siteUrl }) => {
     name: company.legalName,
     url: siteUrl,
     logo: `${siteUrl}assets/brand/icon-512.png`,
-    telephone: phoneHref(company.phone),
+    // Only publish a phone number when one is on record — no dangling "+".
+    ...(company.phone ? { telephone: phoneHref(company.phone) } : {}),
     address: { '@type': 'PostalAddress', streetAddress: company.address, addressCountry: 'IN' },
     medicalSpecialty: 'Vascular and lymphatic care',
   };
@@ -180,8 +192,22 @@ const renderPage = ({
   ];
   const telephone = phoneHref(company.phone);
   const whatsapp = phoneHref(company.whatsapp).replace('+', '');
-  const waPatient = `https://wa.me/${whatsapp}?text=${encodeURIComponent('I would like to discuss my case with MediVasc.')}`;
-  const waDoctor = `https://wa.me/${whatsapp}?text=${encodeURIComponent('I am a medical professional and would like to collaborate with MediVasc.')}`;
+  const waPatient = company.whatsapp
+    ? `https://wa.me/${whatsapp}?text=${encodeURIComponent('I would like to discuss my case with MediVasc.')}`
+    : '';
+  const mailHref = company.email ? `mailto:${escapeHtml(company.email)}` : '';
+  // Primary call-to-action degrades gracefully: WhatsApp when a number is on
+  // record, otherwise email, otherwise the contact section. Refilling the
+  // WhatsApp number in the admin restores every WhatsApp button automatically.
+  const cta = company.whatsapp
+    ? { href: waPatient, icon: icon('whatsapp'), label: 'WhatsApp us', external: true }
+    : mailHref
+      ? { href: mailHref, icon: icon('mail'), label: 'Email us', external: false }
+      : { href: '#contact', icon: '', label: 'Contact us', external: false };
+  const ctaAttrs = cta.external ? ' target="_blank" rel="noreferrer"' : '';
+  const heroStats = Array.isArray(config.heroStats)
+    ? config.heroStats.filter((stat) => stat && stat.value && stat.label)
+    : [];
   const aboutParagraphs = company.about
     .split(/\n\n+/)
     .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
@@ -236,7 +262,6 @@ const renderPage = ({
         <a href="#recoveries">Recoveries</a>
         <a href="#approach">Our approach</a>
         <a href="#conditions">Conditions</a>
-        <a href="#fraternity">For doctors</a>
         <a href="#about">About</a>
         <a href="#contact">Contact</a>
       </nav>
@@ -244,7 +269,7 @@ const renderPage = ({
         <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme">
           <span class="theme-toggle__sun">${icon('sun')}</span><span class="theme-toggle__moon">${icon('moon')}</span>
         </button>
-        <a class="button header-cta" href="${waPatient}" target="_blank" rel="noreferrer">${icon('whatsapp')} Talk to us</a>
+        <a class="button header-cta" href="${cta.href}"${ctaAttrs}>${cta.icon} ${cta.label}</a>
       </div>
     </div>
   </header>
@@ -258,7 +283,7 @@ const renderPage = ({
           <p>${escapeHtml(config.heroSub)}</p>
           <div class="hero__actions">
             <a class="button" href="#recoveries">See the recoveries ${icon('arrowDown')}</a>
-            <a class="button button--outline" href="${waPatient}" target="_blank" rel="noreferrer">${icon('whatsapp')} WhatsApp us</a>
+            <a class="button button--outline" href="${cta.href}"${ctaAttrs}>${cta.icon} ${cta.label}</a>
           </div>
           <ul class="chip-list hero__chips" aria-label="Conditions we treat">
             ${heroChips.map((chip) => `<li>${escapeHtml(chip)}</li>`).join('')}
@@ -274,6 +299,19 @@ const renderPage = ({
           <p><strong>A documented MediVasc recovery.</strong> Below-knee amputation was advised. Therapy prevented it. See the full story ${icon('arrow')}</p>
         </a>` : ''}
       </div>
+      ${heroStats.length ? `
+      <div class="container hero__stats-wrap">
+        <ul class="hero__stats" aria-label="MediVasc at a glance">
+          ${heroStats
+            .map(
+              (stat, index) => `<li class="hero__stat" data-reveal style="--reveal-order:${index}">
+            <span class="hero__stat-icon" aria-hidden="true">${icon(STAT_ICONS.has(stat.icon) ? stat.icon : 'pulse')}</span>
+            <span class="hero__stat-body"><span class="hero__stat-value" data-count>${escapeHtml(stat.value)}</span><span class="hero__stat-label">${escapeHtml(stat.label)}</span></span>
+          </li>`,
+            )
+            .join('')}
+        </ul>
+      </div>` : ''}
     </section>
 
     <section class="section recoveries" id="recoveries">
@@ -349,26 +387,17 @@ const renderPage = ({
               <p>The recovery shown above began after a vascular surgeon had already referred the patient for below-knee amputation. The earlier therapy starts, the shorter it is and the more of the limb it protects. One message is enough to begin.</p>
             </div>
             <div class="act__actions">
-              <a class="button button--inverse" href="${waPatient}" target="_blank" rel="noreferrer">${icon('whatsapp')} WhatsApp us now</a>
-              <a class="button button--inverse-outline" href="tel:${telephone}">${icon('call')} Call +91 ${escapeHtml(company.phone)}</a>
+              <a class="button button--inverse" href="${cta.href}"${ctaAttrs}>${cta.icon} ${cta.label}</a>
+              ${company.phone ? `<a class="button button--inverse-outline" href="tel:${telephone}">${icon('call')} Call us</a>` : ''}
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="section fraternity" id="fraternity">
-      <div class="container fraternity__layout">
-        <div class="fraternity__intro" data-reveal>
-          <p class="kicker">For the medical fraternity</p>
-          <h2>Join hands with us</h2>
-        </div>
-        <div data-reveal style="--reveal-order:1">
-          <p>We invite vascular surgeons, physicians, and wound-care and lymphedema practitioners to study our methodology and our results. Our protocols work alongside your treatment plan, never in place of it, and your long-suffering patients gain an affordable option and the awareness they have been deprived of.</p>
-          <a class="text-link" href="${waDoctor}" target="_blank" rel="noreferrer">Collaborate with MediVasc ${icon('arrow')}</a>
-        </div>
-      </div>
-    </section>
+    <!-- "Join hands with us" (fraternity / For doctors) section archived per owner
+         request 2026-07-13. Markup preserved in git history; restore this block and
+         the #fraternity nav link + For doctors nav item together. -->
 
     <section class="section about" id="about">
       <div class="container about__layout">
@@ -384,10 +413,10 @@ const renderPage = ({
           <p>Tell us the condition, how long it has persisted, and what treatment has been tried. We will study the case and tell you honestly what a protocol can do.</p>
         </div>
         <div class="contact__details" data-reveal style="--reveal-order:1">
-          <a class="contact-row" href="tel:${telephone}">${icon('call')}<span><small>Call</small>+91 ${escapeHtml(company.phone)}</span></a>
-          <a class="contact-row" href="${waPatient}" target="_blank" rel="noreferrer">${icon('whatsapp')}<span><small>WhatsApp</small>+91 ${escapeHtml(company.whatsapp)}</span></a>
+          ${company.phone ? `<a class="contact-row" href="tel:${telephone}">${icon('call')}<span><small>Phone</small>Call us</span></a>` : ''}
+          ${company.whatsapp ? `<a class="contact-row" href="${waPatient}" target="_blank" rel="noreferrer">${icon('whatsapp')}<span><small>WhatsApp</small>WhatsApp us</span></a>` : ''}
           ${company.email ? `<a class="contact-row" href="mailto:${escapeHtml(company.email)}">${icon('mail')}<span><small>Email</small>${escapeHtml(company.email)}</span></a>` : ''}
-          <a class="contact-row" href="${escapeHtml(company.mapsUrl)}" target="_blank" rel="noreferrer">${icon('map')}<span><small>Location</small>${escapeHtml(company.address)}</span></a>
+          <div class="contact-row contact-row--static">${icon('map')}<span><small>Location</small>${escapeHtml(company.address)}</span></div>
         </div>
       </div>
     </section>

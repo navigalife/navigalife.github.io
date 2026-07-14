@@ -23,6 +23,9 @@ const STAGES = [
   { key: 'during', label: 'During therapy' },
   { key: 'after', label: 'After therapy' },
 ];
+// Hero counter glyphs the site can render (mirror of template.js STAT_ICONS);
+// an unknown value falls back to `pulse` on the site.
+const STAT_ICON_NAMES = ['pulse', 'clipboard', 'clock', 'heart', 'shield', 'users'];
 
 // One-time migration off run-1 storage: keep the chosen color mode, drop
 // every legacy key (including any plain-text token from the old remember box).
@@ -483,12 +486,25 @@ const renderAppearance = () => {
       '<span class="theme-option__swatches" aria-hidden="true">' + ['bg', 'surface', 'primary', 'accent', 'good', 'ink'].map(swatch).join('') + '</span>' +
       '</button>';
   }).join('');
+  const statIconLabels = { pulse: 'Pulse', clipboard: 'Clipboard', clock: 'Clock', heart: 'Heart', shield: 'Shield', users: 'People' };
+  const statDefaults = [{ icon: 'pulse' }, { icon: 'clipboard' }, { icon: 'clock' }];
+  const statSource = Array.isArray(config.heroStats) ? config.heroStats : [];
+  const heroStats = [0, 1, 2].map((i) => statSource[i] || statDefaults[i]);
+  const statRows = heroStats.map((stat, i) =>
+    '<div class="stat-row">' +
+    '<label>Icon<select name="stat-icon-' + i + '">' + STAT_ICON_NAMES.map((name) =>
+      '<option value="' + name + '"' + (stat.icon === name ? ' selected' : '') + '>' + statIconLabels[name] + '</option>').join('') + '</select></label>' +
+    '<label>Number<input name="stat-value-' + i + '" value="' + h(stat.value || '') + '" placeholder="500+"></label>' +
+    '<label>Label<input name="stat-label-' + i + '" value="' + h(stat.label || '') + '" placeholder="Recoveries"></label>' +
+    '</div>').join('');
+  const statFieldGroup = '<div class="field-group"><div class="field-group__heading"><div><h2>Hero counter</h2><p>Up to three stat tiles shown in the hero. Clear a number <em>and</em> label to hide that tile.</p></div></div><div class="stat-editor">' + statRows + '</div></div>';
   return '<section class="editor-shell"><div class="section-toolbar"><div><h1>Appearance</h1><p>Site theme, hero copy, search metadata, and this admin’s color mode.</p></div></div>' +
     '<form id="appearance-form"><div class="editor-grid">' +
     '<div class="field-group"><div class="field-group__heading"><div><h2>Site theme</h2><p>Each option pairs light and dark tokens; the preview follows this admin’s color mode.</p></div></div><div class="theme-grid">' + themes + '</div></div>' +
     '<div class="field-group"><div class="field-group__heading"><div><h2>Admin color mode</h2><p>Only affects this editor on this device.</p></div></div><div class="mode-toggle"><button class="button ' + (colorMode === 'light' ? 'button--primary' : 'button--quiet') + '" type="button" data-action="set-color-mode" data-mode="light">Light</button><button class="button ' + (colorMode === 'dark' ? 'button--primary' : 'button--quiet') + '" type="button" data-action="set-color-mode" data-mode="dark">Dark</button></div></div>' +
     '<label class="field--full">Hero headline<textarea name="heroHeadline" required>' + h(config.heroHeadline) + '</textarea></label>' +
     '<label class="field--full">Hero supporting line<textarea name="heroSub" required>' + h(config.heroSub) + '</textarea></label>' +
+    statFieldGroup +
     '<div class="field-group"><div class="field-group__heading"><div><h2>Search metadata</h2><p>Keep title and description specific and concise.</p></div></div><div class="editor-grid"><label class="field--full">SEO title<input name="seoTitle" value="' + h(config.seo.title) + '" required></label><label class="field--full">SEO description<textarea name="seoDescription" required>' + h(config.seo.description) + '</textarea></label></div></div>' +
     '</div><div class="form-actions"><button class="button button--primary" type="button" data-action="save-appearance">Save appearance draft</button></div></form></section>';
 };
@@ -835,6 +851,17 @@ const saveAppearance = (form) => {
   state.draft.config.heroSub = String(data.get('heroSub') || '').trim();
   state.draft.config.seo.title = String(data.get('seoTitle') || '').trim();
   state.draft.config.seo.description = String(data.get('seoDescription') || '').trim();
+  const heroStats = [];
+  for (let i = 0; i < 3; i += 1) {
+    const value = String(data.get('stat-value-' + i) || '').trim();
+    const label = String(data.get('stat-label-' + i) || '').trim();
+    const iconName = String(data.get('stat-icon-' + i) || 'pulse').trim();
+    // A tile needs both a number and a label; blank either to drop it.
+    if (value && label) {
+      heroStats.push({ icon: STAT_ICON_NAMES.includes(iconName) ? iconName : 'pulse', value, label });
+    }
+  }
+  state.draft.config.heroStats = heroStats;
   markDirty('config');
   showStatus('Appearance draft saved', 'The theme and copy changes are held in memory until you publish.');
 };

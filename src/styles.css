@@ -21,12 +21,12 @@ h1 em,h2 em,.motto__line em{font-style:italic;color:var(--accent)}
 p{max-width:68ch}
 section[id]{scroll-margin-top:92px}
 .container{width:min(100% - 40px,1240px);margin-inline:auto}
-.section{padding-block:clamp(4.5rem,9vw,8rem)}
+.section{padding-block:clamp(3.25rem,6vw,5.5rem)}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .skip-link{position:fixed;z-index:1000;top:12px;left:12px;display:inline-flex;min-height:44px;align-items:center;padding:10px 14px;background:var(--ink);color:var(--bg);border-radius:999px;transform:translateY(-160%)}
 .skip-link:focus{transform:none}
 .icon{width:1.2em;height:1.2em;flex:none}
-.kicker{display:inline-flex;align-items:center;gap:10px;margin-bottom:20px;padding:7px 15px 7px 12px;border-radius:999px;background:color-mix(in srgb,var(--surface) 66%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 85%,transparent);color:var(--ink);font-size:.75rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
+.kicker{display:inline-flex;align-items:center;gap:10px;margin-bottom:20px;padding:7px 15px 7px 12px;border-radius:999px;background:color-mix(in srgb,var(--surface) 66%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 85%,transparent);color:var(--ink);font-size:.8125rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
 .kicker::before{content:"";width:8px;height:8px;flex:none;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 15%,transparent)}
 
 .button{display:inline-flex;min-height:52px;align-items:center;justify-content:center;gap:10px;padding:14px 26px;border:0;border-radius:999px;background:var(--primary);color:var(--primary-ink);font-size:1.0625rem;font-weight:600;line-height:1.2;text-decoration:none;box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 10%,transparent),0 12px 28px -14px color-mix(in srgb,var(--primary) 60%,transparent);transition:background-color 200ms ease,color 200ms ease,transform 200ms ease,box-shadow 200ms ease}
@@ -65,7 +65,7 @@ section[id]{scroll-margin-top:92px}
 [data-theme="dark"] .theme-toggle__sun{display:none}
 [data-theme="dark"] .theme-toggle__moon{display:inline-flex}
 
-.hero{padding-block:clamp(3rem,6vw,5.5rem) clamp(3.5rem,7vw,6rem)}
+.hero{padding-block:clamp(2.5rem,5vw,4.25rem) clamp(2.75rem,5vw,4.5rem)}
 .hero__layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(430px,1.06fr);align-items:center;gap:clamp(40px,6vw,92px)}
 .hero__copy>p:not(.kicker){max-width:52ch;margin-bottom:36px;color:var(--ink-muted);font-size:clamp(1.125rem,1.7vw,1.3125rem)}
 .hero__actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:36px}
@@ -80,6 +80,16 @@ section[id]{scroll-margin-top:92px}
 .hero__evidence .icon{vertical-align:-3px;color:var(--primary)}
 .hero__evidence .evidence__stage{left:8px;bottom:8px;padding:3px 10px;font-size:.625rem}
 
+.hero__stats-wrap{margin-top:clamp(2.75rem,5vw,4.5rem)}
+.hero__stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,1.8vw,22px);margin:0;padding:0;list-style:none}
+.hero__stat{display:flex;align-items:center;gap:18px;padding:22px 26px;border-radius:18px;background:color-mix(in srgb,var(--surface) 78%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 72%,transparent),0 22px 48px -34px color-mix(in srgb,var(--ink) 45%,transparent);transition:transform 260ms cubic-bezier(.22,1,.36,1),box-shadow 260ms ease}
+.hero__stat:hover{transform:translateY(-3px);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 88%,transparent),0 30px 62px -34px color-mix(in srgb,var(--ink) 52%,transparent)}
+.hero__stat-icon{display:grid;place-items:center;width:44px;height:44px;flex:none;border-radius:50%;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}
+.hero__stat-icon .icon{width:21px;height:21px}
+.hero__stat-body{display:flex;flex-direction:column;gap:3px;min-width:0;padding-left:18px;border-left:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.hero__stat-value{font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:clamp(1.85rem,2.7vw,2.4rem);line-height:1;letter-spacing:-.015em;color:var(--ink);font-variant-numeric:tabular-nums lining-nums}
+.hero__stat-label{color:var(--ink-muted);font-size:.9375rem;font-weight:500;line-height:1.3}
+
 .evidence{position:relative;margin:0;min-width:0}
 .evidence__image{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:16px;background:var(--surface-2);isolation:isolate}
 .evidence__image>img{position:relative;z-index:1;width:100%;height:100%;object-fit:contain;transition:transform 500ms cubic-bezier(.22,1,.36,1)}
@@ -92,8 +102,8 @@ section[id]{scroll-margin-top:92px}
 .evidence[data-stage="during"] .evidence__stage::before{background:var(--accent)}
 .evidence[data-stage="after"] .evidence__stage::before{background:var(--good)}
 
-.recoveries,.approach,.conditions,.fraternity,.about{border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
-.section-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.85fr);gap:48px;align-items:end;margin-bottom:clamp(48px,6vw,72px)}
+.recoveries,.approach,.conditions,.about{border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.section-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.85fr);gap:48px;align-items:end;margin-bottom:clamp(28px,4vw,48px)}
 .section-heading h2{margin-bottom:0}
 .section-heading>p{margin-bottom:4px;color:var(--ink-muted)}
 .journey__intro{margin-bottom:32px}
@@ -163,12 +173,14 @@ section[id]{scroll-margin-top:92px}
 .about__copy p:first-child{color:var(--ink)}
 .about__copy p:last-child{margin-bottom:0}
 
-.contact{padding-block:clamp(4.5rem,9vw,8rem);border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.contact{padding-block:clamp(3.25rem,6vw,5.5rem);border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
 .contact__layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,.85fr);gap:clamp(48px,9vw,136px);align-items:start}
 .contact__intro p{color:var(--ink-muted)}
 .contact__details{border-top:1px solid color-mix(in srgb,var(--line) 80%,transparent)}
 .contact-row{display:grid;grid-template-columns:28px 1fr;gap:16px;align-items:center;padding:20px 10px;border-bottom:1px solid color-mix(in srgb,var(--line) 80%,transparent);border-radius:0;color:var(--ink);text-decoration:none;transition:background-color 200ms ease,border-radius 200ms ease}
 .contact-row:hover{background:color-mix(in srgb,var(--surface-2) 70%,transparent);border-radius:14px}
+.contact-row--static{cursor:default}
+.contact-row--static:hover{background:none;border-radius:0}
 .contact-row .icon{width:24px;height:24px;color:var(--primary)}
 .contact-row span{display:flex;flex-direction:column;font-weight:600}
 .contact-row small{color:var(--ink-muted);font-size:.8125rem;font-weight:500;text-transform:uppercase;letter-spacing:.08em}
@@ -221,18 +233,39 @@ section[id]{scroll-margin-top:92px}
 
 @media (max-width:760px){
   html{scroll-padding-top:80px}
-  .container{width:min(100% - 32px,1240px)}
+  .container{width:min(100% - 40px,1240px)}
+  .section,.contact{padding-block:clamp(2.5rem,7vw,3.25rem)}
   .header-inner{min-height:72px}
-  .lockup img{height:50px}
+  .lockup img{height:58px}
   .header-cta{display:none}
-  .hero{padding-top:44px}
+  .hero{padding-top:40px}
+  /* The hero kicker copy is long; shrink it on phones so the pill stays one line. */
+  .hero .kicker{font-size:11px;letter-spacing:.02em;padding:6px 12px 6px 10px;margin-bottom:16px}
   .hero__actions .button{flex:1 1 auto}
+  /* Keep the counter as one tidy row on phones (Praan-style), just compact. */
+  .hero__stats-wrap{margin-top:2rem}
+  .hero__stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .hero__stat{flex-direction:column;align-items:flex-start;gap:9px;padding:15px 13px;border-radius:15px}
+  .hero__stat-icon{width:34px;height:34px}
+  .hero__stat-icon .icon{width:17px;height:17px}
+  .hero__stat-body{padding-left:0;border-left:0;gap:2px}
+  .hero__stat-value{font-size:clamp(1.35rem,6.4vw,1.6rem)}
+  .hero__stat-label{font-size:.8125rem;line-height:1.25}
   .hero__evidence::before{inset:18px -10px -10px 18px}
   .section-heading{grid-template-columns:1fr;gap:16px;margin-bottom:40px}
   .journey__stages{grid-template-columns:1fr;gap:24px}
   .pair-story{display:flex;flex-direction:column;align-items:stretch}
   .pair-story__pair{margin-bottom:22px}
-  .pathway{grid-template-columns:1fr;gap:32px}
+  /* "What to expect": on phones the four steps become an editorial timeline —
+     a vertical spine threads the serif step numbers so they read as one ordered
+     journey (desktop keeps the 4-across grid; no orange-disc/gray-card look). */
+  .pathway{grid-template-columns:1fr;gap:0}
+  .pathway>li{position:relative;display:grid;grid-template-columns:44px minmax(0,1fr);column-gap:18px;align-items:start;padding-bottom:28px}
+  .pathway>li:last-child{padding-bottom:0}
+  .pathway>li:not(:last-child)::before{content:"";position:absolute;left:21px;top:44px;bottom:-1px;width:2px;background:linear-gradient(color-mix(in srgb,var(--accent) 42%,transparent),color-mix(in srgb,var(--line) 82%,transparent));border-radius:2px}
+  .pathway>li>span{display:grid;place-items:center;width:44px;height:44px;margin:0;font-size:1.3125rem;background:var(--bg);border-radius:50%;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 52%,transparent)}
+  .pathway>li>span::after{display:none}
+  .pathway>li>div{padding-top:8px}
   .condition-list{grid-template-columns:1fr}
   .quote-story-grid{columns:1}
   .about__layout,.contact__layout{grid-template-columns:1fr;gap:40px}
@@ -241,19 +274,27 @@ section[id]{scroll-margin-top:92px}
   .act__panel{border-radius:24px;padding:32px 24px}
   .act__actions{flex-direction:column}
   .act__actions .button{width:100%}
-  .footer__top{grid-template-columns:1fr;gap:20px}
-  .site-footer nav{flex-wrap:wrap}
-  .footer__bottom{align-items:flex-start;flex-direction:column}
+  /* Tidy, Praan-style mobile footer: bigger mark, aligned link grid, calmer rhythm. */
+  .site-footer{padding:44px 0 28px}
+  .footer__top{grid-template-columns:1fr;gap:20px;padding-bottom:28px}
+  .footer-brand .lockup img{height:64px}
+  .footer__top>p{max-width:36ch;line-height:1.5}
+  .site-footer nav{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
+  .footer__bottom{align-items:flex-start;flex-direction:column;gap:14px}
   .footer__bottom p:last-child{white-space:normal}
 }
 
 @media (max-width:400px){
-  .container{width:min(100% - 24px,1240px)}
+  .container{width:min(100% - 36px,1240px)}
   .header-inner{gap:8px}
-  .lockup img{height:44px}
+  .lockup img{height:52px}
   .hero__actions{flex-direction:column;align-items:stretch}
   .hero__evidence{padding:12px}
   .hero__evidence-strip{gap:8px}
+  .hero__stats{gap:8px}
+  .hero__stat{padding:13px 11px;gap:8px}
+  .hero__stat-icon{width:30px;height:30px}
+  .hero__stat-icon .icon{width:15px;height:15px}
 }
 
 @media (prefers-reduced-motion:reduce){

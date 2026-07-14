@@ -64,4 +64,62 @@
     );
     revealItems.forEach((item) => observer.observe(item));
   }
+
+  // Hero counters ease up to their target the first time they scroll into view.
+  // The authored text (e.g. "500+", "7.5k+") is parsed into prefix/number/suffix
+  // so any admin-entered value animates without hard-coding the format.
+  const counters = [...document.querySelectorAll('[data-count]')];
+  if (counters.length) {
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const parse = (text) => {
+      const match = text.match(/^(\D*)([\d,]+(?:\.\d+)?)(.*)$/s);
+      if (!match) return null;
+      const value = Number(match[2].replace(/,/g, ''));
+      if (!Number.isFinite(value)) return null;
+      const fraction = match[2].includes('.') ? match[2].split('.')[1].length : 0;
+      return { prefix: match[1], suffix: match[3], value, fraction, group: match[2].includes(',') };
+    };
+    const format = (n, spec) =>
+      spec.prefix +
+      n.toLocaleString('en-US', {
+        minimumFractionDigits: spec.fraction,
+        maximumFractionDigits: spec.fraction,
+        useGrouping: spec.group,
+      }) +
+      spec.suffix;
+    const specs = counters.map((element) => {
+      const spec = parse(element.textContent.trim());
+      if (spec && !reduceMotion) element.textContent = format(0, spec);
+      return spec;
+    });
+    const countUp = (element, spec) => {
+      const duration = 2000;
+      const start = performance.now();
+      const step = (now) => {
+        const progress = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = spec.fraction ? spec.value * eased : Math.round(spec.value * eased);
+        element.textContent = format(current, spec);
+        if (progress < 1) requestAnimationFrame(step);
+        else element.textContent = format(spec.value, spec);
+      };
+      requestAnimationFrame(step);
+    };
+    if (!reduceMotion && 'IntersectionObserver' in window) {
+      const counterObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const index = counters.indexOf(entry.target);
+            counterObserver.unobserve(entry.target);
+            if (specs[index]) countUp(entry.target, specs[index]);
+          });
+        },
+        { threshold: 0.6 },
+      );
+      counters.forEach((element, index) => {
+        if (specs[index]) counterObserver.observe(element);
+      });
+    }
+  }
 })();

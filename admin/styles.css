@@ -100,6 +100,10 @@ input::placeholder,textarea::placeholder{color:var(--ink-muted)}
 .repeat-row:first-of-type{border-top:0}
 .repeat-row input{min-height:38px}
 .repeat-row .checkbox-row{display:flex;align-items:center;white-space:nowrap}
+.stat-editor{display:grid;gap:14px}
+.stat-row{display:grid;grid-template-columns:minmax(120px,.7fr) minmax(120px,.8fr) minmax(0,1.4fr);gap:12px;align-items:end}
+.stat-row input{min-height:40px}
+@media(max-width:640px){.stat-row{grid-template-columns:1fr 1fr}.stat-row label:last-child{grid-column:1/-1}}
 .image-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .image-item{min-width:0;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
 .image-preview{display:grid;aspect-ratio:3/2;margin-bottom:8px;place-items:center;overflow:hidden;border-radius:6px;background:var(--surface-2)}

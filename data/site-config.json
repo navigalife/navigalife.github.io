@@ -1,9 +1,14 @@
 {
   "theme": "meridian",
   "productsEnabled": false,
-  "heroHeadline": "Amputation is not the only outcome",
+  "heroHeadline": "Amputation is not the only way out",
   "heroAccent": "only",
   "heroSub": "We are medical engineering professionals specializing in vascular and lymphatic disorders. When years of treatment have brought no improvement, we study the case, design a customized and affordable protocol, and follow up until the desired result is achieved.",
+  "heroStats": [
+    { "icon": "pulse", "value": "500+", "label": "Recoveries" },
+    { "icon": "clipboard", "value": "15+", "label": "Conditions treated" },
+    { "icon": "clock", "value": "20+", "label": "Years improving lives" }
+  ],
   "seo": {
     "title": "MediVasc | Prevention of Foot and Leg Amputation",
     "description": "MediVasc designs customized, affordable protocols for lymphedema, venous ulcers, diabetic foot, DVT, filariasis, and bedridden or elderly patients, with documented recoveries and follow-up until the desired result."
