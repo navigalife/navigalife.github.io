@@ -33,6 +33,23 @@ auto-deploys) and **you/the advisor** (code from a local clone). Your clone goes
   `git config core.hooksPath tools/hooks`. Server-side, `main` also blocks force
   pushes — do not try to work around either; they are protecting live data.
 
+## The `/changes` staging workflow (use `tools/preview.sh`, don't freelance it)
+
+Owner-facing changes go to the `preview` branch FIRST (shown at
+`medivasc.in/changes`), and never ship to `main` until Puranjai explicitly says
+so. Because `main` has two writers, `preview` must always START from the current
+`main` or the owner reviews stale content and promotion stops being linear. That
+sequence is encoded — use it instead of hand-running git:
+
+- **Before editing preview:** `bash tools/preview.sh sync` (resets
+  `origin/preview` → current `origin/main`; the only branch ever force-pushed).
+- **Show it to the owner:** commit to a local `preview` branch, then
+  `bash tools/preview.sh publish` (pushes preview + dispatches a `main` deploy so
+  `/changes` refreshes — a bare preview push can't deploy, the env is main-only).
+- **Go live (only on Puranjai's explicit OK):** `bash tools/preview.sh ship`
+  (dry-run) → review → `bash tools/preview.sh ship --yes` (linear FF to `main`,
+  then re-syncs preview). `tools/preview.sh status` shows where things stand.
+
 ## Session start ritual (every session, no exceptions)
 
 1. Read this file fully.
