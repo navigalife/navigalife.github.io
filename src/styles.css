@@ -125,6 +125,18 @@ section[id]{scroll-margin-top:92px}
 .pair-story h3{margin-bottom:8px;font-size:1.1875rem}
 .pair-story .story-meta{margin-bottom:16px}
 .pair-story .case-note{margin-top:auto;font-size:.9375rem;line-height:1.65}
+/* Expandable recoveries — collapsed shows the first three non-featured cards and
+   a "View more" toggle animates the rest open (src/site.js). The resting collapsed
+   state hides the extras with display:none so it survives reflow and late image
+   loads; site.js only measures heights during the max-height transition. */
+.pair-story-row--collapsible{transition:max-height 460ms cubic-bezier(.22,1,.36,1)}
+html.js .pair-story-row--collapsible.is-collapsed .pair-story:nth-child(n+4){display:none}
+.recoveries__more{display:flex;justify-content:center;margin-top:clamp(30px,4.5vw,46px);margin-bottom:clamp(-2.25rem,-2.5vw,-1.5rem)}
+@media(max-width:760px){.recoveries__more{margin-bottom:0}}
+html:not(.js) .recoveries__more{display:none}
+.recoveries__more-btn:hover .icon{transform:none}
+.recoveries__more-btn[aria-expanded="true"] .icon,
+.recoveries__more-btn[aria-expanded="true"]:hover .icon{transform:rotate(180deg)}
 .quote-story-grid{columns:3;column-gap:24px;margin-top:48px}
 .quote-story{break-inside:avoid;margin:0 0 24px;padding:24px 0 30px;border-top:1px solid color-mix(in srgb,var(--line) 80%,transparent)}
 .quote-story blockquote{margin:0 0 20px;color:var(--ink);font-family:"Fraunces",Georgia,serif;font-size:1.1875rem;font-weight:600;line-height:1.55}

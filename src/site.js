@@ -122,4 +122,136 @@
       });
     }
   }
+
+  // Expandable recoveries — the non-featured case cards collapse to the first
+  // three; the toggle animates the rest open/closed. The resting collapsed state
+  // hides the extras via CSS (display:none on :nth-child(n+4)), so it is immune
+  // to reflow and late image loads; we only measure heights during the max-height
+  // transition itself, then hand back to the CSS resting states.
+  const recoveryList = document.querySelector('[data-recovery-list]');
+  const recoveryToggle = document.querySelector('[data-recovery-toggle]');
+  if (recoveryList && recoveryToggle) {
+    const toggleLabel = recoveryToggle.querySelector('[data-recovery-toggle-label]');
+    const labelMore = recoveryToggle.dataset.labelMore || 'View more';
+    const labelLess = recoveryToggle.dataset.labelLess || 'View less';
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let animating = false;
+
+    const setExpandedState = (expanded) => {
+      recoveryToggle.setAttribute('aria-expanded', String(expanded));
+      if (toggleLabel) toggleLabel.textContent = expanded ? labelLess : labelMore;
+    };
+
+    // Bottom edge of the third card, relative to the row — the collapsed clip line.
+    const collapsedHeight = () => {
+      const cards = [...recoveryList.children];
+      if (cards.length <= 3) return recoveryList.scrollHeight;
+      const top = recoveryList.getBoundingClientRect().top;
+      return Math.round(cards[2].getBoundingClientRect().bottom - top);
+    };
+
+    // Run `done` once the max-height transition ends, with a timeout fallback so a
+    // dropped transitionend can never leave the row stuck mid-animation.
+    const afterTransition = (done) => {
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        recoveryList.removeEventListener('transitionend', onEnd);
+        done();
+      };
+      const onEnd = (event) => {
+        if (event.target === recoveryList && event.propertyName === 'max-height') finish();
+      };
+      recoveryList.addEventListener('transitionend', onEnd);
+      setTimeout(finish, 620);
+    };
+
+    const expand = () => {
+      if (animating) return;
+      const startHeight = recoveryList.getBoundingClientRect().height;
+      recoveryList.classList.remove('is-collapsed'); // extras take their natural space
+      [...recoveryList.children].slice(3).forEach((card) => card.classList.add('is-visible'));
+      setExpandedState(true);
+      if (reduceMotion) return;
+      const endHeight = recoveryList.scrollHeight;
+      animating = true;
+      recoveryList.style.overflow = 'hidden';
+      recoveryList.style.maxHeight = `${startHeight}px`;
+      void recoveryList.offsetHeight; // reflow so the start height is committed
+      afterTransition(() => {
+        recoveryList.style.maxHeight = '';
+        recoveryList.style.overflow = '';
+        animating = false;
+      });
+      recoveryList.style.maxHeight = `${endHeight}px`;
+    };
+
+    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+    // Instant re-centre of the toggle (used only on the reduced-motion path).
+    const centreToggle = () => {
+      const rect = recoveryToggle.getBoundingClientRect();
+      const target = window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2;
+      window.scrollTo({ top: Math.max(0, target), behavior: 'instant' });
+    };
+
+    // Collapse and re-centre as one synchronised motion: a single rAF loop clips the
+    // row shut and scrolls the page on the same easing curve, so the toggle glides to
+    // the viewport centre exactly as the extra cards close. (Animating the height and
+    // then scrolling afterwards read as two disconnected steps.)
+    const collapse = () => {
+      if (animating) return;
+      setExpandedState(false);
+      if (reduceMotion) {
+        recoveryList.classList.add('is-collapsed');
+        centreToggle();
+        return;
+      }
+      const startHeight = recoveryList.getBoundingClientRect().height;
+      const targetHeight = collapsedHeight();
+      const deltaHeight = startHeight - targetHeight; // how far content below rises as the row closes
+      const startScroll = window.scrollY;
+      const rect = recoveryToggle.getBoundingClientRect();
+      // Scroll offset that lands the button's centre at the viewport centre once the
+      // row is fully closed (the button rises by deltaHeight along the way).
+      const endScroll = Math.max(
+        0,
+        startScroll + rect.top + rect.height / 2 - deltaHeight - window.innerHeight / 2,
+      );
+      const duration = 480;
+      const startTime = performance.now();
+      const rootStyle = document.documentElement.style;
+      const prevAnchor = rootStyle.overflowAnchor;
+      rootStyle.overflowAnchor = 'none'; // keep scroll-anchoring from fighting our per-frame scroll
+      recoveryList.style.transition = 'none'; // this direction is hand-driven, not the CSS transition
+      recoveryList.style.overflow = 'hidden';
+      recoveryList.style.maxHeight = `${startHeight}px`;
+      animating = true;
+      const step = (now) => {
+        const progress = Math.min(1, (now - startTime) / duration);
+        const eased = easeOutCubic(progress);
+        recoveryList.style.maxHeight = `${startHeight + (targetHeight - startHeight) * eased}px`;
+        // behavior:'instant' overrides the page's CSS scroll-behavior:smooth so each
+        // frame positions immediately — rAF (not the browser) drives the motion.
+        window.scrollTo({ top: startScroll + (endScroll - startScroll) * eased, behavior: 'instant' });
+        if (progress < 1) {
+          requestAnimationFrame(step);
+          return;
+        }
+        recoveryList.classList.add('is-collapsed'); // hand back to the display:none rest state
+        recoveryList.style.maxHeight = '';
+        recoveryList.style.overflow = '';
+        recoveryList.style.transition = '';
+        rootStyle.overflowAnchor = prevAnchor;
+        animating = false;
+      };
+      requestAnimationFrame(step);
+    };
+
+    recoveryToggle.addEventListener('click', () => {
+      if (recoveryList.classList.contains('is-collapsed')) expand();
+      else collapse();
+    });
+  }
 })();

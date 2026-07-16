@@ -177,6 +177,9 @@ const renderPage = ({
     (testimonial) => !testimonial.featured && testimonial.images.length >= 2,
   );
   const quoteStories = testimonials.filter((testimonial) => !testimonial.images.length);
+  // Once there are more than three non-featured case cards the row collapses to
+  // the first three and a "View more" toggle (site.js) animates the rest open.
+  const collapsibleRecoveries = pairStories.length > 3;
   const tracks = [
     { id: 'disease', label: 'Disease-specific protocols' },
     { id: 'elderly', label: 'Bedridden and elderly care' },
@@ -323,7 +326,8 @@ const renderPage = ({
           <p>Every story below is a real MediVasc case, shown exactly as photographed: before, during, and after therapy. We never generate or edit outcome images. Names are withheld where patients asked for privacy.</p>
         </div>
         ${featured ? renderJourney(featured, imageMap) : ''}
-        ${pairStories.length ? `<div class="pair-story-row">${pairStories.map((testimonial, index) => renderPairStory(testimonial, imageMap, index)).join('')}</div>` : ''}
+        ${pairStories.length ? `<div class="pair-story-row${collapsibleRecoveries ? ' pair-story-row--collapsible is-collapsed' : ''}"${collapsibleRecoveries ? ' data-recovery-list' : ''}>${pairStories.map((testimonial, index) => renderPairStory(testimonial, imageMap, index)).join('')}</div>` : ''}
+        ${collapsibleRecoveries ? `<div class="recoveries__more"><button type="button" class="button button--outline recoveries__more-btn" data-recovery-toggle aria-expanded="false" data-label-more="View more" data-label-less="View less"><span data-recovery-toggle-label>View more</span>${icon('arrowDown')}</button></div>` : ''}
         ${quoteStories.length ? `<div class="quote-story-grid">${quoteStories.map((testimonial, index) => renderQuoteStory(testimonial, index)).join('')}</div>` : ''}
       </div>
     </section>
