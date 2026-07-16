@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - preview
   workflow_dispatch:
 
 permissions:
@@ -19,8 +20,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      # The live root is ALWAYS built from main, regardless of which branch
+      # triggered this run, so a preview push can never alter medivasc.in/.
+      - name: Check out production branch (main)
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -28,10 +34,30 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Build site
+      - name: Build site (production root)
         run: npm run build
       - name: Generate product catalogues
         run: node tools/gen-pdfs.js
+      # Optional staging area: if a `preview` branch exists, build it and mount
+      # it at /changes so reviewers can see it at medivasc.in/changes (and
+      # /changes/admin). Fully non-fatal — any failure here leaves the live
+      # site untouched and still deploys the production root.
+      - name: Graft preview branch into /changes
+        continue-on-error: true
+        run: |
+          set +e
+          if ! git ls-remote --exit-code --heads origin preview >/dev/null 2>&1; then
+            echo "No preview branch — skipping /changes."
+            exit 0
+          fi
+          echo "preview branch found — building it into dist/changes"
+          git fetch origin preview || exit 0
+          git worktree add --force .preview origin/preview || exit 0
+          ( cd .preview && npm ci && npm run build && node tools/gen-pdfs.js ) || { echo "preview build failed — skipping /changes"; git worktree remove --force .preview 2>/dev/null; exit 0; }
+          mkdir -p dist/changes
+          cp -R .preview/dist/. dist/changes/
+          git worktree remove --force .preview 2>/dev/null
+          echo "Grafted preview -> /changes"
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload GitHub Pages artifact
