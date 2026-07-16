@@ -66,6 +66,12 @@ jobs:
           path: dist
 
   deploy:
+    # Only `main` deploys to the live Pages site (the github-pages environment
+    # allows main only anyway). A `preview` push still runs `build` above as a
+    # green build-check, but SKIPS deploy here — so it no longer emits a failed
+    # deploy run (and its email). /changes is refreshed by main deploys, which
+    # graft the current preview.
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

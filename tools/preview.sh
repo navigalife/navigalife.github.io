@@ -69,13 +69,18 @@ cmd_publish() {
   else
     log "No local 'preview' branch; refreshing /changes from origin/preview as-is."
   fi
-  if command -v gh >/dev/null 2>&1; then
-    log "Dispatching a main deploy to re-graft preview into medivasc.in/changes ..."
-    gh workflow run deploy.yml --ref main
-    log "Dispatched. Watch: gh run list --workflow deploy.yml"
-  else
-    log "gh not found — refresh /changes manually (empty commit to main, or dispatch deploy.yml)."
+  log "Refreshing medivasc.in/changes needs a main deploy (the env is main-only)."
+  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    log "Dispatching a main deploy via gh ..."
+    if gh workflow run deploy.yml --ref main; then
+      log "Dispatched. Watch: gh run list --workflow deploy.yml"
+      return 0
+    fi
+    log "gh dispatch failed."
   fi
+  log "gh not authenticated here — refresh /changes with an empty main deploy"
+  log "(works over your normal git push):"
+  log "  git commit --allow-empty -m 'ci: refresh /changes' && git push origin main"
 }
 
 cmd_ship() {
