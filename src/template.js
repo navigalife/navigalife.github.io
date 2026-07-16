@@ -157,6 +157,51 @@ const renderJsonLd = ({ company, siteUrl }) => {
   return JSON.stringify(organization).replaceAll('<', '\\u003c');
 };
 
+// MediVasc Assistant — a conversational lead form that lives at bottom-right on every
+// viewport. The shell is server-rendered (no layout shift); site.js drives the
+// chat and, on completion, builds a wa.me deep-link with the case prefilled.
+// html.js-gated in CSS, so without JS the page's own contact routes take over.
+const renderChatbot = ({ wa, email, conditions }) => {
+  const xIcon =
+    '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+  const chatIcon =
+    '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.4a7.6 7.6 0 0 1-11 6.8L4.5 19.6l1.4-4.4A7.6 7.6 0 1 1 20 11.4Z"/><circle cx="8.5" cy="11.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="12" cy="11.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="15.5" cy="11.6" r="1.05" fill="currentColor" stroke="none"/></svg>';
+  const sendIcon =
+    '<svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.5 3.5c-.5-.2-1 .3-.85.82L4.4 11 14 12 4.4 13l-1.75 6.68c-.14.51.36 1 .85.82l17.2-7.55c.5-.22.5-.94 0-1.16L3.5 3.5Z"/></svg>';
+  const config = JSON.stringify({ wa: wa || '', email: email || '', conditions: conditions || [] }).replaceAll('<', '\\u003c');
+  return `
+  <div class="mvbot" data-mvbot data-mvbot-state="closed">
+    <div class="mvbot__panel" id="mvbot-panel" data-mvbot-panel role="dialog" aria-label="MediVasc Assistant" aria-modal="false" aria-hidden="true">
+      <header class="mvbot__head">
+        <span class="mvbot__avatar" aria-hidden="true"><img src="assets/brand/icon-192.png" alt="" width="42" height="42" loading="lazy" decoding="async"></span>
+        <span class="mvbot__id">
+          <span class="mvbot__name">MediVasc Assistant</span>
+          <span class="mvbot__status"><span class="mvbot__status-dot" aria-hidden="true"></span>Online · replies personally</span>
+        </span>
+        <button type="button" class="mvbot__close" data-mvbot-close aria-label="Close chat">${xIcon}</button>
+      </header>
+      <div class="mvbot__log" data-mvbot-log role="log" aria-live="polite"></div>
+      <div class="mvbot__quick" data-mvbot-quick hidden></div>
+      <form class="mvbot__composer" data-mvbot-form autocomplete="off" novalidate hidden>
+        <label class="sr-only" for="mvbot-input">Type your answer</label>
+        <input class="mvbot__input" id="mvbot-input" data-mvbot-input type="text" name="mvbot-field" autocomplete="off" enterkeyhint="send" placeholder="Type here…">
+        <button type="submit" class="mvbot__send" data-mvbot-send aria-label="Send" disabled>${sendIcon}</button>
+      </form>
+      <p class="mvbot__legal">Opens WhatsApp with your details ready to send. A person replies — this isn’t medical advice.</p>
+    </div>
+    <div class="mvbot__nudge" data-mvbot-nudge hidden>
+      <button type="button" class="mvbot__nudge-x" data-mvbot-nudge-x aria-label="Dismiss">${xIcon}</button>
+      <strong>Have a case?</strong> Request a customized solution in ~30 seconds.
+    </div>
+    <button type="button" class="mvbot__launcher" data-mvbot-toggle aria-expanded="false" aria-controls="mvbot-panel" aria-label="Chat with MediVasc Assistant">
+      <span class="mvbot__launcher-ico mvbot__launcher-ico--chat" aria-hidden="true">${chatIcon}</span>
+      <span class="mvbot__launcher-ico mvbot__launcher-ico--close" aria-hidden="true">${xIcon}</span>
+      <span class="mvbot__launcher-ping" aria-hidden="true"></span>
+    </button>
+    <script type="application/json" data-mvbot-config>${config}</script>
+  </div>`;
+};
+
 const renderPage = ({
   company,
   protocols,
@@ -219,6 +264,11 @@ const renderPage = ({
     <img class="lockup--ink" src="${markPaths.ink}" alt="" width="512" height="257" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
     <img class="lockup--paper" src="${markPaths.paper}" alt="" width="512" height="257" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
   </span>`;
+  // The bot deep-links to WhatsApp when a number is on record, else composes an
+  // email; if neither exists it is omitted (site.js no-ops on a missing config).
+  const chatbot = whatsapp || company.email
+    ? renderChatbot({ wa: whatsapp, email: company.email, conditions: heroChips })
+    : '';
 
   return `<!doctype html>
 <html lang="en" data-site-theme="${escapeHtml(themeId)}">
@@ -436,6 +486,8 @@ const renderPage = ({
       <p>© ${new Date().getFullYear()} ${escapeHtml(company.legalName)}</p>
     </div>
   </footer>
+
+  ${chatbot}
 
   <noscript><p class="noscript">Theme controls require JavaScript. All recovery stories, protocols, and contact routes remain available above.</p></noscript>
   <script src="${jsPath}" defer></script>
