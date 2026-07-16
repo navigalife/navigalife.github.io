@@ -31,6 +31,35 @@ export const resizeProductImage = async (file) => {
   return canvasBlob(canvas);
 };
 
+// Bakes the locked "MediVasc" testimonial watermark into the pixels (proportional
+// to width W so it looks identical on every 4:5 upload). Mirrors the batch spec in
+// tools/watermark.js — top-left, Georgia, semi-transparent white + faint dark
+// outline + soft shadow. Runs inside the crop draw() so it is WYSIWYG in the dialog
+// and captured by the exported blob.
+const drawEvidenceWatermark = (context, w) => {
+  const inset = Math.round(w * 0.06);
+  const fontSize = Math.round(w * 0.08);
+  const baseline = inset + fontSize;
+  context.save();
+  context.font = `500 ${fontSize}px Georgia, "Times New Roman", serif`;
+  context.textAlign = 'left';
+  context.textBaseline = 'alphabetic';
+  context.lineJoin = 'round';
+  // Soft shadow cast from the white fill so it reads at the spec's strength.
+  context.shadowColor = 'rgba(0, 0, 0, 0.28)';
+  context.shadowBlur = 1.5;
+  context.shadowOffsetX = 0;
+  context.shadowOffsetY = 1;
+  context.fillStyle = 'rgba(255, 255, 255, 0.66)';
+  context.fillText('MediVasc', inset, baseline);
+  // Faint dark outline (no shadow so it isn't doubled).
+  context.shadowColor = 'transparent';
+  context.lineWidth = 3.5;
+  context.strokeStyle = 'rgba(11, 31, 42, 0.16)';
+  context.strokeText('MediVasc', inset, baseline);
+  context.restore();
+};
+
 export const cropEvidenceImage = async (file, label) => {
   assertImage(file);
   const image = await createImageBitmap(file, { imageOrientation: 'from-image' });
@@ -57,6 +86,7 @@ export const cropEvidenceImage = async (file, label) => {
     context.fillStyle = '#F5F8F9';
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(image, x, y, width, height);
+    drawEvidenceWatermark(context, canvas.width);
   };
   const update = () => draw();
   zoom.addEventListener('input', update);
