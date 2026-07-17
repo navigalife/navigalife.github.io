@@ -445,3 +445,12 @@ html.mvbot-locked{overflow:hidden}
   .mvbot[data-mvbot-state="open"] .mvbot__launcher{opacity:0;transform:translateY(10px) scale(.6);pointer-events:none}
   .mvbot__nudge{width:min(74vw,244px);max-width:min(74vw,244px)}
 }
+
+/* Content-copy friction (owner directive): a light deterrent against casually
+   selecting/copying page text or saving images. NOT enforceable — screenshots,
+   reader mode, and View Source all defeat it. Contact details, form fields, and
+   the chatbot stay fully selectable so patients can still copy phone/email and
+   type. */
+body{-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-touch-callout:none}
+img{-webkit-user-drag:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.contact-row,.contact-row *,input,textarea,select,[contenteditable],.mvbot__input,.mvbot__log,.mvbot__log *{-webkit-user-select:text;-moz-user-select:text;user-select:text;-webkit-touch-callout:default}

@@ -623,3 +623,17 @@
 
   requestAnimationFrame(() => root.classList.add('mvbot--ready'));
 })();
+
+/* Content-copy friction (owner directive): block image drag + right-click /
+   long-press "save image". Deterrent only — text selection is handled in CSS.
+   Scoped to images so links, contact details, and form fields stay usable. */
+(() => {
+  const overImage = (event) =>
+    event.target instanceof Element && event.target.closest('img');
+  document.addEventListener('dragstart', (event) => {
+    if (overImage(event)) event.preventDefault();
+  });
+  document.addEventListener('contextmenu', (event) => {
+    if (overImage(event)) event.preventDefault();
+  });
+})();
