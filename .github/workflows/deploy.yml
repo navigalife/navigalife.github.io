@@ -47,9 +47,13 @@ jobs:
         run: |
           set +e
           # SWITCH: if tools/CHANGES_DISABLED exists on main, /changes is OFF.
-          # Remove that file (and redeploy main) to turn the staging area back on.
+          # Instead of leaving the URL to fall through to the homepage-style 404,
+          # publish an explicit "staging offline" page at /changes so it reads as
+          # unmistakably off. Remove the marker (and redeploy main) to turn it on.
           if [ -f tools/CHANGES_DISABLED ]; then
-            echo "tools/CHANGES_DISABLED present — /changes is switched OFF, skipping graft."
+            echo "tools/CHANGES_DISABLED present — /changes is switched OFF; serving offline notice."
+            mkdir -p dist/changes
+            cp tools/changes-offline.html dist/changes/index.html
             exit 0
           fi
           if ! git ls-remote --exit-code --heads origin preview >/dev/null 2>&1; then
