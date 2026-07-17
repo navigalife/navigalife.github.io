@@ -241,6 +241,9 @@ const renderPage = ({
     'DVT prevention',
     'Bedridden & elderly care',
   ];
+  // The four conditions the chatbot offers as quick-reply chips (owner-curated).
+  // Kept separate from heroChips so the bot's tappable options stay short.
+  const botConditions = ['Diabetic foot', 'Lymphedema', 'Venous ulcers', 'Mastectomy'];
   const telephone = phoneHref(company.phone);
   const whatsapp = phoneHref(company.whatsapp).replace('+', '');
   const waPatient = company.whatsapp
@@ -299,7 +302,7 @@ const renderPage = ({
   // The bot deep-links to WhatsApp when a number is on record, else composes an
   // email; if neither exists it is omitted (site.js no-ops on a missing config).
   const chatbot = whatsapp || company.email
-    ? renderChatbot({ wa: whatsapp, email: company.email, conditions: heroChips })
+    ? renderChatbot({ wa: whatsapp, email: company.email, conditions: botConditions })
     : '';
 
   return `<!doctype html>
@@ -527,7 +530,7 @@ const renderPage = ({
       <nav aria-label="Footer navigation"><a href="#recoveries">Recoveries</a><a href="#approach">Approach</a><a href="#conditions">Conditions</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
     </div>
     <div class="container footer__bottom">
-      <p>Individual results may vary. Please consult your physician for guidance specific to your condition.</p>
+      <p>Results may vary depending on the history, cause and onset of the disease.</p>
       <p>© ${new Date().getFullYear()} ${escapeHtml(company.legalName)}</p>
     </div>
   </footer>

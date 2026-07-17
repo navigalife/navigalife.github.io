@@ -300,11 +300,12 @@
   const SPARK =
     '<svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.7 5.5L19 9.2l-5.3 1.7L12 16l-1.7-5.1L5 9.2l5.3-1.7L12 2Z"/></svg>';
 
-  const answers = { name: '', condition: '', city: '' };
+  const answers = { name: '', age: '', condition: '', city: '' };
   const steps = [
-    { key: 'name', prompt: 'Who is the therapy for? Please share the <strong>patient’s name</strong>.', placeholder: 'Patient’s name', required: true },
-    { key: 'condition', prompt: 'What is the <strong>condition</strong> we’re looking at? Pick one below or type your own.', placeholder: 'Condition', required: true, chips: true, rotate: true },
-    { key: 'city', prompt: 'Lastly, which <strong>city</strong> are you in? It helps us plan home-based therapy.', placeholder: 'Your city', required: false, skip: true },
+    { key: 'name', prompt: 'What is the <strong>patient’s name</strong>?', placeholder: 'Patient’s name', required: true },
+    { key: 'age', prompt: 'And the <strong>patient’s age</strong>?', placeholder: 'Patient’s age', required: true },
+    { key: 'condition', prompt: 'What <strong>medical condition</strong> are you seeking a solution for? Pick one below or type your own.', placeholder: 'Condition', required: true, chips: true, rotate: true },
+    { key: 'city', prompt: 'Which <strong>city</strong> are you from?', placeholder: 'Your city', required: true },
   ];
   let stepIndex = -1;
   let started = false;
@@ -365,7 +366,7 @@
   const buildQuick = (step) => {
     quick.innerHTML = '';
     if (step.chips) {
-      conditions.slice(0, 3).forEach((label) => {
+      conditions.slice(0, 4).forEach((label) => {
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'mvbot__chip';
@@ -423,8 +424,9 @@
       'Hello MediVasc, I would like to request a solution.',
       '',
       `Patient: ${answers.name}`,
-      `Condition: ${answers.condition}`,
     ];
+    if (answers.age) lines.push(`Age: ${answers.age}`);
+    lines.push(`Condition: ${answers.condition}`);
     if (answers.city) lines.push(`City: ${answers.city}`);
     lines.push('', 'Please advise on a possible protocol.');
     const text = encodeURIComponent(lines.join('\n'));
@@ -438,8 +440,9 @@
   const addSummary = () => {
     const rows = [
       ['Patient', answers.name],
-      ['Condition', answers.condition],
     ];
+    if (answers.age) rows.push(['Age', answers.age]);
+    rows.push(['Condition', answers.condition]);
     if (answers.city) rows.push(['City', answers.city]);
     const card = document.createElement('div');
     card.className = 'mvbot__card';
@@ -475,6 +478,7 @@
     catch (error) { saved = null; }
     if (!saved || saved.v !== 1 || !saved.answers || !saved.answers.name || !saved.answers.condition) return;
     answers.name = saved.answers.name;
+    answers.age = saved.answers.age || '';
     answers.condition = saved.answers.condition;
     answers.city = saved.answers.city || '';
     started = true;
@@ -527,6 +531,7 @@
     stopRotate();
     clearStore();
     answers.name = '';
+    answers.age = '';
     answers.condition = '';
     answers.city = '';
     stepIndex = -1;
