@@ -311,3 +311,21 @@ From the MediVasc Assistant chatbot (advisor-implemented, shipped & live 2026-07
     CTA (Lesson 18). Untrusted visitor input is written via `textContent`, never
     `innerHTML`. Its CSS is below-the-fold → `styles.css` only, not criticalCss
     (Lesson 16); it respects `prefers-reduced-motion`.
+
+From the content-copy friction (advisor-implemented, shipped & live 2026-07-16):
+
+21. **Page text is intentionally unselectable and images are drag/save-blocked —
+    this is a deliberate deterrent, not a bug.** Owner directive for light content
+    protection: `src/styles.css` sets `user-select:none` on `body` and
+    `-webkit-user-drag:none`/`user-select:none` on `img`; `src/site.js` blocks
+    `dragstart`/`contextmenu` when the target is inside an `<img>`. It is friction
+    only — screenshots, reader mode, and View Source still get everything, so if the
+    owner ever asks for "real" protection, say so plainly (the honest layer is the
+    testimonial watermark + shipping compressed images, never originals — you cannot
+    hide source/network from a browser that must download the page to render it). A
+    **selection allowlist** keeps what patients actually need usable: `.contact-row`
+    (+ its children), `input,textarea,select,[contenteditable]`, and the chatbot
+    (`.mvbot__input`,`.mvbot__log`) are re-enabled to `user-select:text` /
+    `-webkit-touch-callout:default`. **If you add any new copyable text (a phone
+    number, an address) or a form field, add its selector to that allowlist** or it
+    will be dead to selection and copy.
