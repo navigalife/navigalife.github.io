@@ -455,6 +455,36 @@
     card.querySelector('[data-mvbot-restart]').addEventListener('click', restart);
   };
 
+  // Persist a completed request across the WhatsApp round-trip. On phones, tapping
+  // the WhatsApp CTA backgrounds the tab; iOS often discards + reloads it on the way
+  // back, which would otherwise wipe the conversation and reopen the bot empty. We
+  // stash the finished request in sessionStorage (tab-scoped, gone when the tab
+  // closes — no long-lived copy of the patient's name) and rehydrate the summary on
+  // load, so reopening shows the request + CTA again instead of a blank restart.
+  const STORE_KEY = 'mvbot-request';
+  const persist = () => {
+    try { sessionStorage.setItem(STORE_KEY, JSON.stringify({ v: 1, answers })); }
+    catch (error) { /* storage unavailable — non-fatal */ }
+  };
+  const clearStore = () => {
+    try { sessionStorage.removeItem(STORE_KEY); } catch (error) { /* ignore */ }
+  };
+  const restoreCompleted = () => {
+    let saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem(STORE_KEY) || 'null'); }
+    catch (error) { saved = null; }
+    if (!saved || saved.v !== 1 || !saved.answers || !saved.answers.name || !saved.answers.condition) return;
+    answers.name = saved.answers.name;
+    answers.condition = saved.answers.condition;
+    answers.city = saved.answers.city || '';
+    started = true;
+    stepIndex = steps.length;
+    form.hidden = true;
+    addBot('Welcome back 🙏 Here’s the request you set up — send it on WhatsApp whenever you’re ready.');
+    addSummary();
+    root.classList.add('mvbot--engaged');
+  };
+
   const askStep = async (i) => {
     stepIndex = i;
     await botSay(steps[i].prompt, i === 0 ? 520 : 760);
@@ -467,6 +497,7 @@
     await botSay('Perfect — here’s your request. Send it to us on WhatsApp and we’ll get back to you personally.', 820);
     addSummary();
     root.classList.add('mvbot--engaged');
+    persist();
   };
 
   async function submitValue(raw, isSkip = false) {
@@ -494,6 +525,7 @@
 
   async function restart() {
     stopRotate();
+    clearStore();
     answers.name = '';
     answers.condition = '';
     answers.city = '';
@@ -631,6 +663,9 @@
       }, 2800);
     }
   }
+
+  // Rehydrate a completed request if the tab was reloaded after the WhatsApp handoff.
+  restoreCompleted();
 
   requestAnimationFrame(() => root.classList.add('mvbot--ready'));
 })();
