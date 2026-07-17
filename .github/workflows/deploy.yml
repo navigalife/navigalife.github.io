@@ -46,6 +46,12 @@ jobs:
         continue-on-error: true
         run: |
           set +e
+          # SWITCH: if tools/CHANGES_DISABLED exists on main, /changes is OFF.
+          # Remove that file (and redeploy main) to turn the staging area back on.
+          if [ -f tools/CHANGES_DISABLED ]; then
+            echo "tools/CHANGES_DISABLED present — /changes is switched OFF, skipping graft."
+            exit 0
+          fi
           if ! git ls-remote --exit-code --heads origin preview >/dev/null 2>&1; then
             echo "No preview branch — skipping /changes."
             exit 0

@@ -1,0 +1,8 @@
+/changes staging area is switched OFF.
+
+While this file exists on `main`, the deploy workflow skips grafting the
+`preview` branch into /changes, so medivasc.in/changes (and /changes/admin)
+return 404 on the next main deploy. The `preview` branch is untouched.
+
+To turn /changes back ON:  git rm tools/CHANGES_DISABLED && commit + push main
+(a normal main deploy then re-grafts the current preview branch).
