@@ -294,3 +294,20 @@ From advisor-implemented work colliding with live owner admin edits (2026-07-14)
     burden is **entirely the advisor's.** Precedent: this session's hero change hit
     a `heroStats` conflict against 4 queued admin commits; commit → `pull --rebase`
     → keep `[]` → rebuild resolved it with zero owner content lost.
+
+From the MediVasc Assistant chatbot (advisor-implemented, shipped & live 2026-07-16):
+
+20. **Client widgets are JS-gated enhancements — the no-JS contact routes stay the
+    path.** The MediVasc Assistant (bottom-right conversational lead-form that walks
+    name → condition → city, then deep-links to `wa.me/<number>` with the case
+    prefilled) is server-rendered as an inert shell in `src/template.js`
+    (`renderChatbot`; its config — WhatsApp number / email / condition chips — is
+    baked as a `data-mvbot-config` JSON `<script>`) so there's zero layout shift, and
+    `src/site.js` only wires it up when that shell is present. It is hidden without JS
+    (`html:not(.js) .mvbot{display:none}` in `src/styles.css`), so the page's own
+    `mailto:`/WhatsApp routes remain the way to reach the business — the widget never
+    becomes the *only* path. `renderChatbot` returns `''` when neither a number nor an
+    email is on record (site.js then no-ops), so it degrades to email like every other
+    CTA (Lesson 18). Untrusted visitor input is written via `textContent`, never
+    `innerHTML`. Its CSS is below-the-fold → `styles.css` only, not criticalCss
+    (Lesson 16); it respects `prefers-reduced-motion`.
