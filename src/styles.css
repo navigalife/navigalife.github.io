@@ -51,11 +51,15 @@ section[id]{scroll-margin-top:92px}
 [data-theme="dark"] .lockup--ink{display:none}
 [data-theme="dark"] .lockup--paper{display:block}
 .site-nav{display:flex;align-items:center;justify-content:center;gap:26px}
-.site-nav a,.site-footer nav a{display:inline-flex;min-height:44px;align-items:center;color:var(--ink-muted);font-size:1rem;font-weight:500;text-decoration:none;transition:color 200ms ease}
-.site-nav a:hover,.site-footer nav a:hover{color:var(--ink)}
-.site-nav a{position:relative}
-.site-nav a::after{content:"";position:absolute;right:2px;bottom:7px;left:2px;height:2px;border-radius:2px;background:var(--accent);transform:scaleX(0);transform-origin:left center;transition:transform 260ms cubic-bezier(.22,1,.36,1)}
-.site-nav a:hover::after,.site-nav a:focus-visible::after{transform:scaleX(1)}
+.site-nav>a,.site-footer nav a{display:inline-flex;min-height:44px;align-items:center;color:var(--ink-muted);font-size:1rem;font-weight:500;text-decoration:none;transition:color 200ms ease}
+.site-nav>a:hover,.site-footer nav a:hover{color:var(--ink)}
+.site-nav>a{position:relative}
+.site-nav>a::after{content:"";position:absolute;right:2px;bottom:7px;left:2px;height:2px;border-radius:2px;background:var(--accent);transform:scaleX(0);transform-origin:left center;transition:transform 260ms cubic-bezier(.22,1,.36,1)}
+.site-nav>a:hover::after,.site-nav>a:focus-visible::after{transform:scaleX(1)}
+/* Mobile drawer + scrim are body-level and inert on desktop; the fixed panel
+   itself lives in the max-width:1000px block. */
+.nav-drawer,.nav-scrim{display:none}
+html.nav-open{overflow:hidden}
 .header-actions{display:flex;align-items:center;gap:12px}
 .header-cta{min-height:46px;padding:10px 20px;font-size:1rem}
 .menu-toggle{display:none}
@@ -224,13 +228,31 @@ html:not(.js) .recoveries__more{display:none}
 
 @media (max-width:1000px){
   .header-inner{grid-template-columns:auto 1fr auto;gap:16px}
-  .menu-toggle{display:grid;grid-column:2;justify-self:end}
-  .site-nav{position:absolute;top:calc(100% + 6px);right:20px;left:20px;display:none;align-items:stretch;flex-direction:column;gap:0;padding:8px;border-radius:18px;background:var(--surface);box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 8%,transparent),0 24px 54px -18px color-mix(in srgb,var(--ink) 35%,transparent)}
-  .site-nav.is-open{display:flex}
-  .site-nav a{padding:13px;border-radius:12px}
-  .site-nav a:hover{background:var(--surface-2)}
-  .site-nav a::after{display:none}
-  .header-actions{grid-column:3}
+  /* Hamburger sits in the far-right corner (where the drawer's X close lands),
+     theme toggle moves just left of it — so open and close share one target.
+     grid-row:1 is required: reversing the columns makes sparse auto-placement
+     backtrack, which it won't, so header-actions would otherwise fall to row 2. */
+  .menu-toggle{display:grid;grid-column:3;grid-row:1;justify-self:end}
+  .site-nav{display:none}
+  /* Right-anchored slide-in drawer (MindStudio-style): dim scrim + panel that
+     transforms in on a smooth curve; closes on scrim/X/Esc/link-tap (site.js).
+     z above the chatbot (120); body-level so the viewport is its containing box. */
+  .nav-scrim{display:block;position:fixed;inset:0;z-index:150;background:color-mix(in srgb,#0b1f2a 52%,transparent);opacity:0;visibility:hidden;transition:opacity 300ms ease,visibility 0s linear 300ms}
+  .nav-scrim.is-open{opacity:1;visibility:visible;transition:opacity 300ms ease}
+  .nav-drawer{display:flex;position:fixed;inset:0 0 0 auto;z-index:160;flex-direction:column;align-items:stretch;width:min(84vw,360px);max-width:100%;background:var(--surface);box-shadow:-30px 0 70px -30px color-mix(in srgb,#0b1f2a 60%,transparent);transform:translateX(100%);transition:transform 360ms cubic-bezier(.22,1,.36,1);overflow-y:auto;overscroll-behavior:contain}
+  .nav-drawer.is-open{transform:translateX(0)}
+  .nav-drawer__head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px 14px 22px;border-bottom:1px solid color-mix(in srgb,var(--line) 78%,transparent)}
+  .nav-drawer__brand{display:inline-flex;align-items:center}
+  .nav-drawer__brand .lockup img{height:38px}
+  .nav-drawer__close{width:44px;height:44px;background:transparent;box-shadow:none}
+  .nav-drawer__close:hover{background:var(--surface-2)}
+  .nav-drawer__links{display:flex;flex-direction:column}
+  .nav-drawer__links a{display:flex;align-items:center;padding:19px 24px;color:var(--ink);font-size:1.125rem;font-weight:500;text-decoration:none;transition:background-color 180ms ease}
+  .nav-drawer__links a+a{border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+  .nav-drawer__links a:hover{background:var(--surface-2)}
+  .nav-drawer__foot{margin-top:auto;display:flex;flex-direction:column;gap:12px;padding:22px 24px calc(22px + env(safe-area-inset-bottom,0px));border-top:1px solid color-mix(in srgb,var(--line) 78%,transparent)}
+  .nav-drawer__cta{display:inline-flex;justify-content:center;min-height:52px;font-size:1.05rem}
+  .header-actions{grid-column:2;grid-row:1;justify-self:end}
   .hero__layout{grid-template-columns:1fr;gap:44px}
   .hero__evidence{max-width:600px}
   .pathway{grid-template-columns:repeat(2,minmax(0,1fr));gap:36px}

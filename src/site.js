@@ -29,16 +29,27 @@
   });
   refreshThemeControl();
 
-  const closeMenu = () => {
-    navigation?.classList.remove('is-open');
-    menuToggle?.setAttribute('aria-expanded', 'false');
+  const navScrim = document.querySelector('[data-nav-scrim]');
+  const menuClose = document.querySelector('[data-menu-close]');
+
+  const setMenu = (open) => {
+    navigation?.classList.toggle('is-open', open);
+    navScrim?.classList.toggle('is-open', open);
+    menuToggle?.setAttribute('aria-expanded', String(open));
+    root.classList.toggle('nav-open', open); // locks page scroll behind the drawer
   };
+  const closeMenu = () => setMenu(false);
 
   menuToggle?.addEventListener('click', () => {
-    const open = navigation?.classList.toggle('is-open');
-    menuToggle.setAttribute('aria-expanded', String(Boolean(open)));
+    setMenu(!navigation?.classList.contains('is-open'));
   });
-  navigation?.addEventListener('click', closeMenu);
+  menuClose?.addEventListener('click', closeMenu);
+  navScrim?.addEventListener('click', closeMenu);
+  // Tapping a destination link closes the drawer; the brand (span) and close
+  // control (button) aren't links, so only real nav links trigger this.
+  navigation?.addEventListener('click', (event) => {
+    if (event.target.closest('a')) closeMenu();
+  });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && navigation?.classList.contains('is-open')) closeMenu();
   });

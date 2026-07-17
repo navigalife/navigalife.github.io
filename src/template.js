@@ -19,6 +19,7 @@ const icon = (name) => {
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/>',
     map: '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
     menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    close: '<path d="M6 6 18 18M18 6 6 18"/>',
     moon: '<path d="M20.2 15.2A8.5 8.5 0 0 1 8.8 3.8a8.5 8.5 0 1 0 11.4 11.4Z"/>',
     sun: '<circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
@@ -253,6 +254,16 @@ const renderPage = ({
       ? { href: mailHref, icon: icon('mail'), label: 'Email us', external: false }
       : { href: '#contact', icon: '', label: 'Contact us', external: false };
   const ctaAttrs = cta.external ? ' target="_blank" rel="noreferrer"' : '';
+  // Single source for the primary nav — rendered inline in the header (desktop)
+  // and inside the mobile slide-in drawer (below); keep the two in sync via this.
+  const navItems = [
+    ['#recoveries', 'Recoveries'],
+    ['#approach', 'Our approach'],
+    ['#conditions', 'Conditions'],
+    ['#about', 'About'],
+    ['#contact', 'Contact'],
+  ];
+  const navLinksHtml = navItems.map(([href, label]) => `<a href="${href}">${label}</a>`).join('');
   const heroStats = Array.isArray(config.heroStats)
     ? config.heroStats.filter((stat) => stat && stat.value && stat.label)
     : [];
@@ -310,13 +321,9 @@ const renderPage = ({
   <header class="site-header" data-header>
     <div class="container header-inner">
       <a class="wordmark" href="#top" aria-label="MediVasc home">${lockup('header')}</a>
-      <button class="icon-button menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-menu-toggle><span class="sr-only">Open navigation</span>${icon('menu')}</button>
-      <nav class="site-nav" id="site-nav" aria-label="Main navigation" data-nav>
-        <a href="#recoveries">Recoveries</a>
-        <a href="#approach">Our approach</a>
-        <a href="#conditions">Conditions</a>
-        <a href="#about">About</a>
-        <a href="#contact">Contact</a>
+      <button class="icon-button menu-toggle" type="button" aria-expanded="false" aria-controls="nav-drawer" data-menu-toggle><span class="sr-only">Open navigation</span>${icon('menu')}</button>
+      <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+        ${navLinksHtml}
       </nav>
       <div class="header-actions">
         <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme">
@@ -326,6 +333,23 @@ const renderPage = ({
       </div>
     </div>
   </header>
+
+  <!-- Mobile slide-in drawer + scrim: body-level (NOT inside .site-header, whose
+       backdrop-filter would trap fixed descendants to its own 84px box and stack
+       them below the chatbot). Controlled by site.js; single nav source above. -->
+  <div class="nav-scrim" data-nav-scrim></div>
+  <nav class="nav-drawer" id="nav-drawer" aria-label="Mobile navigation" data-nav>
+    <div class="nav-drawer__head">
+      <span class="nav-drawer__brand">${lockup('header')}</span>
+      <button class="icon-button nav-drawer__close" type="button" data-menu-close><span class="sr-only">Close navigation</span>${icon('close')}</button>
+    </div>
+    <div class="nav-drawer__links">
+      ${navLinksHtml}
+    </div>
+    <div class="nav-drawer__foot">
+      <a class="button nav-drawer__cta" href="${cta.href}"${ctaAttrs}>${cta.icon} ${cta.label}</a>
+    </div>
+  </nav>
 
   <main id="main">
     <section class="hero" id="top">
