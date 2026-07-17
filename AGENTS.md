@@ -329,3 +329,23 @@ From the content-copy friction (advisor-implemented, shipped & live 2026-07-16):
     `-webkit-touch-callout:default`. **If you add any new copyable text (a phone
     number, an address) or a form field, add its selector to that allowlist** or it
     will be dead to selection and copy.
+
+From the mobile nav drawer (advisor-implemented, shipped & live 2026-07-16):
+
+22. **The mobile menu is a body-level slide-in drawer — NOT inside `.site-header`.**
+    `src/template.js` renders a right-anchored drawer (`.nav-drawer` + dim `.nav-scrim`,
+    MindStudio-style: drawer head with logo + X, stacked links with row dividers,
+    WhatsApp CTA pinned bottom) as a **direct child of `<body>`**, after `</header>`. It
+    must NOT live inside `.site-header`: that element has `backdrop-filter:blur()`, which
+    makes it the *containing block* for any `position:fixed` descendant (and its own
+    stacking context) — a fixed drawer placed inside gets clamped to the header's ~84px
+    box (body clipped) and stacks *below* the z-120 chatbot. Body-level fixes both
+    (drawer `z-index:160` / scrim `150`, above the chatbot). Nav links are a **single
+    source** (`navLinksHtml` in template.js) rendered into both the desktop header nav
+    and the drawer — keep them in sync there, never duplicate. `src/site.js` toggles
+    `.is-open` on drawer + scrim + `html.nav-open` (scroll lock) and closes on scrim tap
+    / X (`data-menu-close`) / Escape / link tap. On mobile the hamburger is deliberately
+    in the far-right corner (`grid-column:3`) with the theme toggle to its left
+    (`grid-column:2`) so open (☰) and close (X) share one target — and **both need
+    `grid-row:1`**: reversing the header-inner columns makes CSS grid's sparse
+    auto-placement (which never backtracks) drop the theme toggle to a second row.
