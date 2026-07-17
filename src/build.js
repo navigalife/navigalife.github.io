@@ -76,6 +76,19 @@ const prepareMark = async (name, width = 128) => {
   return writeHashed('assets/brand', name, 'png', buffer);
 };
 
+// Like prepareMark but also returns the resized intrinsic dimensions. Used for the
+// footer ™ lockup, whose canvas is wider than the plain mark (the ™ is baked at the
+// 'c' shoulder), so the <img> needs its own width/height to avoid a layout shift.
+const prepareMarkSized = async (name, width = 512) => {
+  const buffer = await sharp(path.join(ROOT, 'assets', 'brand', `${name}.png`))
+    .resize({ width, withoutEnlargement: true })
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+  const meta = await sharp(buffer).metadata();
+  const src = await writeHashed('assets/brand', name, 'png', buffer);
+  return { src, width: meta.width, height: meta.height };
+};
+
 const copyBrandAssets = async () => {
   const fixedAssets = [
     'favicon.svg',
@@ -97,12 +110,23 @@ const copyBrandAssets = async () => {
       ),
     ),
   );
-  const [ogImage, ink, paper] = await Promise.all([
+  const [ogImage, ink, paper, inkTm, paperTm, inkTmLg, paperTmLg] = await Promise.all([
     processImage('assets/brand/og-image.png'),
     prepareMark('logo-ink', 512),
     prepareMark('logo-paper', 512),
+    prepareMarkSized('logo-ink-tm', 512),
+    prepareMarkSized('logo-paper-tm', 512),
+    prepareMarkSized('logo-ink-tm-lg', 512),
+    prepareMarkSized('logo-paper-tm-lg', 512),
   ]);
-  return { ogImage: ogImage.original, markPaths: { ink, paper } };
+  return {
+    ogImage: ogImage.original,
+    markPaths: { ink, paper },
+    // Two footer ™ lockups: '-lg' (larger ™) for desktop's 54px render, the base
+    // one for the 64px phone render (see src/styles.css breakpoint swap).
+    markPathsTm: { ink: inkTm, paper: paperTm },
+    markPathsTmLg: { ink: inkTmLg, paper: paperTmLg },
+  };
 };
 
 const copyFonts = async () => {
@@ -291,6 +315,8 @@ const build = async () => {
     themeId,
     imageMap,
     markPaths: brand.markPaths,
+    markPathsTm: brand.markPathsTm,
+    markPathsTmLg: brand.markPathsTmLg,
     cssPath,
     jsPath,
     ogImage: brand.ogImage,

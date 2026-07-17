@@ -50,6 +50,10 @@ section[id]{scroll-margin-top:92px}
 .lockup--paper{display:none}
 [data-theme="dark"] .lockup--ink{display:none}
 [data-theme="dark"] .lockup--paper{display:block}
+/* Footer ™ lockup renders two baked sizes; show the larger-™ desktop one, hide the
+   phone one. The ≤760px block below flips this (phone renders the logo bigger). */
+.lockup__size{display:inline-flex;align-items:center}
+.lockup__size--sm{display:none}
 .site-nav{display:flex;align-items:center;justify-content:center;gap:26px}
 .site-nav>a,.site-footer nav a{display:inline-flex;min-height:44px;align-items:center;color:var(--ink-muted);font-size:1rem;font-weight:500;text-decoration:none;transition:color 200ms ease}
 .site-nav>a:hover,.site-footer nav a:hover{color:var(--ink)}
@@ -316,6 +320,8 @@ html:not(.js) .recoveries__more{display:none}
   .site-footer{padding:44px 0 28px}
   .footer__top{grid-template-columns:1fr;gap:20px;padding-bottom:28px}
   .footer-brand .lockup img{height:64px}
+  .lockup__size--lg{display:none}
+  .lockup__size--sm{display:inline-flex}
   .footer__top>p{max-width:36ch;line-height:1.5}
   .site-footer nav{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
   .footer__bottom{align-items:flex-start;flex-direction:column;gap:14px}

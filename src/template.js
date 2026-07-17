@@ -211,6 +211,8 @@ const renderPage = ({
   themeId,
   imageMap,
   markPaths,
+  markPathsTm,
+  markPathsTmLg,
   cssPath,
   jsPath,
   ogImage,
@@ -271,9 +273,28 @@ const renderPage = ({
     .split(/\n\n+/)
     .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
     .join('');
+  // The hero headline is wrapped in styled curly quotes below. The admin CMS is a
+  // co-writer and the owner sometimes types their own quotes into the headline —
+  // strip any surrounding straight/curly quotes (and stray whitespace) here so the
+  // render always shows exactly one styled set, never a doubled "«…»".
+  const heroHeadlineText = String(config.heroHeadline || '')
+    .replace(/^[\s"“”'‘’]+|[\s"“”'‘’]+$/g, '');
   const lockup = (context) => `<span class="lockup" aria-hidden="true">
     <img class="lockup--ink" src="${markPaths.ink}" alt="" width="512" height="257" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
     <img class="lockup--paper" src="${markPaths.paper}" alt="" width="512" height="257" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
+  </span>`;
+  // Footer-only lockup: the ™ is baked into these variants at the 'c' shoulder
+  // (see assets/brand/logo-*-tm*.png) rather than positioned in CSS, so it stays
+  // pixel-tight to the letterform. Two size wrappers — '-lg' (larger ™) for the
+  // 54px desktop render, base for the 64px phone render — swapped by breakpoint in
+  // CSS (.lockup__size--sm hidden on desktop, --lg hidden ≤760px). Wider canvas
+  // than the plain mark → each img carries its own intrinsic width/height.
+  const tmImg = (mark) =>
+    `<img class="lockup--ink" src="${mark.ink.src}" alt="" width="${mark.ink.width}" height="${mark.ink.height}" loading="lazy" decoding="async">
+    <img class="lockup--paper" src="${mark.paper.src}" alt="" width="${mark.paper.width}" height="${mark.paper.height}" loading="lazy" decoding="async">`;
+  const footerLockup = () => `<span class="lockup" aria-hidden="true">
+    <span class="lockup__size lockup__size--lg">${tmImg(markPathsTmLg)}</span>
+    <span class="lockup__size lockup__size--sm">${tmImg(markPathsTm)}</span>
   </span>`;
   // The bot deep-links to WhatsApp when a number is on record, else composes an
   // email; if neither exists it is omitted (site.js no-ops on a missing config).
@@ -355,7 +376,7 @@ const renderPage = ({
     <section class="hero" id="top">
       <div class="container hero__layout">
         <div class="hero__copy" data-reveal>
-          <h1><span class="hero__lead">Prevention of foot and leg amputation</span>${accentuate(config.heroHeadline, config.heroAccent)}</h1>
+          <h1><span class="hero__lead">Prevention of foot and leg amputation</span>“${accentuate(heroHeadlineText, config.heroAccent)}”</h1>
           <p>${escapeHtml(config.heroSub)}</p>
           <div class="hero__actions">
             <a class="button" href="#recoveries">See the recoveries ${icon('arrowDown')}</a>
@@ -501,7 +522,7 @@ const renderPage = ({
 
   <footer class="site-footer">
     <div class="container footer__top">
-      <span class="footer-brand">${lockup('footer')}<span class="sr-only">MediVasc</span></span>
+      <span class="footer-brand">${footerLockup()}<span class="sr-only">MediVasc™</span></span>
       <p>${escapeHtml(company.tagline)}</p>
       <nav aria-label="Footer navigation"><a href="#recoveries">Recoveries</a><a href="#approach">Approach</a><a href="#conditions">Conditions</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
     </div>
