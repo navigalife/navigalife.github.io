@@ -342,9 +342,32 @@ const validate = ({ products, protocols, testimonials, themes, config, solutions
 
 const copyAdmin = async () => {
   const source = path.join(ROOT, 'admin');
+  const target = path.join(DIST, 'admin');
   try {
     await fs.access(source);
-    await fs.cp(source, path.join(DIST, 'admin'), { recursive: true });
+    await fs.cp(source, target, { recursive: true });
+    // Cache-bust the admin bundle. The admin ships static filenames (app.js and
+    // its relative imports, styles.css); with no version query a browser can pair
+    // a freshly deployed index.html with a stale, cached app.js. That is exactly
+    // how new nav tabs (Solutions, Voices) ended up falling through to the
+    // Appearance renderer for people whose browser still held the old app.js.
+    // The version is a content hash of the bundle, so it only changes when the
+    // code changes and otherwise leaves the browser cache intact.
+    const bundle = ['app.js', 'gh-api.js', 'image-tools.js', 'vault.js', 'styles.css'];
+    const hash = crypto.createHash('sha256');
+    for (const file of bundle) hash.update(await fs.readFile(path.join(source, file)));
+    const v = hash.digest('hex').slice(0, 8);
+    const rewrite = async (file, replacer) => {
+      const filePath = path.join(target, file);
+      await fs.writeFile(filePath, replacer(await fs.readFile(filePath, 'utf8')));
+    };
+    // index.html references the entry script and stylesheet by bare filename.
+    await rewrite('index.html', (html) => html
+      .replace('src="app.js"', `src="app.js?v=${v}"`)
+      .replace('href="styles.css"', `href="styles.css?v=${v}"`));
+    // app.js imports its siblings by relative path; version those too.
+    await rewrite('app.js', (js) => js
+      .replace(/(['"])(\.\/(?:gh-api|image-tools|vault)\.js)\1/g, `$1$2?v=${v}$1`));
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }

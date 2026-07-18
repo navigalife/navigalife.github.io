@@ -498,7 +498,7 @@ const renderSolutionEditor = () => {
 
 const renderVoices = () => {
   const items = state.draft.feedback || [];
-  const cards = items.map((item, index) => '<div class="voice-item" data-testid="voice-row">' + imagePreview(item.src) + '<code>' + h(item.src) + '</code>' +
+  const cards = items.map((item, index) => '<div class="voice-item" data-testid="voice-row">' + imagePreview(item.src) +
     '<div class="row-actions"><button class="row-action" type="button" data-action="voice-move" data-index="' + index + '" data-direction="-1" aria-label="Move up" ' + (index === 0 ? 'disabled' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 7l-5 5 5 5"/></svg></button><button class="row-action" type="button" data-action="voice-move" data-index="' + index + '" data-direction="1" aria-label="Move down" ' + (index === items.length - 1 ? 'disabled' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7l5 5-5 5"/></svg></button><button class="row-action" type="button" data-action="voice-delete" data-index="' + index + '" aria-label="Delete">' + icon('trash') + '</button></div></div>');
   const gallery = items.length
     ? '<div class="voice-grid" data-testid="voices-list">' + cards.join('') + '</div>'
