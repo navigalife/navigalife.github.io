@@ -279,7 +279,7 @@ const renderPage = ({
   config,
   themeId,
   imageMap,
-  solutionImages,
+  solutions,
   feedbackImages,
   markPaths,
   markPathsTm,
@@ -341,32 +341,19 @@ const renderPage = ({
     }
     return { href: '#contact', icon: '', label, external: false };
   };
-  // Two owner-requested condition cards (post #recoveries). Copy is site-voice —
-  // short and clinical-warm; section 1 keeps the owner's pressure-stockings
-  // warning, section 2 keeps the deeper case study and the four objectives.
-  const solutionCards = [
-    {
-      title: 'Post-mastectomy arm lymphedema',
-      condition: 'Post-mastectomy arm lymphedema',
-      images: solutionImages.mastectomy,
-      cta: conditionCta('Ask about arm swelling', 'I would like to discuss post-mastectomy arm swelling (lymphedema) with MediVasc.'),
-      body: [
-        { text: 'Treating breast cancer often means clearing lymph nodes and vessels from the axilla. With those channels gone, lymph fluid begins to collect in the arm. Left unmanaged, the swelling turns chronic. Everyday tasks grow harder, and even turning over in sleep is disturbed.' },
-        { text: 'A common mistake makes it worse: reaching for pressure stockings. Lymph is meant to keep moving in a dynamic flow, not to be held static by a compression garment.', variant: 'warn' },
-        { text: 'We design the protocol around your case and stay with you at regular intervals, guiding the therapy so the swelling stops progressing and daily life returns to normal.' },
-      ],
-    },
-    {
-      title: 'Elephantiasis & filariasis',
-      condition: 'Elephantiasis & filariasis',
-      images: solutionImages.elephantiasis,
-      cta: conditionCta('Ask about elephantiasis', 'I would like to discuss elephantiasis and filariasis with MediVasc.'),
-      body: [
-        { text: 'Elephantiasis is the severe, hardening enlargement of a limb caused by long-standing lymphatic obstruction, most often after lymphatic filariasis, a mosquito-borne infection common across tropical regions and, in India, along the coast. As fluid stagnates, the skin thickens, darkens, and cracks, and infections take hold more and more easily.' },
-        { text: 'We start with a deeper case study (the full history and its causes) and measure the limb along its length, because no two are alike. From there the protocol is built to stop the progression, prevent hyperkeratosis, clear the darkened skin, and rebuild overall vascularity.' },
-      ],
-    },
-  ].filter((card) => card.images && card.images.length);
+  // Owner-curated condition cards (data/solutions.json, managed from the admin's
+  // Solutions tab). The card copy and photograph order live in the manifest; the
+  // template only resolves the CTA to a WhatsApp/email/contact link (same
+  // graceful degrade as the primary hero CTA) and drops any card left imageless.
+  const solutionCards = (Array.isArray(solutions) ? solutions : [])
+    .map((card) => ({
+      title: card.title,
+      condition: card.condition,
+      images: card.images,
+      cta: conditionCta(card.cta.label, card.cta.message),
+      body: card.body,
+    }))
+    .filter((card) => card.images && card.images.length);
   const solutionsSection = solutionCards.length
     ? `<section class="section solutions" id="solutions">
       <div class="container">

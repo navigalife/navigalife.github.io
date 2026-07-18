@@ -1,5 +1,5 @@
 import { ApiError, AuthError, BranchConflictError, GhApi } from './gh-api.js';
-import { blobToBase64, cropEvidenceImage, resizeProductImage } from './image-tools.js';
+import { blobToBase64, cropEvidenceImage, redactImage, resizeFeedbackImage, resizeProductImage } from './image-tools.js';
 import { createVault, forgetVault, unlockVault, vaultExists } from './vault.js';
 
 const OWNER = 'navigalife';
@@ -14,6 +14,8 @@ const FILES = {
   products: 'data/products.json',
   protocols: 'data/protocols.json',
   testimonials: 'data/testimonials.json',
+  solutions: 'data/solutions.json',
+  feedback: 'data/feedback.json',
   company: 'data/company.json',
   config: 'data/site-config.json',
   themes: 'data/themes.json',
@@ -332,6 +334,16 @@ const defaultTestimonial = () => ({
   images: [],
 });
 
+const defaultSolution = () => ({
+  id: '',
+  title: '',
+  condition: '',
+  visible: true,
+  cta: { label: '', message: '' },
+  body: [{ text: '' }],
+  images: [],
+});
+
 const editorHeading = (kicker, title) => '<div class="editor-header"><div><p class="auth-kicker">' + h(kicker) + '</p><h1>' + h(title) + '</h1></div><button class="button button--quiet" type="button" data-action="back">Back to list</button></div>';
 
 // URL for an already-committed asset. Pinned to the loaded commit (baseSha) so
@@ -445,6 +457,59 @@ const renderTestimonialEditor = () => {
     '</div><div class="form-actions"><button class="button button--quiet" type="button" data-action="back">Cancel</button><button class="button button--primary" type="button" data-action="save-editor">Save story draft</button></div></form></section>';
 };
 
+const renderSolutionsList = () => {
+  const items = state.draft.solutions || [];
+  const rows = items.map((card, index) => '<div class="list-row" data-testid="solution-row">' +
+    '<div class="row-title"><strong>' + h(card.title || 'Untitled card') + '</strong><span>' + h(card.id) + '</span></div>' +
+    '<div class="row-meta">' + h(card.condition || '') + '</div>' +
+    '<div class="status-badges"><span class="badge ' + (card.visible !== false ? 'badge--active' : '') + '">' + (card.visible !== false ? 'Visible' : 'Hidden') + '</span>' +
+    ((card.images || []).length ? '<span class="badge">' + card.images.length + ' photo' + (card.images.length === 1 ? '' : 's') + '</span>' : '<span class="badge badge--draft">No photos</span>') + '</div>' +
+    rowActions('solutions', index, items.length) + '</div>');
+  return listPage('solutions', 'Solutions', 'Before/after condition galleries shown in “Two conditions, up close”. Each card carries its own copy, call-to-action, and photographs.', rows, { itemLabel: 'condition card' });
+};
+
+const renderSolutionEditor = () => {
+  const card = state.editor.buffer;
+  const isNew = state.editor.index < 0;
+  const hasStagedImage = (card.images || []).some((image) => {
+    const change = state.assetChanges.get(image.src);
+    return change && !change.delete;
+  });
+  const body = (card.body || []).map((paragraph, index) => '<div class="repeat-row repeat-row--body">' +
+    '<textarea aria-label="Paragraph ' + (index + 1) + '" data-body-index="' + index + '" data-body-field="text" rows="3" placeholder="Paragraph text">' + h(paragraph.text || '') + '</textarea>' +
+    '<label class="checkbox-row"><input type="checkbox" data-body-index="' + index + '" data-body-field="warn" ' + (paragraph.variant === 'warn' ? 'checked' : '') + '><span>Warning</span></label>' +
+    '<div class="row-actions"><button class="row-action" type="button" data-action="body-move" data-index="' + index + '" data-direction="-1" aria-label="Move paragraph up" ' + (index === 0 ? 'disabled' : '') + '>' + icon('up') + '</button><button class="row-action" type="button" data-action="body-move" data-index="' + index + '" data-direction="1" aria-label="Move paragraph down" ' + (index === card.body.length - 1 ? 'disabled' : '') + '>' + icon('down') + '</button><button class="row-action" type="button" data-action="body-delete" data-index="' + index + '" aria-label="Delete paragraph">' + icon('trash') + '</button></div>' +
+    '</div>').join('');
+  const images = (card.images || []).map((image, index) => '<div class="image-item">' + imagePreview(image.src, true) + '<code>' + h(image.src) + '</code><div class="row-actions"><button class="row-action" type="button" data-action="image-move" data-index="' + index + '" data-direction="-1" aria-label="Move image left" ' + (index === 0 ? 'disabled' : '') + '>' + icon('up') + '</button><button class="row-action" type="button" data-action="image-move" data-index="' + index + '" data-direction="1" aria-label="Move image right" ' + (index === card.images.length - 1 ? 'disabled' : '') + '>' + icon('down') + '</button><button class="row-action" type="button" data-action="image-delete" data-index="' + index + '" aria-label="Delete image">' + icon('trash') + '</button></div></div>').join('');
+  return '<section class="editor-shell" data-testid="solution-editor">' + editorHeading(isNew ? 'New condition card' : 'Edit condition card', card.title || 'Untitled card') +
+    '<div class="notice">The card copy, call-to-action, and photo order all publish from here. Photographs are cropped to 4:5 and carry the baked “MediVasc” watermark, exactly like recovery evidence.</div>' +
+    '<form id="solution-form"><div class="editor-grid">' +
+    '<label>Card title<input name="title" value="' + h(card.title) + '" required></label>' +
+    '<label>Immutable slug<input name="id" value="' + h(card.id) + '" pattern="[a-z0-9\\-]+" required ' + (isNew && !hasStagedImage ? '' : 'readonly') + '><span class="field-help">' + (hasStagedImage ? 'Remove staged uploads before changing this slug.' : 'Lowercase letters, numbers, hyphens. Names the photo files.') + '</span></label>' +
+    '<label class="field--full">Carousel label (condition)<input name="condition" value="' + h(card.condition) + '" required><span class="field-help">Announced to screen readers on the photo carousel, e.g. “Post-mastectomy arm lymphedema”.</span></label>' +
+    '<label>CTA button label<input name="ctaLabel" value="' + h(card.cta ? card.cta.label : '') + '" required></label>' +
+    '<label class="field--full">CTA prefilled message<textarea name="ctaMessage" required>' + h(card.cta ? card.cta.message : '') + '</textarea><span class="field-help">Sent to WhatsApp or email when a visitor taps the button.</span></label>' +
+    '<div class="field-group"><div class="field-group__heading"><div><h2>Body paragraphs</h2><p>Shown under the gallery. Mark one “Warning” for the cautionary styling.</p></div><button class="button button--quiet" type="button" data-action="body-add">Add paragraph</button></div>' + body + '</div>' +
+    '<div class="field-group"><div class="field-group__heading"><div><h2>Before/after photographs</h2><p>Uploads are cropped to 4:5, watermarked, and downscaled. Reorder with the arrows.</p></div></div><div class="image-list">' + images +
+    '<label class="upload-control"><input type="file" id="solution-images" accept="image/jpeg,image/png,image/webp" multiple><span>Upload one or more photographs</span><small>JPEG, PNG, or WebP · 20 MB each</small></label></div></div>' +
+    '<div class="field-group"><label class="checkbox-row"><input name="visible" type="checkbox" ' + (card.visible !== false ? 'checked' : '') + '><span>Visible on the site</span></label></div>' +
+    '</div><div class="form-actions"><button class="button button--quiet" type="button" data-action="back">Cancel</button><button class="button button--primary" type="button" data-action="save-editor">Save card draft</button></div></form></section>';
+};
+
+const renderVoices = () => {
+  const items = state.draft.feedback || [];
+  const cards = items.map((item, index) => '<div class="voice-item" data-testid="voice-row">' + imagePreview(item.src) + '<code>' + h(item.src) + '</code>' +
+    '<div class="row-actions"><button class="row-action" type="button" data-action="voice-move" data-index="' + index + '" data-direction="-1" aria-label="Move up" ' + (index === 0 ? 'disabled' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 7l-5 5 5 5"/></svg></button><button class="row-action" type="button" data-action="voice-move" data-index="' + index + '" data-direction="1" aria-label="Move down" ' + (index === items.length - 1 ? 'disabled' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7l5 5-5 5"/></svg></button><button class="row-action" type="button" data-action="voice-delete" data-index="' + index + '" aria-label="Delete">' + icon('trash') + '</button></div></div>');
+  const gallery = items.length
+    ? '<div class="voice-grid" data-testid="voices-list">' + cards.join('') + '</div>'
+    : '<div class="empty-state"><h2>No patient messages yet</h2><p>Upload the first chat screenshot to begin. You will blur identifying details before it is saved.</p></div>';
+  return '<section><div class="section-toolbar"><div><h1>Voices</h1><p>Patient-message screenshots for “In their words”. The order here is the order shown; earlier cards are seen first.</p></div></div>' +
+    '<div class="notice notice--warning">Every screenshot passes through identity redaction on upload: blur the avatar, saved contact name, and any phone number before saving. The blur is permanent.</div>' +
+    gallery +
+    '<label class="upload-control upload-control--wide"><input type="file" id="voice-images" accept="image/jpeg,image/png,image/webp" multiple><span>Add message screenshots</span><small>JPEG, PNG, or WebP · 20 MB each · you will redact each one</small></label>' +
+    '</section>';
+};
+
 const renderCompany = () => {
   const company = state.draft.company;
   return '<section class="editor-shell"><div class="section-toolbar"><div><h1>Company</h1><p>Business identity, contact channels, and about copy.</p></div></div>' +
@@ -518,9 +583,12 @@ const render = () => {
   if (state.editor?.kind === 'products') html = renderProductEditor();
   else if (state.editor?.kind === 'protocols') html = renderProtocolEditor();
   else if (state.editor?.kind === 'testimonials') html = renderTestimonialEditor();
+  else if (state.editor?.kind === 'solutions') html = renderSolutionEditor();
   else if (state.activeTab === 'products') html = renderProductsList();
   else if (state.activeTab === 'protocols') html = renderProtocolsList();
   else if (state.activeTab === 'testimonials') html = renderTestimonialsList();
+  else if (state.activeTab === 'solutions') html = renderSolutionsList();
+  else if (state.activeTab === 'voices') html = renderVoices();
   else if (state.activeTab === 'company') html = renderCompany();
   else html = renderAppearance();
   editorRoot.innerHTML = html;
@@ -528,7 +596,7 @@ const render = () => {
 };
 
 const openEditor = (kind, index) => {
-  const defaults = { products: defaultProduct, protocols: defaultProtocol, testimonials: defaultTestimonial };
+  const defaults = { products: defaultProduct, protocols: defaultProtocol, testimonials: defaultTestimonial, solutions: defaultSolution };
   state.editor = {
     kind,
     index,
@@ -576,6 +644,20 @@ const syncEditorFromForm = () => {
     buffer.engagement = lines(data.get('engagement'));
     buffer.visible = data.has('visible');
     buffer.draft = data.has('draft');
+  } else if (state.editor.kind === 'solutions') {
+    for (const key of ['id', 'title', 'condition']) buffer[key] = String(data.get(key) || '').trim();
+    buffer.cta = { label: String(data.get('ctaLabel') || '').trim(), message: String(data.get('ctaMessage') || '').trim() };
+    buffer.visible = data.has('visible');
+    for (const input of form.querySelectorAll('[data-body-index]')) {
+      const paragraph = buffer.body[Number(input.dataset.bodyIndex)];
+      if (!paragraph) continue;
+      if (input.dataset.bodyField === 'warn') {
+        if (input.checked) paragraph.variant = 'warn';
+        else delete paragraph.variant;
+      } else {
+        paragraph.text = input.value;
+      }
+    }
   } else {
     for (const key of ['id', 'name', 'age', 'location', 'condition', 'duration', 'remark', 'quote']) buffer[key] = String(data.get(key) || '').trim();
     buffer.featured = data.has('featured');
@@ -651,6 +733,15 @@ const saveEditor = () => {
       }
     }
   }
+  if (kind === 'solutions') {
+    if (!buffer.title || !buffer.condition) throw new Error('The card needs a title and a carousel label.');
+    if (!buffer.cta || !buffer.cta.label || !buffer.cta.message) throw new Error('The card needs a CTA button label and a prefilled message.');
+    buffer.body = (buffer.body || [])
+      .map((paragraph) => (paragraph.variant === 'warn' ? { text: String(paragraph.text || '').trim(), variant: 'warn' } : { text: String(paragraph.text || '').trim() }))
+      .filter((paragraph) => paragraph.text);
+    if (!buffer.body.length) throw new Error('Add at least one body paragraph.');
+    if (buffer.visible && !buffer.images.length) throw new Error('A visible card needs at least one photograph. Add a photo, or untick Visible.');
+  }
   if (index < 0) state.draft[kind].push(deepClone(buffer));
   else state.draft[kind][index] = deepClone(buffer);
   markDirty(kind);
@@ -680,9 +771,10 @@ const deleteItem = (kind, index) => {
     showStatus('The featured story can’t be deleted', 'One story must stay featured to anchor the hero. Feature another story first, then delete this one.');
     return;
   }
-  if (!confirm('Delete ' + (item.name || item.condition || item.id) + '? This will be included in the next publish.')) return;
+  if (!confirm('Delete ' + (item.name || item.title || item.condition || item.id) + '? This will be included in the next publish.')) return;
   if (kind === 'products') for (const path of item.images) unstageOrDeleteAsset(path);
   if (kind === 'testimonials') for (const image of item.images || []) unstageOrDeleteAsset(image.src);
+  if (kind === 'solutions') for (const image of item.images || []) unstageOrDeleteAsset(image.src);
   state.draft[kind].splice(index, 1);
   markDirty(kind);
   render();
@@ -761,6 +853,68 @@ const uploadStagePhoto = async (stageKey, file) => {
   render();
 };
 
+// Existing srcs (from the manifest) plus every path already staged this session,
+// so a fresh upload never collides with a pending add or a pending delete.
+const usedGalleryPaths = (srcs) => {
+  const used = new Set(srcs);
+  for (const path of state.assetChanges.keys()) used.add(path);
+  return used;
+};
+
+const nextGalleryPath = (dir, prefix, used) => {
+  let number = 1;
+  let path;
+  do {
+    path = dir + '/' + prefix + '-' + String(number).padStart(2, '0') + '.webp';
+    number += 1;
+  } while (used.has(path));
+  return path;
+};
+
+const uploadSolutionImages = async (files) => {
+  syncEditorFromForm();
+  const card = state.editor.buffer;
+  if (!card.id || !/^[a-z0-9-]+$/.test(card.id)) throw new Error('Enter a valid card slug before uploading photographs.');
+  const duplicate = state.draft.solutions.some((item, index) => item.id === card.id && index !== state.editor.index);
+  if (duplicate) throw new Error('That card slug is already in use. Choose a unique slug first.');
+  const used = usedGalleryPaths((state.draft.solutions || []).flatMap((item) => (item.images || []).map((image) => image.src)));
+  for (const file of files) {
+    const blob = await cropEvidenceImage(file, card.condition || 'before and after');
+    if (!blob) continue;
+    const path = nextGalleryPath('assets/solutions', card.id, used);
+    used.add(path);
+    await stageBlob(path, blob);
+    card.images.push({ src: path });
+  }
+  render();
+};
+
+const uploadVoiceImages = async (files) => {
+  if (!Array.isArray(state.draft.feedback)) state.draft.feedback = [];
+  const used = usedGalleryPaths(state.draft.feedback.map((item) => item.src));
+  for (const file of files) {
+    const resized = await resizeFeedbackImage(file);
+    const redacted = await redactImage(resized, 'patient message');
+    if (!redacted) continue; // editor cancelled this screenshot's upload
+    const path = nextGalleryPath('assets/feedback', 'feedback', used);
+    used.add(path);
+    await stageBlob(path, redacted);
+    state.draft.feedback.push({ src: path });
+    markDirty('feedback');
+  }
+  render();
+};
+
+const deleteFeedback = (index) => {
+  const item = state.draft.feedback[index];
+  if (!item) return;
+  if (!confirm('Delete this screenshot? This will be included in the next publish.')) return;
+  unstageOrDeleteAsset(item.src);
+  state.draft.feedback.splice(index, 1);
+  markDirty('feedback');
+  render();
+};
+
 const handleEditorAction = async (button) => {
   const action = button.dataset.action;
   if (action === 'add') return openEditor(button.dataset.kind, -1);
@@ -772,6 +926,8 @@ const handleEditorAction = async (button) => {
   if (action === 'move') return moveItem(button.dataset.kind, Number(button.dataset.index), Number(button.dataset.direction));
   if (action === 'toggle-visible') return toggleVisible(button.dataset.kind, Number(button.dataset.index));
   if (action === 'delete') return deleteItem(button.dataset.kind, Number(button.dataset.index));
+  if (action === 'voice-move') return moveItem('feedback', Number(button.dataset.index), Number(button.dataset.direction));
+  if (action === 'voice-delete') return deleteFeedback(Number(button.dataset.index));
   if (action === 'save-editor') return saveEditor();
   if (action === 'save-company') return saveCompany(editorRoot.querySelector('#company-form'));
   if (action === 'save-appearance') return saveAppearance(editorRoot.querySelector('#appearance-form'));
@@ -793,6 +949,14 @@ const handleEditorAction = async (button) => {
     buffer.specs.splice(target, 0, spec);
   }
   if (action === 'spec-delete') buffer.specs.splice(Number(button.dataset.index), 1);
+  if (action === 'body-add') buffer.body.push({ text: '' });
+  if (action === 'body-move') {
+    const index = Number(button.dataset.index);
+    const target = index + Number(button.dataset.direction);
+    const [paragraph] = buffer.body.splice(index, 1);
+    buffer.body.splice(target, 0, paragraph);
+  }
+  if (action === 'body-delete') buffer.body.splice(Number(button.dataset.index), 1);
   if (action === 'image-move') {
     const index = Number(button.dataset.index);
     const target = index + Number(button.dataset.direction);
@@ -800,8 +964,8 @@ const handleEditorAction = async (button) => {
     buffer.images.splice(target, 0, path);
   }
   if (action === 'image-delete') {
-    const [path] = buffer.images.splice(Number(button.dataset.index), 1);
-    unstageOrDeleteAsset(path);
+    const [removed] = buffer.images.splice(Number(button.dataset.index), 1);
+    unstageOrDeleteAsset(typeof removed === 'string' ? removed : removed.src);
   }
   if (action === 'stage-delete') {
     const existing = imageForStage(buffer, button.dataset.stage);
@@ -1053,7 +1217,7 @@ editorRoot.addEventListener('click', async (event) => {
 editorRoot.addEventListener('submit', (event) => {
   event.preventDefault();
   try {
-    if (event.target.id === 'product-form' || event.target.id === 'protocol-form' || event.target.id === 'testimonial-form') saveEditor();
+    if (event.target.id === 'product-form' || event.target.id === 'protocol-form' || event.target.id === 'testimonial-form' || event.target.id === 'solution-form') saveEditor();
     if (event.target.id === 'company-form') saveCompany(event.target);
     if (event.target.id === 'appearance-form') saveAppearance(event.target);
   } catch (error) {
@@ -1064,6 +1228,8 @@ editorRoot.addEventListener('submit', (event) => {
 editorRoot.addEventListener('change', async (event) => {
   try {
     if (event.target.id === 'product-images') await uploadProductImages([...event.target.files]);
+    if (event.target.id === 'solution-images') await uploadSolutionImages([...event.target.files]);
+    if (event.target.id === 'voice-images') await uploadVoiceImages([...event.target.files]);
     if (event.target.dataset.stageField && event.target.files[0]) await uploadStagePhoto(event.target.dataset.stageField, event.target.files[0]);
   } catch (error) {
     showStatus('Image could not be processed', h(error.message));

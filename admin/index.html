@@ -97,6 +97,8 @@
     <div class="app-body">
       <nav class="tab-nav" aria-label="Content sections" id="tab-nav">
         <button type="button" data-tab="testimonials">Recoveries</button>
+        <button type="button" data-tab="solutions">Solutions</button>
+        <button type="button" data-tab="voices">Voices</button>
         <button type="button" data-tab="protocols">Protocols</button>
         <button type="button" data-tab="company">Company</button>
         <button type="button" data-tab="appearance">Appearance</button>
@@ -130,6 +132,25 @@
         <label>Vertical <input id="crop-y" type="range" min="-1" max="1" step="0.01" value="0"></label>
       </div>
       <div class="form-actions"><button class="button button--quiet" value="cancel" type="submit">Cancel</button><button class="button button--primary" id="crop-apply" value="default" type="submit">Use crop</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="redact-dialog" id="redact-dialog">
+    <form method="dialog">
+      <div class="dialog-heading">
+        <div><p class="auth-kicker">Identity redaction</p><h2 id="redact-title">Blur identifying details</h2></div>
+        <button class="icon-button" value="cancel" aria-label="Cancel upload" type="submit">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <p class="redact-hint">Drag across each avatar, saved contact name, or phone number to blur it. Drag a box to move it, drag its corner handle to resize, or select a box and press Delete. The blur is baked into the image permanently, and nothing here is generative.</p>
+      <div class="redact-stage"><canvas id="redact-canvas" width="640" height="800"></canvas></div>
+      <div class="redact-controls">
+        <button class="button button--quiet" id="redact-remove" type="button">Remove selected</button>
+        <button class="button button--quiet" id="redact-clear" type="button">Clear all</button>
+        <span class="redact-count" id="redact-count">0 boxes</span>
+      </div>
+      <div class="form-actions"><button class="button button--quiet" value="cancel" type="submit">Cancel upload</button><button class="button button--primary" id="redact-apply" value="default" type="submit">Bake blur &amp; use</button></div>
     </form>
   </dialog>
 

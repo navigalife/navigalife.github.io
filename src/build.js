@@ -68,18 +68,16 @@ const buildImageMap = async (testimonials) => {
   return Object.fromEntries(entries);
 };
 
-// Build responsive variants for every .webp in a gallery directory (solutions,
-// feedback) and return both the imageMap entries and an ordered item list. Items
+// Build responsive variants for an ordered list of gallery sources (solutions,
+// feedback), named explicitly by their manifest (data/{solutions,feedback}.json)
+// rather than by scanning the directory, so the owner controls order and set
+// from the admin. Returns the imageMap entries plus an src-keyed item map. Items
 // carry the source's real (already EXIF-rotated) dimensions and the largest
 // variant path, so the template can size auto-width rail cards without layout
 // shift and open a full-resolution screenshot in the lightbox.
-const buildGalleryMap = async (directory, widths) => {
-  const names = (await fs.readdir(path.join(ROOT, directory)))
-    .filter((name) => name.toLowerCase().endsWith('.webp'))
-    .sort();
+const buildGallery = async (srcs, widths) => {
   const items = await Promise.all(
-    names.map(async (name) => {
-      const src = path.posix.join(directory, name);
+    srcs.map(async (src) => {
       const [variants, meta] = await Promise.all([
         processImage(src, widths),
         sharp(path.join(ROOT, src)).metadata(),
@@ -95,7 +93,8 @@ const buildGalleryMap = async (directory, widths) => {
     }),
   );
   const map = Object.fromEntries(items.map((item) => [item.src, item.variants]));
-  return { map, items };
+  const bySrc = new Map(items.map((item) => [item.src, item]));
+  return { map, bySrc };
 };
 
 const prepareMark = async (name, width = 128) => {
@@ -226,7 +225,7 @@ h1 em{font-style:italic;color:var(--accent)}
 @media(prefers-reduced-motion:reduce){[data-reveal]{opacity:1;transform:none;filter:none}}
 `;
 
-const validate = ({ products, protocols, testimonials, themes, config }) => {
+const validate = ({ products, protocols, testimonials, themes, config, solutions, feedback }) => {
   const themeId = process.env.SITE_THEME || config.theme;
   const theme = themes.find((candidate) => candidate.id === themeId);
   if (!theme) throw new Error(`Unknown theme: ${themeId}`);
@@ -295,6 +294,49 @@ const validate = ({ products, protocols, testimonials, themes, config }) => {
     );
   }
 
+  // Condition-solution galleries (data/solutions.json). Each card's photographs
+  // must live under assets/solutions/<id>-*, which ties image ownership to the
+  // card and is the invariant the admin's uploader also honours.
+  const SLUG = /^[a-z0-9-]+$/;
+  const solutionIds = new Set();
+  for (const card of solutions || []) {
+    const label = card.id || '(missing id)';
+    if (!card.id || !SLUG.test(card.id) || solutionIds.has(card.id)) {
+      throw new Error(`Invalid solution id: ${label}`);
+    }
+    solutionIds.add(card.id);
+    if (!card.title || !card.condition) {
+      throw new Error(`Solution ${label} requires a title and condition.`);
+    }
+    if (!card.cta || !card.cta.label || !card.cta.message) {
+      throw new Error(`Solution ${label} requires a CTA label and prefilled message.`);
+    }
+    const body = card.body || [];
+    if (!body.length || body.some((paragraph) => !paragraph.text)) {
+      throw new Error(`Solution ${label} needs at least one non-empty body paragraph.`);
+    }
+    const images = card.images || [];
+    if (card.visible !== false && !images.length) {
+      throw new Error(`Solution ${label} is visible but has no photographs.`);
+    }
+    for (const image of images) {
+      if (!image.src || !image.src.startsWith(`assets/solutions/${card.id}-`)) {
+        throw new Error(`Solution ${label}: image src must be assets/solutions/${card.id}-*.webp (got ${image.src || '(missing)'}).`);
+      }
+    }
+  }
+
+  // Patient-voices rail (data/feedback.json): an ordered list of chat-screenshot
+  // sources, identity already redacted at upload. Just shape + uniqueness here.
+  const feedbackSeen = new Set();
+  for (const item of feedback || []) {
+    if (!item.src || !item.src.startsWith('assets/feedback/')) {
+      throw new Error(`Feedback item requires an src under assets/feedback/ (got ${item.src || '(missing)'}).`);
+    }
+    if (feedbackSeen.has(item.src)) throw new Error(`Duplicate feedback src: ${item.src}`);
+    feedbackSeen.add(item.src);
+  }
+
   return { theme, themeId, visibleProtocols };
 };
 
@@ -309,7 +351,7 @@ const copyAdmin = async () => {
 };
 
 const build = async () => {
-  const [company, products, protocols, testimonials, themes, config, baseCss, clientJs] =
+  const [company, products, protocols, testimonials, themes, config, solutionsData, feedbackData, baseCss, clientJs] =
     await Promise.all([
       readJson('data/company.json'),
       readJson('data/products.json'),
@@ -317,6 +359,8 @@ const build = async () => {
       readJson('data/testimonials.json'),
       readJson('data/themes.json'),
       readJson('data/site-config.json'),
+      readJson('data/solutions.json'),
+      readJson('data/feedback.json'),
       fs.readFile(path.join(__dirname, 'styles.css'), 'utf8'),
       fs.readFile(path.join(__dirname, 'site.js'), 'utf8'),
     ]);
@@ -327,23 +371,35 @@ const build = async () => {
     testimonials,
     themes,
     config,
+    solutions: solutionsData,
+    feedback: feedbackData,
   });
   await fs.rm(DIST, { recursive: true, force: true });
   await fs.mkdir(DIST, { recursive: true });
 
+  const solutionSrcs = solutionsData.flatMap((card) => (card.images || []).map((image) => image.src));
+  const feedbackSrcs = feedbackData.map((item) => item.src);
   const [imageMap, brand, solutions, feedback] = await Promise.all([
     buildImageMap(testimonials),
     copyBrandAssets(),
     // Condition carousels: crisp up to ~600px card width (1024 covers hi-dpi).
-    buildGalleryMap('assets/solutions', [320, 640, 1024]),
+    buildGallery(solutionSrcs, [320, 640, 1024]),
     // Patient messages: 1600 so the lightbox stays readable on large screens.
-    buildGalleryMap('assets/feedback', [320, 640, 1024, 1600]),
+    buildGallery(feedbackSrcs, [320, 640, 1024, 1600]),
   ]);
   Object.assign(imageMap, solutions.map, feedback.map);
-  const bySlug = (slug) =>
-    solutions.items.filter((item) => path.basename(item.src).startsWith(`${slug}-`));
-  const solutionImages = { mastectomy: bySlug('mastectomy'), elephantiasis: bySlug('elephantiasis') };
-  const feedbackImages = feedback.items;
+  // Resolve each card's manifest image list to processed items (order preserved),
+  // dropping hidden cards and any left with no usable photographs.
+  const solutionCards = solutionsData
+    .filter((card) => card.visible !== false)
+    .map((card) => ({
+      ...card,
+      images: (card.images || []).map((image) => solutions.bySrc.get(image.src)).filter(Boolean),
+    }))
+    .filter((card) => card.images.length);
+  const feedbackImages = feedbackData
+    .map((item) => feedback.bySrc.get(item.src))
+    .filter(Boolean);
   const cssPath = await writeHashed('assets', 'site', 'css', `${themeCss(theme)}\n${baseCss}`);
   const jsPath = await writeHashed('assets', 'site', 'js', clientJs);
   const html = renderPage({
@@ -353,7 +409,7 @@ const build = async () => {
     config,
     themeId,
     imageMap,
-    solutionImages,
+    solutions: solutionCards,
     feedbackImages,
     markPaths: brand.markPaths,
     markPathsTm: brand.markPathsTm,
