@@ -143,6 +143,75 @@ const renderQuoteStory = (testimonial, index) => `
     <figcaption>${patientLabel(testimonial) ? `<strong>${escapeHtml(patientLabel(testimonial))}</strong>` : ''}<span>${escapeHtml(testimonial.location)}</span><span>${escapeHtml(testimonial.condition)}</span></figcaption>
   </figure>`;
 
+// One carousel slide — the same evidence frame the recoveries use (4:5, blurred
+// cover fill behind a contained photo), minus the stage caption.
+const solutionSlide = (item, imageMap, condition, index, total) => `
+        <li class="solution-slide">
+          <div class="evidence">
+            <div class="evidence__image">
+              <div class="evidence__fill" aria-hidden="true">${image(item.src, imageMap, { alt: '', sizes: '(max-width:1000px) 92vw, 45vw', width: item.width, height: item.height })}</div>
+              ${image(item.src, imageMap, {
+                alt: `${condition}: photograph ${index + 1} of ${total}`,
+                sizes: '(max-width:1000px) 92vw, 45vw',
+                width: item.width,
+                height: item.height,
+              })}
+            </div>
+          </div>
+        </li>`;
+
+// Scroll-snap photo carousel: swipe on touch, arrows on desktop, with a "NN / NN"
+// fraction and a thin progress bar. site.js keeps the index in sync (nearest slide).
+const solutionCarousel = (items, imageMap, condition) => `
+      <div class="solution-carousel" data-carousel role="group" aria-roledescription="carousel" aria-label="${escapeHtml(condition)} photographs">
+        <div class="solution-carousel__viewport">
+          <ul class="solution-carousel__track" data-carousel-track>
+            ${items.map((item, index) => solutionSlide(item, imageMap, condition, index, items.length)).join('')}
+          </ul>
+          <button type="button" class="solution-carousel__arrow solution-carousel__arrow--prev" data-carousel-prev aria-label="Previous photograph">${icon('arrow')}</button>
+          <button type="button" class="solution-carousel__arrow solution-carousel__arrow--next" data-carousel-next aria-label="Next photograph">${icon('arrow')}</button>
+        </div>
+        <div class="solution-carousel__meta">
+          <span class="solution-carousel__bar" aria-hidden="true"><span data-carousel-progress></span></span>
+          <span class="solution-carousel__count"><span data-carousel-index>1</span> / ${items.length}</span>
+        </div>
+      </div>`;
+
+const renderSolutionCard = (card, imageMap, index) => {
+  const body = card.body
+    .map((paragraph) => `<p class="solution-card__p${paragraph.variant === 'warn' ? ' solution-card__p--warn' : ''}">${escapeHtml(paragraph.text)}</p>`)
+    .join('');
+  return `
+    <article class="solution-card" data-reveal style="--reveal-order:${index}">
+      ${solutionCarousel(card.images, imageMap, card.condition)}
+      <div class="solution-card__body">
+        <h3>${escapeHtml(card.title)}</h3>
+        ${body}
+        <a class="button solution-card__cta" href="${card.cta.href}"${card.cta.external ? ' target="_blank" rel="noreferrer"' : ''}>${card.cta.icon} ${escapeHtml(card.cta.label)}</a>
+      </div>
+    </article>`;
+};
+
+// A patient-message screenshot slide in the voices carousel — one row, natural
+// aspect at a shared height (no crop), opens the full-resolution image in a
+// lightbox (site.js). `sizes` is keyed to orientation so previews load a
+// large-enough variant to stay crisp (the lightbox uses the full image).
+const voiceCard = (item, imageMap, index, total) => {
+  const wide = Number(item.width) > Number(item.height);
+  return `
+      <li class="voice-slide">
+        <button type="button" class="voice-card" data-voice="${index}" data-voice-full="${escapeHtml(item.full)}" aria-label="Read patient message ${index + 1} of ${total}">
+          ${image(item.src, imageMap, {
+            alt: `Patient message ${index + 1}`,
+            sizes: wide ? '(max-width:640px) 88vw, 780px' : '(max-width:640px) 88vw, 240px',
+            width: item.width,
+            height: item.height,
+          })}
+          <span class="voice-card__zoom" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M15 20h5v-5M9 20H4v-5"/></svg></span>
+        </button>
+      </li>`;
+};
+
 const renderJsonLd = ({ company, siteUrl }) => {
   const organization = {
     '@context': 'https://schema.org',
@@ -188,7 +257,7 @@ const renderChatbot = ({ wa, email, conditions }) => {
         <input class="mvbot__input" id="mvbot-input" data-mvbot-input type="text" name="mvbot-field" autocomplete="off" enterkeyhint="send" placeholder="Type here…">
         <button type="submit" class="mvbot__send" data-mvbot-send aria-label="Send" disabled>${sendIcon}</button>
       </form>
-      <p class="mvbot__legal">Opens WhatsApp with your details ready to send. A person replies — this isn’t medical advice.</p>
+      <p class="mvbot__legal">Opens WhatsApp with your details ready to send. A person replies. This isn’t medical advice.</p>
     </div>
     <div class="mvbot__nudge" data-mvbot-nudge hidden>
       <button type="button" class="mvbot__nudge-x" data-mvbot-nudge-x aria-label="Dismiss">${xIcon}</button>
@@ -210,6 +279,8 @@ const renderPage = ({
   config,
   themeId,
   imageMap,
+  solutionImages,
+  feedbackImages,
   markPaths,
   markPathsTm,
   markPathsTmLg,
@@ -259,6 +330,91 @@ const renderPage = ({
       ? { href: mailHref, icon: icon('mail'), label: 'Email us', external: false }
       : { href: '#contact', icon: '', label: 'Contact us', external: false };
   const ctaAttrs = cta.external ? ' target="_blank" rel="noreferrer"' : '';
+  // Per-condition CTA — same graceful degrade as the primary `cta`, but the
+  // WhatsApp/email message is prefilled with the specific condition.
+  const conditionCta = (label, message) => {
+    if (company.whatsapp) {
+      return { href: `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`, icon: icon('whatsapp'), label, external: true };
+    }
+    if (company.email) {
+      return { href: `mailto:${escapeHtml(company.email)}?subject=${encodeURIComponent(message)}`, icon: icon('mail'), label, external: false };
+    }
+    return { href: '#contact', icon: '', label, external: false };
+  };
+  // Two owner-requested condition cards (post #recoveries). Copy is site-voice —
+  // short and clinical-warm; section 1 keeps the owner's pressure-stockings
+  // warning, section 2 keeps the deeper case study and the four objectives.
+  const solutionCards = [
+    {
+      title: 'Post-mastectomy arm lymphedema',
+      condition: 'Post-mastectomy arm lymphedema',
+      images: solutionImages.mastectomy,
+      cta: conditionCta('Ask about arm swelling', 'I would like to discuss post-mastectomy arm swelling (lymphedema) with MediVasc.'),
+      body: [
+        { text: 'Treating breast cancer often means clearing lymph nodes and vessels from the axilla. With those channels gone, lymph fluid begins to collect in the arm. Left unmanaged, the swelling turns chronic. Everyday tasks grow harder, and even turning over in sleep is disturbed.' },
+        { text: 'A common mistake makes it worse: reaching for pressure stockings. Lymph is meant to keep moving in a dynamic flow, not to be held static by a compression garment.', variant: 'warn' },
+        { text: 'We design the protocol around your case and stay with you at regular intervals, guiding the therapy so the swelling stops progressing and daily life returns to normal.' },
+      ],
+    },
+    {
+      title: 'Elephantiasis & filariasis',
+      condition: 'Elephantiasis & filariasis',
+      images: solutionImages.elephantiasis,
+      cta: conditionCta('Ask about elephantiasis', 'I would like to discuss elephantiasis and filariasis with MediVasc.'),
+      body: [
+        { text: 'Elephantiasis is the severe, hardening enlargement of a limb caused by long-standing lymphatic obstruction, most often after lymphatic filariasis, a mosquito-borne infection common across tropical regions and, in India, along the coast. As fluid stagnates, the skin thickens, darkens, and cracks, and infections take hold more and more easily.' },
+        { text: 'We start with a deeper case study (the full history and its causes) and measure the limb along its length, because no two are alike. From there the protocol is built to stop the progression, prevent hyperkeratosis, clear the darkened skin, and rebuild overall vascularity.' },
+      ],
+    },
+  ].filter((card) => card.images && card.images.length);
+  const solutionsSection = solutionCards.length
+    ? `<section class="section solutions" id="solutions">
+      <div class="container">
+        <div class="section-heading" data-reveal>
+          <div>
+            <p class="kicker">Complications we treat</p>
+            <h2>Two conditions, <em>up close</em></h2>
+          </div>
+          <p>Post-mastectomy arm lymphedema, and elephantiasis with filariasis: the two we are asked about most. See what they look like, and how a customized protocol changes their course.</p>
+        </div>
+        <div class="solution-grid">
+          ${solutionCards.map((card, index) => renderSolutionCard(card, imageMap, index)).join('')}
+        </div>
+      </div>
+    </section>`
+    : '';
+  const voices = Array.isArray(feedbackImages) ? feedbackImages : [];
+  const voicesSection = voices.length
+    ? `<section class="section voices" id="voices">
+      <div class="container">
+        <div class="section-heading" data-reveal>
+          <div>
+            <p class="kicker">In their words</p>
+            <h2>What patients <em>say</em> about us</h2>
+          </div>
+          <p>Unedited messages from patients and their families, shared with their permission. Tap any note to read it in full.</p>
+        </div>
+        <div class="voice-carousel" data-carousel role="group" aria-roledescription="carousel" aria-label="Patient messages">
+          <div class="voice-carousel__viewport">
+            <ul class="voices-rail" data-carousel-track data-voice-rail aria-label="Patient messages">
+              ${voices.map((item, index) => voiceCard(item, imageMap, index, voices.length)).join('')}
+            </ul>
+            <button type="button" class="voice-carousel__arrow voice-carousel__arrow--prev" data-carousel-prev aria-label="Previous message">${icon('arrow')}</button>
+            <button type="button" class="voice-carousel__arrow voice-carousel__arrow--next" data-carousel-next aria-label="Next message">${icon('arrow')}</button>
+          </div>
+        </div>
+      </div>
+      <dialog class="voice-lightbox" data-voice-lightbox aria-label="Patient message">
+        <div class="voice-lightbox__stage">
+          <img class="voice-lightbox__img" data-voice-lightbox-img alt="" decoding="async">
+        </div>
+        <button type="button" class="voice-lightbox__close" data-voice-close aria-label="Close">${icon('close')}</button>
+        <button type="button" class="voice-lightbox__nav voice-lightbox__nav--prev" data-voice-prev aria-label="Previous message">${icon('arrow')}</button>
+        <button type="button" class="voice-lightbox__nav voice-lightbox__nav--next" data-voice-next aria-label="Next message">${icon('arrow')}</button>
+        <p class="voice-lightbox__counter" data-voice-counter aria-live="polite"></p>
+      </dialog>
+    </section>`
+    : '';
   // Single source for the primary nav — rendered inline in the header (desktop)
   // and inside the mobile slide-in drawer (below); keep the two in sync via this.
   const navItems = [
@@ -429,6 +585,10 @@ const renderPage = ({
         ${quoteStories.length ? `<div class="quote-story-grid">${quoteStories.map((testimonial, index) => renderQuoteStory(testimonial, index)).join('')}</div>` : ''}
       </div>
     </section>
+
+    ${solutionsSection}
+
+    ${voicesSection}
 
     <section class="section approach" id="approach">
       <div class="container">

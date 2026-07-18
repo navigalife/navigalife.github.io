@@ -23,7 +23,7 @@ const writeHashed = async (directory, stem, extension, content) => {
   return path.posix.join(directory, filename);
 };
 
-const processImage = async (relativePath) => {
+const processImage = async (relativePath, widths = [320, 640]) => {
   const sourcePath = path.join(ROOT, relativePath);
   const extension = path.extname(relativePath).slice(1).toLowerCase();
   const stem = path.basename(relativePath, path.extname(relativePath));
@@ -31,7 +31,7 @@ const processImage = async (relativePath) => {
   const variants = {};
 
   if (extension === 'webp') {
-    for (const width of [320, 640]) {
+    for (const width of widths) {
       const buffer = await sharp(sourcePath)
         .rotate()
         .resize({ width, withoutEnlargement: true })
@@ -66,6 +66,36 @@ const buildImageMap = async (testimonials) => {
     [...sources].map(async (source) => [source, await processImage(source)]),
   );
   return Object.fromEntries(entries);
+};
+
+// Build responsive variants for every .webp in a gallery directory (solutions,
+// feedback) and return both the imageMap entries and an ordered item list. Items
+// carry the source's real (already EXIF-rotated) dimensions and the largest
+// variant path, so the template can size auto-width rail cards without layout
+// shift and open a full-resolution screenshot in the lightbox.
+const buildGalleryMap = async (directory, widths) => {
+  const names = (await fs.readdir(path.join(ROOT, directory)))
+    .filter((name) => name.toLowerCase().endsWith('.webp'))
+    .sort();
+  const items = await Promise.all(
+    names.map(async (name) => {
+      const src = path.posix.join(directory, name);
+      const [variants, meta] = await Promise.all([
+        processImage(src, widths),
+        sharp(path.join(ROOT, src)).metadata(),
+      ]);
+      const built = Object.keys(variants).map(Number).sort((a, b) => a - b);
+      return {
+        src,
+        variants,
+        width: meta.width,
+        height: meta.height,
+        full: variants[built[built.length - 1]],
+      };
+    }),
+  );
+  const map = Object.fromEntries(items.map((item) => [item.src, item.variants]));
+  return { map, items };
 };
 
 const prepareMark = async (name, width = 128) => {
@@ -301,10 +331,19 @@ const build = async () => {
   await fs.rm(DIST, { recursive: true, force: true });
   await fs.mkdir(DIST, { recursive: true });
 
-  const [imageMap, brand] = await Promise.all([
+  const [imageMap, brand, solutions, feedback] = await Promise.all([
     buildImageMap(testimonials),
     copyBrandAssets(),
+    // Condition carousels: crisp up to ~600px card width (1024 covers hi-dpi).
+    buildGalleryMap('assets/solutions', [320, 640, 1024]),
+    // Patient messages: 1600 so the lightbox stays readable on large screens.
+    buildGalleryMap('assets/feedback', [320, 640, 1024, 1600]),
   ]);
+  Object.assign(imageMap, solutions.map, feedback.map);
+  const bySlug = (slug) =>
+    solutions.items.filter((item) => path.basename(item.src).startsWith(`${slug}-`));
+  const solutionImages = { mastectomy: bySlug('mastectomy'), elephantiasis: bySlug('elephantiasis') };
+  const feedbackImages = feedback.items;
   const cssPath = await writeHashed('assets', 'site', 'css', `${themeCss(theme)}\n${baseCss}`);
   const jsPath = await writeHashed('assets', 'site', 'js', clientJs);
   const html = renderPage({
@@ -314,6 +353,8 @@ const build = async () => {
     config,
     themeId,
     imageMap,
+    solutionImages,
+    feedbackImages,
     markPaths: brand.markPaths,
     markPathsTm: brand.markPathsTm,
     markPathsTmLg: brand.markPathsTmLg,

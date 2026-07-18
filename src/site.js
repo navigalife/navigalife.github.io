@@ -267,6 +267,162 @@
   }
 })();
 
+// Condition photo carousels + patient-message lightbox. One controller drives every
+// [data-carousel] (the two solution cards): swipe/scroll on touch, arrows on desktop,
+// with a live "NN / NN" fraction and a progress bar synced to the nearest slide. The
+// voices rail opens each screenshot full-resolution in a <dialog> lightbox.
+(() => {
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  document.querySelectorAll('[data-carousel]').forEach((carousel) => {
+    const track = carousel.querySelector('[data-carousel-track]');
+    if (!track) return;
+    const slides = [...track.children];
+    if (!slides.length) return;
+    const prev = carousel.querySelector('[data-carousel-prev]');
+    const next = carousel.querySelector('[data-carousel-next]');
+    const indexEl = carousel.querySelector('[data-carousel-index]');
+    const progress = carousel.querySelector('[data-carousel-progress]');
+    const base = () => slides[0].offsetLeft; // slides share an offset parent; cancels it out
+    let index = 0;
+
+    // The slide whose centre is closest to the viewport centre (survives manual swipes).
+    const nearest = () => {
+      const center = track.scrollLeft + track.clientWidth / 2;
+      let best = 0;
+      let bestDist = Infinity;
+      slides.forEach((slide, i) => {
+        const dist = Math.abs(slide.offsetLeft - base() + slide.clientWidth / 2 - center);
+        if (dist < bestDist) { bestDist = dist; best = i; }
+      });
+      return best;
+    };
+
+    const maxScroll = () => track.scrollWidth - track.clientWidth;
+
+    // The rest offsets CSS would snap to: each slide centred (scroll-snap-align:
+    // center), clamped to the scrollable range and de-duped (near-identical ends
+    // collapse). Arrows must land on these exact offsets — animating toward a spot
+    // that is not itself a snap point gets reverted by scroll-snap-type:mandatory,
+    // which is why a plain scrollBy left the near-full voices rail dead.
+    const snapPoints = () => {
+      const cw = track.clientWidth;
+      const max = maxScroll();
+      const raw = slides
+        .map((s) => Math.max(0, Math.min(Math.round(s.offsetLeft - base() - (cw - s.clientWidth) / 2), max)))
+        .sort((a, b) => a - b);
+      const out = [];
+      raw.forEach((p) => { if (!out.length || p - out[out.length - 1] > 8) out.push(p); });
+      return out;
+    };
+
+    const render = () => {
+      if (indexEl) indexEl.textContent = String(index + 1);
+      if (progress) progress.style.transform = `scaleX(${(index + 1) / slides.length})`;
+      // Disable arrows by real scroll position vs. the snap extremes: the voices
+      // rail's leading/trailing card can never sit dead-centre, so an index test
+      // would wrongly keep an arrow live (or dead).
+      const pts = snapPoints();
+      const left = track.scrollLeft;
+      if (prev) prev.disabled = left <= pts[0] + 1;
+      if (next) next.disabled = left >= pts[pts.length - 1] - 1;
+    };
+
+    // Move to the next/previous snap offset in the swipe direction.
+    const nudge = (dir) => {
+      const pts = snapPoints();
+      const left = track.scrollLeft;
+      const target = dir > 0
+        ? pts.find((p) => p > left + 1)
+        : [...pts].reverse().find((p) => p < left - 1);
+      if (target == null) return;
+      track.scrollTo({ left: target, behavior: reduceMotion ? 'auto' : 'smooth' });
+    };
+
+    let raf = 0;
+    track.addEventListener('scroll', () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        index = nearest();
+        render();
+      });
+    }, { passive: true });
+
+    prev?.addEventListener('click', () => nudge(-1));
+    next?.addEventListener('click', () => nudge(1));
+    render();
+  });
+
+  const rail = document.querySelector('[data-voice-rail]');
+  const lightbox = document.querySelector('[data-voice-lightbox]');
+  if (rail && lightbox && typeof lightbox.showModal === 'function') {
+    const cards = [...rail.querySelectorAll('[data-voice]')];
+    const imgEl = lightbox.querySelector('[data-voice-lightbox-img]');
+    const closeBtn = lightbox.querySelector('[data-voice-close]');
+    const prevBtn = lightbox.querySelector('[data-voice-prev]');
+    const nextBtn = lightbox.querySelector('[data-voice-next]');
+    const counter = lightbox.querySelector('[data-voice-counter]');
+    let current = 0;
+
+    const show = (i) => {
+      current = (i + cards.length) % cards.length;
+      const card = cards[current];
+      imgEl.src = card.dataset.voiceFull;
+      imgEl.alt = card.getAttribute('aria-label') || 'Patient message';
+      if (counter) counter.textContent = `${current + 1} / ${cards.length}`;
+    };
+    // showModal() makes the rest of the page inert but leaves it scrollable via
+    // wheel/touch behind the backdrop; pin the body so it stays put (both
+    // breakpoints), restoring the exact scroll offset on close.
+    let lockedY = 0;
+    const lockPage = () => {
+      lockedY = window.scrollY || window.pageYOffset || 0;
+      const sbw = window.innerWidth - document.documentElement.clientWidth;
+      const b = document.body;
+      b.style.position = 'fixed';
+      b.style.top = `-${lockedY}px`;
+      b.style.left = '0';
+      b.style.right = '0';
+      b.style.width = '100%';
+      if (sbw > 0) b.style.paddingRight = `${sbw}px`;
+    };
+    const unlockPage = () => {
+      const b = document.body;
+      b.style.position = '';
+      b.style.top = '';
+      b.style.left = '';
+      b.style.right = '';
+      b.style.width = '';
+      b.style.paddingRight = '';
+      // Restore instantly — a plain scrollTo obeys html{scroll-behavior:smooth}
+      // and would visibly animate the page back to where it was on close.
+      window.scrollTo({ top: lockedY, left: 0, behavior: 'instant' });
+    };
+
+    const openAt = (i) => {
+      show(i);
+      if (!lightbox.open) { lightbox.showModal(); lockPage(); }
+    };
+
+    cards.forEach((card, i) => card.addEventListener('click', () => openAt(i)));
+    closeBtn?.addEventListener('click', () => lightbox.close());
+    prevBtn?.addEventListener('click', () => show(current - 1));
+    nextBtn?.addEventListener('click', () => show(current + 1));
+    // Click anywhere except the image or a control (i.e. the backdrop) closes it.
+    lightbox.addEventListener('click', (event) => {
+      if (event.target === imgEl || event.target.closest('.voice-lightbox__nav, .voice-lightbox__close')) return;
+      lightbox.close();
+    });
+    lightbox.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowRight') { event.preventDefault(); show(current + 1); }
+      else if (event.key === 'ArrowLeft') { event.preventDefault(); show(current - 1); }
+    });
+    // Drop the (large) screenshot once closed so it isn't held decoded in memory.
+    lightbox.addEventListener('close', () => { unlockPage(); imgEl.removeAttribute('src'); });
+  }
+})();
+
 // MediVasc Assistant — the conversational lead form at bottom-right. Walks the visitor
 // through name -> condition -> city one message at a time, then hands off to
 // WhatsApp (or email) with the case prefilled. Server-rendered shell in
@@ -432,7 +588,7 @@
     const text = encodeURIComponent(lines.join('\n'));
     if (config.wa) return `https://wa.me/${config.wa}?text=${text}`;
     if (config.email) {
-      return `mailto:${config.email}?subject=${encodeURIComponent(`Solution request — ${answers.name}`)}&body=${text}`;
+      return `mailto:${config.email}?subject=${encodeURIComponent(`Solution request: ${answers.name}`)}&body=${text}`;
     }
     return '#contact';
   };
@@ -484,7 +640,7 @@
     started = true;
     stepIndex = steps.length;
     form.hidden = true;
-    addBot('Welcome back 🙏 Here’s the request you set up — send it on WhatsApp whenever you’re ready.');
+    addBot('Welcome back 🙏 Here’s the request you set up. Send it on WhatsApp whenever you’re ready.');
     addSummary();
     root.classList.add('mvbot--engaged');
   };
@@ -498,7 +654,7 @@
   const finish = async () => {
     stepIndex = steps.length;
     closeComposer();
-    await botSay('Perfect — here’s your request. Send it to us on WhatsApp and we’ll get back to you personally.', 820);
+    await botSay('Perfect. Here’s your request. Send it to us on WhatsApp and we’ll get back to you personally.', 820);
     addSummary();
     root.classList.add('mvbot--engaged');
     persist();
@@ -537,7 +693,7 @@
     stepIndex = -1;
     log.innerHTML = '';
     root.classList.remove('mvbot--engaged');
-    await botSay('No problem — let’s update the details.', 420);
+    await botSay('No problem, let’s update the details.', 420);
     await askStep(0);
   }
 
@@ -611,7 +767,7 @@
     b.style.right = '';
     b.style.width = '';
     document.documentElement.classList.remove('mvbot-locked');
-    window.scrollTo(0, scrollLockY);
+    window.scrollTo({ top: scrollLockY, left: 0, behavior: 'instant' });
   };
   mqMobile.addEventListener?.('change', () => { if (!mqMobile.matches) unlockScroll(); syncViewport(); });
 
