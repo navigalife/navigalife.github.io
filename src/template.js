@@ -212,17 +212,58 @@ const voiceCard = (item, imageMap, index, total) => {
       </li>`;
 };
 
-const renderJsonLd = ({ company, siteUrl }) => {
+// The conditions MediVasc treats, published as schema.org `knowsAbout` so search
+// engines can associate the organisation with the searches patients actually run
+// (see docs/LESSONS.md — condition terms drive most of the site's intended reach).
+const KNOWS_ABOUT = [
+  'Lymphedema',
+  'Post-mastectomy lymphedema',
+  'Venous ulcers',
+  'Varicose veins',
+  'Chronic venous insufficiency',
+  'Diabetic foot',
+  'Deep vein thrombosis',
+  'Filariasis',
+  'Elephantiasis',
+  'Peripheral arterial disease',
+  'Prevention of leg and foot amputation',
+];
+
+const renderJsonLd = ({ company, config, siteUrl }) => {
+  // Any social profiles the owner has filled in (data/company.json) become
+  // `sameAs` links, which help Google connect the site to those profiles and
+  // disambiguate our name from unrelated "MediVasc" businesses abroad.
+  const sameAs = Object.values(company.social || {}).filter(Boolean);
   const organization = {
     '@context': 'https://schema.org',
     '@type': 'MedicalOrganization',
     name: company.legalName,
+    // A clear India signal: our name collides with a French clinic, so we always
+    // present as "MediVasc India" in the machine-readable identity too.
+    alternateName: 'MediVasc India',
     url: siteUrl,
     logo: `${siteUrl}assets/brand/icon-512.png`,
+    description: config?.seo?.description || company.tagline,
     // Only publish a phone number when one is on record — no dangling "+".
     ...(company.phone ? { telephone: phoneHref(company.phone) } : {}),
+    ...(company.email ? { email: `mailto:${company.email}` } : {}),
     address: { '@type': 'PostalAddress', streetAddress: company.address, addressCountry: 'IN' },
+    areaServed: ['New Delhi', 'Delhi NCR', 'India'],
     medicalSpecialty: 'Vascular and lymphatic care',
+    knowsAbout: KNOWS_ABOUT,
+    // WhatsApp is our primary contact channel — expose it as a contact point so
+    // it can surface in rich results, not just as a link buried in the page.
+    ...(company.whatsapp
+      ? {
+          contactPoint: {
+            '@type': 'ContactPoint',
+            telephone: phoneHref(company.whatsapp),
+            contactType: 'customer service',
+            availableLanguage: ['English', 'Hindi'],
+          },
+        }
+      : {}),
+    ...(sameAs.length ? { sameAs } : {}),
   };
   return JSON.stringify(organization).replaceAll('<', '\\u003c');
 };
@@ -457,7 +498,7 @@ const renderPage = ({
   <title>${escapeHtml(config.seo.title)}</title>
   <meta name="description" content="${escapeHtml(config.seo.description)}">
   <meta name="robots" content="index,follow">
-  <meta name="theme-color" content="${escapeHtml(themeBg)}">
+${config.seo.googleVerification ? `  <meta name="google-site-verification" content="${escapeHtml(config.seo.googleVerification)}">\n` : ''}  <meta name="theme-color" content="${escapeHtml(themeBg)}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="${escapeHtml(company.name)}">
   <meta property="og:title" content="${escapeHtml(config.seo.title)}">
@@ -481,7 +522,7 @@ const renderPage = ({
   <link rel="preload" href="assets/fonts/instrument-sans-latin-400-600.woff2" as="font" type="font/woff2" crossorigin>
   <style>${criticalCss}</style>
   <link rel="stylesheet" href="${cssPath}">
-  <script type="application/ld+json">${renderJsonLd({ company, siteUrl })}</script>
+  <script type="application/ld+json">${renderJsonLd({ company, config, siteUrl })}</script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
