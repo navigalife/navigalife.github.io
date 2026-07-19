@@ -24,13 +24,17 @@ management are preserved for a possible return).
    documented pipelines that produced the patient-evidence WebPs and the brand
    set from owner-supplied originals. `tools/gen-brand.js` renders header lockups and the OG
    image with the real fonts.
-7. `tools/gen-pdfs.js` exits successfully without output while
-   `productsEnabled` is false.
-8. `.github/workflows/deploy.yml` builds `dist/` and deploys it through
+7. `.github/workflows/deploy.yml` builds `dist/` and deploys it through
    GitHub Pages on pushes to `main` (or manual dispatch).
 
+The product catalogue PDF pipeline (Puppeteer + `tools/gen-pdfs.js`) was
+removed because it pulled a ~500 MB Chromium download on every deploy for a
+step that did nothing while `productsEnabled` is false. Product data and admin
+management are untouched; to bring the pipeline back see
+[`docs/RESTORE-PDF-PIPELINE.md`](docs/RESTORE-PDF-PIPELINE.md).
+
 No frontend framework, runtime library, database, analytics, or form backend.
-The only development dependencies are Puppeteer and Sharp.
+The only development dependency is Sharp.
 
 ## Content model
 

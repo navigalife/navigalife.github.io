@@ -5,11 +5,9 @@
   "description": "MediVasc static site build — prevention of foot and leg amputation",
   "scripts": {
     "build": "node src/build.js",
-    "pdfs": "node tools/gen-pdfs.js",
-    "serve": "npm run build && npm run pdfs && node src/serve.js"
+    "serve": "npm run build && node src/serve.js"
   },
   "devDependencies": {
-    "puppeteer": "^24.0.0",
     "sharp": "^0.34.0"
   }
 }

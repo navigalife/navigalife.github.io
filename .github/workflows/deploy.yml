@@ -36,8 +36,6 @@ jobs:
         run: npm ci
       - name: Build site (production root)
         run: npm run build
-      - name: Generate product catalogues
-        run: node tools/gen-pdfs.js
       # Optional staging area: if a `preview` branch exists, build it and mount
       # it at /changes so reviewers can see it at medivasc.in/changes (and
       # /changes/admin). Fully non-fatal — any failure here leaves the live
@@ -63,7 +61,7 @@ jobs:
           echo "preview branch found — building it into dist/changes"
           git fetch origin preview || exit 0
           git worktree add --force .preview origin/preview || exit 0
-          ( cd .preview && npm ci && npm run build && node tools/gen-pdfs.js ) || { echo "preview build failed — skipping /changes"; git worktree remove --force .preview 2>/dev/null; exit 0; }
+          ( cd .preview && npm ci && npm run build ) || { echo "preview build failed — skipping /changes"; git worktree remove --force .preview 2>/dev/null; exit 0; }
           mkdir -p dist/changes
           cp -R .preview/dist/. dist/changes/
           git worktree remove --force .preview 2>/dev/null
