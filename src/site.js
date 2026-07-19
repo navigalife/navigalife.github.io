@@ -300,16 +300,19 @@
 
     const maxScroll = () => track.scrollWidth - track.clientWidth;
 
-    // The rest offsets CSS would snap to: each slide centred (scroll-snap-align:
-    // center), clamped to the scrollable range and de-duped (near-identical ends
-    // collapse). Arrows must land on these exact offsets — animating toward a spot
-    // that is not itself a snap point gets reverted by scroll-snap-type:mandatory,
-    // which is why a plain scrollBy left the near-full voices rail dead.
+    // The offsets the arrows step between: each slide start-aligned to the
+    // scrollport (matching the desktop-only scroll-snap-align:start — arrows only
+    // exist there), clamped to the scrollable range and de-duped so the clamped
+    // trailing cards collapse to a single end stop. Measured with rects from the
+    // track's own box so the offsets include the track's padding and land exactly
+    // where the snap engine rests — offsetLeft relative to slide 0 was short by
+    // that padding, so the rail rested 2px past pts[0] and the prev arrow's
+    // "at the start" disable test never tripped.
     const snapPoints = () => {
-      const cw = track.clientWidth;
       const max = maxScroll();
+      const origin = track.getBoundingClientRect().left - track.scrollLeft;
       const raw = slides
-        .map((s) => Math.max(0, Math.min(Math.round(s.offsetLeft - base() - (cw - s.clientWidth) / 2), max)))
+        .map((s) => Math.max(0, Math.min(Math.round(s.getBoundingClientRect().left - origin), max)))
         .sort((a, b) => a - b);
       const out = [];
       raw.forEach((p) => { if (!out.length || p - out[out.length - 1] > 8) out.push(p); });
@@ -328,15 +331,61 @@
       if (next) next.disabled = left >= pts[pts.length - 1] - 1;
     };
 
-    // Move to the next/previous snap offset in the swipe direction.
+    // Scroll to a snap offset without letting scroll-snap fight the animation.
+    // A native scrollTo({behavior:'smooth'}) on a snap container can be canceled
+    // by the snap engine and reverted to the origin (this is why the prev arrow
+    // looked dead), so we suspend snapping and tween scrollLeft ourselves,
+    // restoring snapping once we land. `tweenTarget` remembers where an in-flight
+    // animation is headed so a quick second click steps on from there instead of
+    // restarting from the barely-moved current position (which made rapid clicks
+    // crawl). Snapping is restored by clearing our inline 'none' override, never
+    // by saving a value a rapid click could capture as 'none' and leave stuck off.
+    let tween = 0;
+    let tweenTarget = null;
+    const animateTo = (left) => {
+      if (!tween && Math.abs(left - track.scrollLeft) < 1) return;
+      tweenTarget = left;
+      track.style.scrollSnapType = 'none';
+      if (reduceMotion) {
+        track.scrollLeft = left;
+        tween = 0;
+        tweenTarget = null;
+        track.style.scrollSnapType = '';
+        return;
+      }
+      const start = track.scrollLeft;
+      const delta = left - start;
+      const startTime = performance.now();
+      const duration = 320;
+      const ease = (t) => 1 - (1 - t) ** 3;
+      if (tween) cancelAnimationFrame(tween);
+      const step = (now) => {
+        const t = Math.min(1, (now - startTime) / duration);
+        track.scrollLeft = start + delta * ease(t);
+        if (t < 1) { tween = requestAnimationFrame(step); return; }
+        tween = 0;
+        tweenTarget = null;
+        track.style.scrollSnapType = '';
+      };
+      tween = requestAnimationFrame(step);
+    };
+
+    // Step one snap offset in the swipe direction. We step from the snap point
+    // nearest where we are (or, mid-animation, where we are headed) rather than by
+    // a pixel threshold: the rail can rest a couple of px off a computed offset
+    // (its 2px padding), and a threshold test would strand the arrow on a 2px
+    // move that the snap engine reverts. Nearest-index also lets mashing advance.
     const nudge = (dir) => {
       const pts = snapPoints();
-      const left = track.scrollLeft;
-      const target = dir > 0
-        ? pts.find((p) => p > left + 1)
-        : [...pts].reverse().find((p) => p < left - 1);
-      if (target == null) return;
-      track.scrollTo({ left: target, behavior: reduceMotion ? 'auto' : 'smooth' });
+      if (!pts.length) return;
+      const from = (tween && tweenTarget != null) ? tweenTarget : track.scrollLeft;
+      let i = 0;
+      for (let k = 1; k < pts.length; k += 1) {
+        if (Math.abs(pts[k] - from) < Math.abs(pts[i] - from)) i = k;
+      }
+      const targetIndex = Math.max(0, Math.min(i + dir, pts.length - 1));
+      if (targetIndex === i) return;
+      animateTo(pts[targetIndex]);
     };
 
     let raf = 0;

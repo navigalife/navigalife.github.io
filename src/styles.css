@@ -540,7 +540,11 @@ html:not(.js) .solution-carousel__arrow,html:not(.js) .solution-carousel__meta,h
 .voice-carousel__arrow--prev .icon{transform:rotate(180deg)}
 .voice-carousel__arrow--next{right:8px}
 .voice-carousel__arrow .icon{width:20px;height:20px}
-@media (min-width:1001px){.voice-carousel__arrow{display:grid}}
+/* Desktop only: the arrows page the rail, and start alignment gives them clean,
+   evenly spaced, reachable snap stops (centre alignment crams the trailing cards
+   into near-identical offsets the arrows cannot step past). Phones keep centre
+   alignment so the card in view sits centred with its neighbours peeking in. */
+@media (min-width:1001px){.voice-carousel__arrow{display:grid}.voice-slide{scroll-snap-align:start}}
 
 .voice-lightbox{position:fixed;inset:0;width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;background:transparent;place-items:center;overflow:hidden}
 .voice-lightbox:not([open]){display:none}
