@@ -84,7 +84,7 @@
     "id": "elephantiasis",
     "title": "Elephantiasis & filariasis",
     "condition": "Elephantiasis & filariasis",
-    "visible": false,
+    "visible": true,
     "cta": {
       "label": "Ask about elephantiasis",
       "message": "I would like to discuss elephantiasis and filariasis with MediVasc."
