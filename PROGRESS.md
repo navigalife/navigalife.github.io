@@ -1,158 +1,24 @@
 # PROGRESS
 
-## Spec 004 — Admin validation sync
+This file carries the **current run header only** — phase, branch, next action,
+blockers. Completed spec runs are recorded in git history and the advisor's
+review records, not here.
 
-- **Current phase**: Phase 2 checkpoint complete; ready for advisor review
-- **Branch**: `codex/004-admin-validation-sync`
-- **Next action**: Advisor review against spec 004 acceptance criteria.
-- **Blockers**: None.
+## Current state
 
-| Date | Phase | Checkpoint | Evidence / notes |
-|---|---|---|---|
-| 2026-07-13 | 1 | Point-of-action guards complete | D1 now rejects a featured story unless it has exactly 3 images with the specified message; exactly 3 proceeds past that guard. D2 checks the saved story and other featured stories before the cross-unset loop, so un-featuring the sole featured story throws before draft mutation, while a second featured story makes the guard false. D3 checks before `confirm`, asset removal, and list mutation, so deleting the sole featured story shows the specified status and returns, while another featured story makes the guard false. The existing 1-image rejection is unchanged and still runs before D2. `npm run build` exited 0: `Built MediVasc landing: 4 recovery stories, 16 protocols, theme meridian.` and `Client JavaScript: 2528 bytes (2.47 KB).` `node --check admin/app.js` and `git diff --check` passed; `cmp -s admin/app.js dist/admin/app.js` confirmed byte-identical copy-through. Stage labels remain exactly `Before therapy`, `During therapy`, and `After therapy`. Manual reasoning covers acceptance criteria 1–6; no browser harness was added per spec. |
-| 2026-07-13 | 2 | Publish-time backstop complete | Added pure `validateDraft(testimonials)` with the required single-image, maximum-3, featured-exactly-3, and exactly-one-featured checks. `publish()` invokes it after the open-editor guard and before `collectChanges()`; every failure shows `Cannot publish yet` and returns before `state.publishing = true` and before the sole `state.api.publish(...)` call. Manual control-flow reasoning covers zero featured, multiple featured, a featured story with a non-3 count, a single image, and more than 3 images; no invalid path can attempt a commit. `npm run build` again exited 0 with 4 recovery stories, 16 protocols, Meridian, and 2528-byte public client JS. `node --check admin/app.js`, `git diff --check`, admin copy-through comparison, unchanged stage-label inspection, and the implementation scope audit passed. Acceptance criteria 7–9 are satisfied by this manual review; no client test harness or network publish was introduced. |
+- **Live:** MediVasc site is live at `medivasc.in`. No spec run is in flight.
+- **Branch:** `main`. Advisor design/content changes use the direct-change lane
+  (`commit → pull --rebase origin main → node src/build.js → push`, never force —
+  see the STOP block in `AGENTS.md`). Codex runs use `codex/<spec>-<slug>` and
+  never touch `main`.
+- **Next action:** none pending. Owner content flows through the admin CMS;
+  advisor changes go direct, or through a numbered spec in `docs/specs/` for
+  large or mechanical runs.
+- **Blockers:** none.
 
-## Spec 002 — MediVasc pivot (advisor-implemented, 2026-07-12)
+## Completed runs (evidence in git history + advisor reviews)
 
-- **Current phase**: Phase 5 — shipped
-- **Branch**: `feat/002-medivasc-pivot` (merged to `main`)
-- **Run type**: implemented directly by the advisor (no executor session);
-  spec 002 + Addendum A are the design record.
-
-| Date | Phase | Checkpoint | Evidence / notes |
-|---|---|---|---|
-| 2026-07-12 | 1 | Brand + evidence assets | `tools/prepare-brand.js` (mask-derived marks/favicons from the owner logo, no redraw) and `tools/prepare-evidence.js` (documented crops, EXIF strip, 4:5) committed with outputs; OG image now rendered from the lockup by `tools/gen-brand.js` (run 3). |
-| 2026-07-12 | 2 | Data layer | company/site-config/testimonials/protocols/themes rewritten for MediVasc; 4 real recovery stories (story-001 featured, leg-color lightening noted per owner); 16 protocols across disease/elderly; run-1 placeholder quotes deleted; run-1 protocols+testimonials archived in `data/archive/`. All JSON parses. |
-| 2026-07-12 | 3 | Public site v2 | Trust-first narrative per Addendum A (hero → recoveries → approach with verbatim motto → conditions list → act-today band → fraternity → about → contact). `npm run build` exit 0; body 18px computed at 4 viewport/mode combos; zero console errors; zero "sequential", "Naviga Life", product, catalogue, or sports strings in dist; rendered screenshots reviewed desktop+mobile, light+dark. |
-| 2026-07-12 | 4 | Admin v2 | Passcode vault (PBKDF2-SHA-256 600k → AES-GCM; plain PAT never persisted; passcode-only unlock after reload; forget-device wipe), login theme toggle fixed (site tokens scoped to app view), Recoveries creation flow with Before/During/After 4:5 slots + featured uniqueness, protocols limited to two tracks, products preserved with archive notice, appearance rebuilt. 22/22 browser flow checks passed against a mocked GitHub API; no console errors. |
-| 2026-07-12 | 5 | Ship | README/AGENTS/PROGRESS updated; merged to `main`; workflow deploy verified live (see advisor review 002). |
-
-# PROGRESS — Spec 001 (initial site)
-
-> Executor: update at EVERY checkpoint, and before ending any session.
-> This file is the only handoff between sessions. Be precise.
-
-- **Current phase**: Phase 5 — final §11 punch list complete
-- **Branch**: `codex/001-initial-site`
-- **Next action**: advisor re-review
-- **Blockers**: None. No PAT was placed in files, commands, logs, commits,
-  browser storage, or this document.
-
-## Checkpoint log
-
-| Date | Phase | Checkpoint | Evidence / notes |
-|---|---|---|---|
-| 2026-07-10 | Phase 1 | Checkpoint 1 complete | `python3 -c "import json;d=json.load(open('scrape/extracted.json'));print(len(d['products']),'products')"` → `20 products`. Manifest: 304 URLs (`200`: 300, `403`: 2 image-host malformed size probes from the first variant implementation, `0`: 2 locally rejected whitespace links); 26/26 requested catalogue HTML pages returned 200, 237 product image selections recorded, `blocked_at: None`. All 20 products have specifications and local images; categories, company facts, address, contact, masked GST, and registration date extracted. No reviews/testimonials or certifications were present in the server-rendered cache. `git status --ignored -- scrape/` → `scrape/` listed under “Ignored files”; nothing staged. |
-| 2026-07-10 | Phase 2 | Brand foundation complete | Authored the frozen product-edit and portrait prompts in `IMAGE-STYLE.md`, plus copy rules and worked examples in `COPY-VOICE.md`. Vendored Anthropic's official `frontend-design` skill byte-for-byte from its public repository; SHA-256 `1608ea77fbb6fc30d13a97d12cfa8ebf31358d40f0dd97beed24829d6b3f45dd`. |
-| 2026-07-10 | Phase 2 | Public data complete | Added 20 products with unique immutable ids, normalized specifications, rewritten descriptions, conditions, and reserved image paths; 9 placeholder testimonials (5 photo, 4 quote); company and SEO copy; and 4 complete light/dark themes. All five JSON files parse. Contrast audit passed every tested body, CTA, link, and focus pair; lowest required ratio 5.46:1. Fingerprint scan across `data/` and `docs/brand/` returned 0. |
-| 2026-07-10 | Phase 2 | Checkpoint 2 complete | Generated and approved 20 product edits from archived references plus 5 text-to-image testimonial portraits using the locked prompts in `IMAGE-STYLE.md`. Re-encoded product assets to 1800×1200 WebP and portraits to 1200×1200 WebP with `sharp`; EXIF/XMP/IPTC/ICC scan returned 0 findings. `assets/products/manifest.json` contains 25 records with complete prompts, model, date, output, and archived-source paths for all product edits. Added Fraunces wordmark SVG, SVG favicon, 32/180/192/512 PNG favicon set, and a 1200×630 OG image; all raster brand files are metadata-clean. Exact JSON parse command passed; exact fingerprint scan across `data/ assets/ src/ admin/ docs/brand/` returned `0`; 20/20 product image directories are non-empty. Visual contact-sheet review found consistent warm studio treatment, no visible source branding, and varied natural portraits. Installed only the permitted dev dependencies: `puppeteer@24.43.1` and `sharp@0.34.5`; npm reported 0 vulnerabilities at installation. |
-| 2026-07-10 | Phase 3 | Public build complete | Added the data-driven `src/build.js` pipeline, public template, token-only CSS, progressive JS, and dependency-free local server. `npm run build` exited 0 with `Built 20 products with theme meridian`, `Client JavaScript: 4494 bytes (4.39 KB)`, and the expected `dist/` site, hashed CSS/JS and processed-image names, sitemap, robots file, 404 page, brand assets, and conditional admin copy-through. The approved `company.json` has blank email and hours fields, so the template safely omits those two contact rows until verified values are supplied instead of inventing them. Catalogue links intentionally target Phase 5 PDF outputs. |
-| 2026-07-10 | Phase 3 | Render and interaction QA complete | In-app Browser QA passed page identity, meaningful DOM, framework-overlay check, zero console warnings/errors, 20 cards and 20 detail panels, light/dark toggle, mobile menu, product click routing, direct `#product/venogain-scd-500` load, dialog focus, and zero broken images. Screenshots reviewed at desktop and 360×800; the 360px DOM reported no horizontal overflow. Native Puppeteer keyboard fallback passed link Enter → dialog open/focus close → Escape → dialog closed/hash cleared/focus returned. `clinic`, `sage`, and `graphite` builds were each rendered and spot-checked against exact light/dark `--bg` and `--primary` tokens; final output was restored to `meridian`. The only visual repair found in QA was the static dark wordmark losing contrast; it now consumes `--ink`. |
-| 2026-07-10 | Phase 3 | Checkpoint 3 complete | Exact verify evidence: `npm run build` → exit 0; product-name audit → `20/20 visible product names found`, `missing: none`; shipped JS audit → `4494 dist/assets/site.d62774152b.js`; exact `grep -c "indiamart" dist/ -r` printed `:0` for every output file (grep exit 1 because there were no matches); case-insensitive `rg -ni '(indiamart|imimg)' src dist` → no output; 55 shipped raster images checked with 0 EXIF/XMP/IPTC/ICC findings; `node --check` passed all four source JS files. Ban-list scan and non-token hex scan of authored CSS returned no matches. Accessibility DOM audit found no duplicate ids, missing image alt text, or unnamed buttons. |
-| 2026-07-10 | Phase 4 | Clean stop before implementation | Read only spec §Phase 4 after Checkpoint 3. The checkpoint requires validating token auth, full CRUD, and an atomic Git Data API publish against the real repository branch. `git remote -v` confirmed `navigalife/navigalife.github.io`; `gh auth status` confirmed no GitHub host is authenticated. No admin files were started because the real publish acceptance path could not be checkpointed in this session. |
-| 2026-07-11 | Phase 3 rework | A1 punch list complete | Self-hosted the official Latin WOFF2 files for Fraunces 600 and Instrument Sans 400–600 under `assets/fonts/`; SHA-256: Fraunces `2c3287428a81fc670a67e56fd0d87f76ddc0b3ef4f25104c0adc600cf68fe24e`, Instrument Sans `6219bc4bfdfc5d9b2201dcdf046218b122a758f932e25ed5f168f929b7ca2311`. Removed Google Fonts connections, added both preload links, added `@font-face` with `font-display: swap`, and copied fonts into `dist/`. Updated hero, product-card, and detail product frames to `object-fit: contain` with 8% inner padding on `--surface-2`, including dark-theme wash behavior. `npm run build` exited 0 with `Built 20 products with theme meridian` and `Client JavaScript: 4494 bytes (4.39 KB)`; `cmp` confirmed both shipped font files exactly match their sources; the output scan found only local preloads/font URLs and no Google Fonts hosts. |
-| 2026-07-11 | Phase 3 rework | A2 data and evidence protocol complete | Added 9 visible draft protocol seeds: 7 disease-specific entries plus elderly wellbeing and sports recovery. Copy stays at the owner-approved service level and contains no invented pressures, frequencies, session counts, or regimens; all referenced device ids resolve. Migrated all 9 placeholders to testimonial schema v2 quote records with no image fields. Deleted all 5 generated portrait files and marked exactly their 5 manifest records `retired`; all 20 product records remain `approved`. Marked the portrait prompt retired and added the deterministic-only 4:5 before/after evidence recipe and no-fabricated-imagery empty-state rule to `IMAGE-STYLE.md`. Updated protocol-first hero and SEO copy in `site-config.json`; `company.json` was not edited. Validation output: `7 JSON files parse`; `9 protocols: 7 disease, 1 wellbeing, 1 sports`; `9 quote testimonials; 0 portrait references`; `5 portrait manifest records retired; product records remain approved`; fingerprint scan `0`; testimonial portrait assets `0`; `npm run build` exited 0. |
-| 2026-07-11 | Phase 3 rework | A2 public rendering complete | Rewired the build for `protocols.json` and testimonial schema v2 validation/image discovery, including the rule that before/after entries must be real non-placeholder pairs. Replaced the collage with one normalized device frame, a protocol-first headline, all 3 audience pathways, and the compact Assess → Custom protocol → Guided home use → Review & adjust rail. Public DOM order is `top > approach > stories > products > about > contact`; the old therapy section is merged into the 4-step engagement model and 9 cards across 3 audience tracks. Added the deterministic before/after component (matched 4:5 frames, blurred-self letterbox layer, labels, quote/credit line) and shipped its designed empty state because there are 0 real pairs; all 9 quote placeholders render without portraits. Build audit: `hero: 3 pathways, 1 device image, no collage`; `public content: 9 protocol cards, 1 evidence empty state, 20 product cards`; fingerprint scan `0`; all four source JS files pass `node --check`. In-app Browser QA at 1280×720 and 360×800 found zero console warnings/errors, zero horizontal overflow, local Fraunces/Instrument Sans loaded, no failed images, working light/dark toggle, working mobile menu, and a working direct product deep link with focus on Close. The first desktop pass found the pathway rail 4px below the 720px fold; the hero top rhythm was tightened and re-measured with all 3 pathways fully visible (`top: 610`, `bottom: 710`). Product overlay computed `object-fit: contain` and 8% frame padding. Visual review of the final desktop and mobile screenshots found no remaining layout mismatch against A2's required elements. |
-| 2026-07-11 | Phase 3 rework | Checkpoint 3 re-verified after A1/A2 | Unchanged exact verify commands re-run on the final default build. `npm run build` → exit 0 with `Built 20 products with theme meridian` and `Client JavaScript: 4494 bytes (4.39 KB)`; product-name audit → `20/20 visible product names found`, `missing: none`; shipped JS audit → `4494 dist/assets/site.d62774152b.js` (4.39 KB, below 30 KB); exact `grep -c "indiamart" dist/ -r` printed `:0` for every output file; case-insensitive `rg -ni '(indiamart|imimg)' src dist` → `0`. Additional re-verification: 45 shipped raster images checked with `0 EXIF/XMP/IPTC/ICC findings`; `node --check` passed all 4 source JS files; authored CSS ban-list scan `0`; authored CSS non-token hex scan `0`; both shipped WOFF2 files byte-match their source assets. Headless Chrome rendered every theme in both modes with exact `--bg`/`--primary` tokens, 20 products, 9 protocols, and clean console: meridian light `#F6F4EF/#0E6B63`, dark `#10181A/#4FB3A6`; clinic light `#F3F5F6/#315D75`, dark `#10171C/#7FB2CC`; sage light `#F4F1E8/#476545`, dark `#141A15/#91B28D`; graphite light `#F2F1ED/#3F464A`, dark `#111315/#BCC4C8`. Final output restored to meridian. Keyboard fallback output: `direct hash opened/focused; Escape closed/cleared; click reopened; Escape returned focus`. No Phase 4/admin work was started. |
-| 2026-07-11 | Phase 4 | Advisor hero punch item complete | Moved the 3:2 ratio and frame treatment from the attributed `<img>` to a dedicated `.hero-product__frame`, so intrinsic image dimensions can no longer expand the visual column. `npm run build` exited 0 with `Built 20 products with theme meridian` and `Client JavaScript: 4494 bytes (4.39 KB)`. In-app Browser verification at the required 1440×900 measured the frame at `524.05×349.36` (`1.5` ratio), visual content at `475.20px` high versus the layout's `567.38px`, caption gap `0`, steps gap `28`, horizontal overflow `-15`, and zero console warnings/errors. Original-resolution screenshot review confirmed the frame hugs the device image and the caption and steps rail remain tight beneath. |
-| 2026-07-11 | Phase 4 | Admin implementation static checkpoint | Added the vanilla `/admin/` SPA with token validation and scoped storage warning, repo/branch source loading, file SHAs and base-SHA concurrency guard, in-memory draft state, persistent unsaved bar, before-unload protection, logout, and centralized GitHub error handling. Implemented Products CRUD/reorder/visibility/all-schema editing, spec rows, multi-image WebP/downscale/preview/order/delete, and the canonical locked image prompt; A2.7 Testimonials v2 type switching with dual adjustable client-side 4:5 crops; Protocols CRUD/reorder/visibility/audience/engagement/device multi-select; Company fields; four theme previews plus hero/SEO editing; one-commit Git Data API publishing with ref-last atomicity; reload-and-reapply on branch movement; Actions polling; and deploy workflow dispatch. Updated the dependency-free local server to resolve directory indexes for `/admin/`. Static verification: `node --check` passed `admin/app.js`, `admin/gh-api.js`, `admin/image-tools.js`, and `src/serve.js`; `npm run build` exited 0 with `Built 20 products with theme meridian` and `Client JavaScript: 4494 bytes (4.39 KB)`; all 5 admin source files byte-matched their `dist/admin/` copies after the build; `git diff --check` passed; admin fingerprint/token scan returned `0`. No data JSON, including `company.json`, was changed. Rendered and real-repo QA remain unclaimed because the local server restart was denied by the exhausted desktop approval quota and Browser policy blocks direct local-file navigation. |
-| 2026-07-11 | Phase 4 | Advisor admin punch list complete | Added an explicit publish guard while any product, protocol, or testimonial editor is open; both publish entry points now show `Save or cancel the open editor first`. Centralized asset removal so session-staged uploads are unstaged and their object URLs revoked instead of emitting invalid `sha:null` tombstones, while base-tree files still stage deletes; applied it at all four reviewed call sites. Product upload now rejects duplicate slugs before processing and locks a new-product slug while staged images exist. Split Actions polling into a 30-second run-discovery phase with an accurate expected `No workflow run found` result, followed only when a run exists by up to three minutes of run-status polling. Removed unused file-SHA state and a dead blob ternary, synchronized both publish button labels, and corrected the header sun ray. Static evidence: `node --check` passed all 3 admin JavaScript modules; `npm run build` exited 0 with `Built 20 products with theme meridian` and `Client JavaScript: 4494 bytes (4.39 KB)`; all 5 admin files byte-matched `dist/admin/`; `git diff --check` passed; admin fingerprint/token scan returned `0`. |
-| 2026-07-11 | Phase 4 | Rendered and regression QA partial | Created the previously absent remote `codex/001-initial-site` branch by pushing the committed Phase 4 code; the first admin connection's `Not Found` was confirmed to be the missing ref rather than token scope. In-app Browser rendered the authenticated 20-product admin at 1440×900 and 390×844 in light and dark modes with exact Meridian `--bg` values, `Instrument Sans`, zero relevant console warnings/errors, and no horizontal page overflow. Runtime upload regression via installed headless Chrome passed: dismissed native testimonial-delete confirmation with count unchanged; duplicate product slug rejected before image processing; unique upload staged `assets/products/upload-regression-device/01.webp`; publish while the editor was open returned `Save or cancel the open editor first`; deleting the staged upload cleared the change and disabled publish. Rendered QA then exposed that valid editor submit buttons focused but did not dispatch the delegated submit in either browser engine. Added explicit visible save actions for product, protocol, testimonial, company, and appearance forms while retaining the native submit handler. `node --check`, `npm run build`, admin copy-through, and `git diff --check` passed after the repair; clicking the repaired product save returned to the list with the unsaved bar, and product reorder changed the first ids from `venogain-scd-500, kl-3000-pro-neo` to `kl-3000-pro-neo, venogain-scd-500` in memory. Browser Use then hard-blocked localhost during the dirty logout confirmation, so testimonial creation, theme switch, actual content publish, expected no-workflow result, and `git log --stat` remain unclaimed. No data JSON or `company.json` changed locally, and no admin content commit was created remotely. |
-| 2026-07-11 | Phase 4 | Explicit-save validity addendum complete | Added `if (!form.reportValidity()) return;` at the start of both `saveCompany` and `saveAppearance`, so their explicit `type="button"` controls preserve native required-field validation. `node --check admin/app.js`, `npm run build`, exact admin copy-through, and `git diff --check` passed. Final E2E must include one empty-required-field rejection before the real branch publish. |
-| 2026-07-11 | Phase 4 | Checkpoint 4 complete | Completed the full real-repository admin E2E on `codex/001-initial-site`. Rendered QA passed at 1440×900 and 390×844 in both light and dark modes with exact Meridian backgrounds, no horizontal overflow, and zero console warnings/errors; the final published Sage state was also visually reviewed at 1440×900. Regression coverage passed the required session-upload path: duplicate slug rejected before processing, a unique image staged at `assets/products/upload-regression-device/01.webp`, publish refused while its editor was open with `Save or cancel the open editor first`, and deleting the session-staged upload removed the change instead of creating a tombstone; the later real publish succeeded. Native testimonial-delete confirmation was dismissed with its count unchanged, and the dirty-state logout confirmation was triggered and handled before reconnecting. The Company display name was cleared and remained `valueMissing: true` after the explicit save action, with `company.json` still clean, proving required-field rejection. The final in-memory draft edited the VenoGain tagline, reordered KL 3000 ahead of VenoGain, added quote testimonial `t-010`, and selected Sage. The header button visibly changed to `Publishing…`; publish completed with the expected `No workflow run found` state after the 30-second discovery window and no console output. `git log --oneline 651f2c8..origin/codex/001-initial-site` contained exactly one commit, `e7fdfa0 Update site content from admin`; `git log -1 --stat` reported only `data/products.json`, `data/testimonials.json`, and `data/site-config.json` (3 files, 819 insertions, 179 deletions), with no `company.json` change. The local branch was fast-forwarded to that exact commit. Final verification: both admin JS modules passed `node --check`; all 6 data JSON files parsed; published-content assertions passed for product edit/order, testimonial, and Sage; `npm run build` exited 0 with `Built 20 products with theme sage` and 4494-byte client JS; all 5 admin files byte-matched `dist/admin/`; `git diff --check` passed; `scrape/` remained ignored; shipped fingerprint and token scan returned 0. The PAT was entered only in the runtime token field and was never persisted. |
-
-| 2026-07-12 | Phase 5 | Checkpoint 5 complete | Added the main-only/manual Pages deploy pipeline, deterministic A4 catalogue template and Puppeteer renderer, complete SEO/social/MedicalDevice structured data, inline critical CSS, performance image attributes, and the §10 README. Final QA passed 20 PDF generation/visual/disclaimer checks; Lighthouse mobile 92/100/100/100; six responsive widths with no overflow or sub-44px public targets; 390/1440 dark public, overlay, and admin sweeps; 8 theme-mode checks; reduced motion; native keyboard focus trap/Escape/focus return; 146 internal-link and 20 catalogue checks; 0 console issues, broken visible images, shipped fingerprints, or raster metadata findings. The checkpoint commits are pushed to `origin/codex/001-initial-site` for advisor review. |
-| 2026-07-12 | Phase 5 | Final §11 punch list complete | Rebuild now dispatches `deploy.yml` with `ref: main` unconditionally, including from an admin session connected to `codex/001-initial-site`; the displayed status also identifies `main`. Theme preview markup and selectors now agree, with explicit mock card/image/copy blocks and paired light/dark token sets. A rendered Puppeteer pass against `dist/admin/`, using local mocked GitHub Contents/Actions responses and no real PAT or network call, verified all six preview colors for Meridian, Clinic, Sage, and Graphite in both modes, then intercepted Rebuild and observed `{ ref: "main" }`; console issues were `[]`. Visual inspection of `/private/tmp/naviga-theme-picker.png` confirmed all eight rendered previews. Final static evidence: `node --check` passed all 3 admin modules; `npm run build` exited 0 with `Built 20 products with theme meridian`; all 5 admin files byte-matched `dist/admin/`; and `git diff --check` passed. |
-
-## QA evidence (Phase 5)
-
-- **Implementation/static build**: Commit `9c072b5` adds the main-only plus
-  manual deploy workflow, deterministic A4 catalogue template/Puppeteer
-  renderer, Product/MedicalDevice and Organization structured data,
-  canonical/OG/Twitter metadata, inline critical CSS, and the §10 README.
-  Repeated builds exited 0 with `Built 20 products with theme meridian`.
-  Structured-data/image audit passed with 20 Product items and 41/41 public
-  image elements carrying alt, width, height, and loading attributes. Client
-  JavaScript was 4494 bytes before the focus repair and is 5164 bytes after it.
-  An isolated `git archive` of the committed Checkpoint 5 tree passed `npm ci`
-  (`puppeteer 24.43.1`, `sharp 0.34.5`), `npm run build`, and `npm run pdfs`,
-  producing 20 products and 20 linked catalogue files with theme Meridian;
-  its product/source/admin/dist fingerprint scan returned 0.
-- **PDFs**: The final `npm run pdfs` generated 20/20 catalogues after all source
-  repairs. `pdfinfo` reported one A4 page for every file.
-  Normalized text extraction found the required disclaimer in all 20. A
-  rendered 4x5 contact sheet plus original-resolution VenoGain review found no
-  clipping, overlap, broken glyphs, missing images, or inconsistent frames;
-  headers, specifications, contact footers, and disclaimer alignment passed.
-- **Responsive/tap targets**: In-app Browser sweep at 360, 390, 768, 1024,
-  1440, and 2560 px reported horizontal overflow `0`, broken loaded images `0`,
-  and no public `a`/`button`/`summary` box below 44x44 after the first target
-  repair. Mobile and desktop screenshots were visually clean. Admin auth dark
-  render passed at 390x844 and 1440x900 with overflow `0`, no sub-44px controls,
-  a 44px skip link, and a 44px checkbox label at both widths. Final public and
-  admin console capture found no warnings, errors, or failed resources after
-  adding the existing SVG favicon to the admin document.
-- **Dark/theme matrix**: Meridian public dark sweep at 390 and 1440 covered
-  hero, approach, stories, product range, about/body, contact, footer, and
-  overlay. Exact dark `--bg` was `#10181A`, images had `filter: none`, modal
-  focus landed on Close, and overflow stayed `0`. Admin auth used the same dark
-  background and surface tokens at both sizes; Checkpoint 4 already records the
-  authenticated editor sweep. All 4 themes x light/dark passed exact token and
-  hero-frame/product-card/testimonial spot-checks with no console issues:
-  Meridian `#F6F4EF/#0E6B63` and `#10181A/#4FB3A6`; Clinic
-  `#F3F5F6/#315D75` and `#10171C/#7FB2CC`; Sage `#F4F1E8/#476545` and
-  `#141A15/#91B28D`; Graphite `#F2F1ED/#3F464A` and
-  `#111315/#BCC4C8`. Final build was restored to Meridian.
-- **Reduced motion**: Browser CDP emulation matched
-  `prefers-reduced-motion: reduce`; scroll behavior was `auto`, reveal opacity
-  was `1`, reveal transform was `none`, hidden reveal count was `0`, and card
-  transition/dialog animation durations were `1e-05s`.
-- **Lighthouse**: Lighthouse 12.8.2 mobile on the exact final output scored
-  Performance 92, Accessibility 100, SEO 100, Best Practices 100; FCP 2.1 s,
-  LCP 2.9 s, CLS 0, TBT 100 ms.
-- **Keyboard**: The final native pass focused the skip link first with a solid
-  3px outline, followed `#main`, reached the VenoGain product-card opener on
-  Tab 36, opened with Enter, focused Close, wrapped Shift+Tab to Call, kept 12
-  forward Tabs inside the dialog, and closed with Escape while clearing the
-  hash and returning focus to the same opener.
-- **Links/images/static acceptance**: The final crawl checked 5 HTML/CSS
-  documents, 146 internal references, 48 syntactically valid external
-  references, and all 20 non-empty PDFs with no missing target. Incremental
-  scroll loaded all 21 non-hidden images with 0 failures; all 20 intentionally
-  hidden overlay-image references resolved statically. Final structured/static
-  audit: 20 scraped and 20 visible products, `blocked_at: null`, 9 protocols,
-  9 A2-compliant quote placeholders, 4 themes, 41 attributed HTML image nodes,
-  5164 bytes shipped JS, 20 PDFs, 45 raster files with 0 EXIF/XMP/IPTC/ICC,
-  and 0 shipped fingerprint findings. All 8 JavaScript modules passed
-  `node --check`; `git diff --check`, design ban-list scan, and TODO scan passed.
-
-## §11 acceptance checklist
-
-1. [x] Cached scrape covers 20 products; manifest `blocked_at` is null and
-   `scrape/` remains ignored/untracked.
-2. [x] Product data, assets, authored source, admin, and shipped `dist/` scan
-   has 0 source-marketplace fingerprints; all 45 shipped rasters are metadata
-   clean. Control/spec documents necessarily retain the project brief and are
-   not shipped site content.
-3. [x] `npm run build` exits 0 with all 20 visible products, responsive images,
-   visible specifications, conditions, and working catalogue links.
-4. [x] The main-only/manual workflow runs the deterministic HTML/Puppeteer
-   generator; all 20 eligible PDFs generate, render consistently, and contain
-   the required disclaimer. The workflow is correctly not run on this branch.
-5. [x] Token-only design system, self-hosted Fraunces/Instrument Sans, warm
-   light default, dark public/admin surfaces, ban-list audit, and all 8
-   theme-mode renders pass.
-6. [x] Checkpoint 4 records real-repository admin auth, CRUD/reorder/visibility,
-   upload, theme, atomic publish, rebuild, status, unsaved guard, and edge-case
-   evidence; Phase 5 regression kept admin output byte-matched and dark-clean.
-7. [x] Admin locked prompt, approved generation manifest, automatic PDF path,
-   and normalized 3:2 image frame are in place.
-8. [x] Per A2's superseding evidence rule, 9 launch placeholders are quote type
-   and no fabricated before/after images ship; admin supports both quote and
-   real before/after types for future verified evidence.
-9. [x] Final Lighthouse mobile is 92/100/100/100; Product/MedicalDevice plus
-   Organization JSON-LD, sitemap, robots, and 5164-byte JS pass.
-10. [x] Six-width responsive/tap-target sweep, 390/1440 dark sweep, reduced
-    motion, native keyboard/focus trap, and all 8 theme-mode checks are logged.
-11. [x] All work is committed and pushed on `codex/001-initial-site`; README
-    meets §10 and this checkpoint log is complete.
+- **001** — initial site (signed off 2026-07-12)
+- **002** — MediVasc pivot (advisor-implemented, signed off 2026-07-12)
+- **003** — design overhaul (advisor-implemented, review-only; no `docs/specs/003-*.md`)
+- **004** — admin validation sync (first Codex-executed spec, merged & live 2026-07-13)
