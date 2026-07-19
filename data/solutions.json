@@ -22,7 +22,7 @@
     ],
     "images": [
       {
-        "src": "assets/solutions/mastectomy-01.webp"
+        "src": "assets/solutions/mastectomy-14.webp"
       },
       {
         "src": "assets/solutions/mastectomy-02.webp"
@@ -31,13 +31,16 @@
         "src": "assets/solutions/mastectomy-03.webp"
       },
       {
-        "src": "assets/solutions/mastectomy-04.webp"
-      },
-      {
         "src": "assets/solutions/mastectomy-05.webp"
       },
       {
         "src": "assets/solutions/mastectomy-06.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-04.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-01.webp"
       },
       {
         "src": "assets/solutions/mastectomy-07.webp"
@@ -59,9 +62,6 @@
       },
       {
         "src": "assets/solutions/mastectomy-13.webp"
-      },
-      {
-        "src": "assets/solutions/mastectomy-14.webp"
       },
       {
         "src": "assets/solutions/mastectomy-15.webp"
