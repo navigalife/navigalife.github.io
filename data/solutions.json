@@ -9,66 +9,155 @@
       "message": "I would like to discuss post-mastectomy arm swelling (lymphedema) with MediVasc."
     },
     "body": [
-      { "text": "Treating breast cancer often means clearing lymph nodes and vessels from the axilla. With those channels gone, lymph fluid begins to collect in the arm. Left unmanaged, the swelling turns chronic. Everyday tasks grow harder, and even turning over in sleep is disturbed." },
-      { "text": "A common mistake makes it worse: reaching for pressure stockings. Lymph is meant to keep moving in a dynamic flow, not to be held static by a compression garment.", "variant": "warn" },
-      { "text": "We design the protocol around your case and stay with you at regular intervals, guiding the therapy so the swelling stops progressing and daily life returns to normal." }
+      {
+        "text": "Treating breast cancer often means clearing lymph nodes and vessels from the axilla. With those channels gone, lymph fluid begins to collect in the arm. Left unmanaged, the swelling turns chronic. Everyday tasks grow harder, and even turning over in sleep is disturbed."
+      },
+      {
+        "text": "A common mistake makes it worse: reaching for pressure stockings. Lymph is meant to keep moving in a dynamic flow, not to be held static by a compression garment.",
+        "variant": "warn"
+      },
+      {
+        "text": "We design the protocol around your case and stay with you at regular intervals, guiding the therapy so the swelling stops progressing and daily life returns to normal."
+      }
     ],
     "images": [
-      { "src": "assets/solutions/mastectomy-01.webp" },
-      { "src": "assets/solutions/mastectomy-02.webp" },
-      { "src": "assets/solutions/mastectomy-03.webp" },
-      { "src": "assets/solutions/mastectomy-04.webp" },
-      { "src": "assets/solutions/mastectomy-05.webp" },
-      { "src": "assets/solutions/mastectomy-06.webp" },
-      { "src": "assets/solutions/mastectomy-07.webp" },
-      { "src": "assets/solutions/mastectomy-08.webp" },
-      { "src": "assets/solutions/mastectomy-09.webp" },
-      { "src": "assets/solutions/mastectomy-10.webp" },
-      { "src": "assets/solutions/mastectomy-11.webp" },
-      { "src": "assets/solutions/mastectomy-12.webp" },
-      { "src": "assets/solutions/mastectomy-13.webp" },
-      { "src": "assets/solutions/mastectomy-14.webp" },
-      { "src": "assets/solutions/mastectomy-15.webp" },
-      { "src": "assets/solutions/mastectomy-16.webp" },
-      { "src": "assets/solutions/mastectomy-17.webp" },
-      { "src": "assets/solutions/mastectomy-18.webp" },
-      { "src": "assets/solutions/mastectomy-19.webp" }
+      {
+        "src": "assets/solutions/mastectomy-01.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-02.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-03.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-04.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-05.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-06.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-07.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-08.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-09.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-10.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-11.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-12.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-13.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-14.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-15.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-16.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-17.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-18.webp"
+      },
+      {
+        "src": "assets/solutions/mastectomy-19.webp"
+      }
     ]
   },
   {
     "id": "elephantiasis",
     "title": "Elephantiasis & filariasis",
     "condition": "Elephantiasis & filariasis",
-    "visible": true,
+    "visible": false,
     "cta": {
       "label": "Ask about elephantiasis",
       "message": "I would like to discuss elephantiasis and filariasis with MediVasc."
     },
     "body": [
-      { "text": "Elephantiasis is the severe, hardening enlargement of a limb caused by long-standing lymphatic obstruction, most often after lymphatic filariasis, a mosquito-borne infection common across tropical regions and, in India, along the coast. As fluid stagnates, the skin thickens, darkens, and cracks, and infections take hold more and more easily." },
-      { "text": "We start with a deeper case study (the full history and its causes) and measure the limb along its length, because no two are alike. From there the protocol is built to stop the progression, prevent hyperkeratosis, clear the darkened skin, and rebuild overall vascularity." }
+      {
+        "text": "Elephantiasis is the severe, hardening enlargement of a limb caused by long-standing lymphatic obstruction, most often after lymphatic filariasis, a mosquito-borne infection common across tropical regions and, in India, along the coast. As fluid stagnates, the skin thickens, darkens, and cracks, and infections take hold more and more easily."
+      },
+      {
+        "text": "We start with a deeper case study (the full history and its causes) and measure the limb along its length, because no two are alike. From there the protocol is built to stop the progression, prevent hyperkeratosis, clear the darkened skin, and rebuild overall vascularity."
+      }
     ],
     "images": [
-      { "src": "assets/solutions/elephantiasis-01.webp" },
-      { "src": "assets/solutions/elephantiasis-02.webp" },
-      { "src": "assets/solutions/elephantiasis-03.webp" },
-      { "src": "assets/solutions/elephantiasis-04.webp" },
-      { "src": "assets/solutions/elephantiasis-05.webp" },
-      { "src": "assets/solutions/elephantiasis-06.webp" },
-      { "src": "assets/solutions/elephantiasis-07.webp" },
-      { "src": "assets/solutions/elephantiasis-08.webp" },
-      { "src": "assets/solutions/elephantiasis-09.webp" },
-      { "src": "assets/solutions/elephantiasis-10.webp" },
-      { "src": "assets/solutions/elephantiasis-11.webp" },
-      { "src": "assets/solutions/elephantiasis-12.webp" },
-      { "src": "assets/solutions/elephantiasis-13.webp" },
-      { "src": "assets/solutions/elephantiasis-14.webp" },
-      { "src": "assets/solutions/elephantiasis-15.webp" },
-      { "src": "assets/solutions/elephantiasis-16.webp" },
-      { "src": "assets/solutions/elephantiasis-17.webp" },
-      { "src": "assets/solutions/elephantiasis-18.webp" },
-      { "src": "assets/solutions/elephantiasis-19.webp" },
-      { "src": "assets/solutions/elephantiasis-20.webp" }
+      {
+        "src": "assets/solutions/elephantiasis-01.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-02.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-03.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-04.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-05.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-06.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-07.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-08.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-09.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-10.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-11.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-12.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-13.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-14.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-15.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-16.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-17.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-18.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-19.webp"
+      },
+      {
+        "src": "assets/solutions/elephantiasis-20.webp"
+      }
     ]
   }
 ]
