@@ -93,6 +93,14 @@ sequence is encoded — use it instead of hand-running git:
   host immediately, log the timestamp in `scrape/manifest.json`, and switch to
   cache-only work. Never scrape from CI. Never re-fetch a URL that exists in
   the cache.
+- **GitHub account scoping**: everything this repo does on GitHub happens as
+  **navigalife**. Git is already wired — local `user.*` config plus the
+  `navigalife@` username embedded in the remote URL select the right keychain
+  credential automatically; commits and pushes need nothing special. The
+  machine's global `gh` CLI account is `puranjai-dev` and other projects use it
+  in parallel, so **never run `gh auth switch`** (it flips a machine-global
+  setting and races concurrent sessions). Scope any `gh` call to this repo
+  per-command instead: `GH_TOKEN=$(gh auth token -u navigalife) gh <cmd>`.
 - **Progress protocol**: at every checkpoint, update `PROGRESS.md` (phase,
   checkpoint reached, exact next step, open blockers) and commit. Commit
   granularly with plain, descriptive messages. If you sense the session/context
