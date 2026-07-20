@@ -329,7 +329,6 @@ const renderPage = ({
   jsPath,
   ogImage,
   siteUrl,
-  criticalCss,
   themeBg,
 }) => {
   const featured = testimonials.find((testimonial) => testimonial.featured);
@@ -519,7 +518,6 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
   <link rel="preload" href="assets/fonts/fraunces-latin-600.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/fraunces-latin-600-italic.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/instrument-sans-latin-400-600.woff2" as="font" type="font/woff2" crossorigin>
-  <style>${criticalCss}</style>
   <link rel="stylesheet" href="${cssPath}">
   <script type="application/ld+json">${renderJsonLd({ company, config, siteUrl })}</script>
 </head>
