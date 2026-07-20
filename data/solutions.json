@@ -82,8 +82,8 @@
   },
   {
     "id": "elephantiasis",
-    "title": "Elephantiasis & filariasis",
-    "condition": "Elephantiasis & filariasis",
+    "title": "Elephantiasis, Filariasis & Gangrene",
+    "condition": "Elephantiasis, Filariasis & Gangrene",
     "visible": true,
     "cta": {
       "label": "Ask about elephantiasis",

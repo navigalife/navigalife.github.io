@@ -181,13 +181,15 @@ const renderSolutionCard = (card, imageMap, index) => {
   const body = card.body
     .map((paragraph) => `<p class="solution-card__p${paragraph.variant === 'warn' ? ' solution-card__p--warn' : ''}">${escapeHtml(paragraph.text)}</p>`)
     .join('');
+  // Order is heading → photographs → copy → CTA: the case photo is the hook, so it
+  // sits directly under the title and above the explanatory copy.
   return `
     <article class="solution-card" data-reveal style="--reveal-order:${index}">
+      <h3 class="solution-card__title">${escapeHtml(card.title)}</h3>
+      ${solutionCarousel(card.images, imageMap, card.condition)}
       <div class="solution-card__body">
-        <h3>${escapeHtml(card.title)}</h3>
         ${body}
       </div>
-      ${solutionCarousel(card.images, imageMap, card.condition)}
       <a class="button solution-card__cta" href="${card.cta.href}"${card.cta.external ? ' target="_blank" rel="noreferrer"' : ''}>${card.cta.icon} ${escapeHtml(card.cta.label)}</a>
     </article>`;
 };
@@ -400,7 +402,7 @@ const renderPage = ({
         <div class="section-heading" data-reveal>
           <div>
             <p class="kicker">Real cases</p>
-            <h2>Complications <em>we treat</em></h2>
+            <h2>Complications <em>we manage</em></h2>
           </div>
         </div>
         <div class="solution-grid">

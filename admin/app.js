@@ -465,7 +465,7 @@ const renderSolutionsList = () => {
     '<div class="status-badges"><span class="badge ' + (card.visible !== false ? 'badge--active' : '') + '">' + (card.visible !== false ? 'Visible' : 'Hidden') + '</span>' +
     ((card.images || []).length ? '<span class="badge">' + card.images.length + ' photo' + (card.images.length === 1 ? '' : 's') + '</span>' : '<span class="badge badge--draft">No photos</span>') + '</div>' +
     rowActions('solutions', index, items.length) + '</div>');
-  return listPage('solutions', 'Solutions', 'Condition galleries shown in “Complications we treat”. Each card carries its own copy, call-to-action, and photographs.', rows, { itemLabel: 'condition card' });
+  return listPage('solutions', 'Solutions', 'Condition galleries shown in “Complications we manage”. Each card carries its own copy, call-to-action, and photographs.', rows, { itemLabel: 'condition card' });
 };
 
 const renderSolutionEditor = () => {
