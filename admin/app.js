@@ -465,7 +465,7 @@ const renderSolutionsList = () => {
     '<div class="status-badges"><span class="badge ' + (card.visible !== false ? 'badge--active' : '') + '">' + (card.visible !== false ? 'Visible' : 'Hidden') + '</span>' +
     ((card.images || []).length ? '<span class="badge">' + card.images.length + ' photo' + (card.images.length === 1 ? '' : 's') + '</span>' : '<span class="badge badge--draft">No photos</span>') + '</div>' +
     rowActions('solutions', index, items.length) + '</div>');
-  return listPage('solutions', 'Solutions', 'Before/after condition galleries shown in “Two conditions, up close”. Each card carries its own copy, call-to-action, and photographs.', rows, { itemLabel: 'condition card' });
+  return listPage('solutions', 'Solutions', 'Condition galleries shown in “Complications we treat”. Each card carries its own copy, call-to-action, and photographs.', rows, { itemLabel: 'condition card' });
 };
 
 const renderSolutionEditor = () => {
@@ -489,8 +489,8 @@ const renderSolutionEditor = () => {
     '<label class="field--full">Carousel label (condition)<input name="condition" value="' + h(card.condition) + '" required><span class="field-help">Announced to screen readers on the photo carousel, e.g. “Post-mastectomy arm lymphedema”.</span></label>' +
     '<label>CTA button label<input name="ctaLabel" value="' + h(card.cta ? card.cta.label : '') + '" required></label>' +
     '<label class="field--full">CTA prefilled message<textarea name="ctaMessage" required>' + h(card.cta ? card.cta.message : '') + '</textarea><span class="field-help">Sent to WhatsApp or email when a visitor taps the button.</span></label>' +
-    '<div class="field-group"><div class="field-group__heading"><div><h2>Body paragraphs</h2><p>Shown under the gallery. Mark one “Warning” for the cautionary styling.</p></div><button class="button button--quiet" type="button" data-action="body-add">Add paragraph</button></div>' + body + '</div>' +
-    '<div class="field-group"><div class="field-group__heading"><div><h2>Before/after photographs</h2><p>Uploads are cropped to 4:5, watermarked, and downscaled. Reorder with the arrows.</p></div></div><div class="image-list">' + images +
+    '<div class="field-group"><div class="field-group__heading"><div><h2>Body paragraphs</h2><p>Shown above the gallery. Mark one “Warning” for the cautionary styling.</p></div><button class="button button--quiet" type="button" data-action="body-add">Add paragraph</button></div>' + body + '</div>' +
+    '<div class="field-group"><div class="field-group__heading"><div><h2>Case photographs</h2><p>Uploads are cropped to 4:5, watermarked, and downscaled. Reorder with the arrows.</p></div></div><div class="image-list">' + images +
     '<label class="upload-control"><input type="file" id="solution-images" accept="image/jpeg,image/png,image/webp" multiple><span>Upload one or more photographs</span><small>JPEG, PNG, or WebP · 20 MB each</small></label></div></div>' +
     '<div class="field-group"><label class="checkbox-row"><input name="visible" type="checkbox" ' + (card.visible !== false ? 'checked' : '') + '><span>Visible on the site</span></label></div>' +
     '</div><div class="form-actions"><button class="button button--quiet" type="button" data-action="back">Cancel</button><button class="button button--primary" type="button" data-action="save-editor">Save card draft</button></div></form></section>';

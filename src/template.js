@@ -183,12 +183,12 @@ const renderSolutionCard = (card, imageMap, index) => {
     .join('');
   return `
     <article class="solution-card" data-reveal style="--reveal-order:${index}">
-      ${solutionCarousel(card.images, imageMap, card.condition)}
       <div class="solution-card__body">
         <h3>${escapeHtml(card.title)}</h3>
         ${body}
-        <a class="button solution-card__cta" href="${card.cta.href}"${card.cta.external ? ' target="_blank" rel="noreferrer"' : ''}>${card.cta.icon} ${escapeHtml(card.cta.label)}</a>
       </div>
+      ${solutionCarousel(card.images, imageMap, card.condition)}
+      <a class="button solution-card__cta" href="${card.cta.href}"${card.cta.external ? ' target="_blank" rel="noreferrer"' : ''}>${card.cta.icon} ${escapeHtml(card.cta.label)}</a>
     </article>`;
 };
 
@@ -400,10 +400,9 @@ const renderPage = ({
       <div class="container">
         <div class="section-heading" data-reveal>
           <div>
-            <p class="kicker">Complications we treat</p>
-            <h2>Two conditions, <em>up close</em></h2>
+            <p class="kicker">Real cases</p>
+            <h2>Complications <em>we treat</em></h2>
           </div>
-          <p>Post-mastectomy arm lymphedema, and elephantiasis with filariasis: the two we are asked about most. See what they look like, and how a customized protocol changes their course.</p>
         </div>
         <div class="solution-grid">
           ${solutionCards.map((card, index) => renderSolutionCard(card, imageMap, index)).join('')}
