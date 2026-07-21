@@ -48,10 +48,10 @@
     "draft": false
   },
   {
-    "id": "lymphedema",
-    "condition": "Lymphedema (arm and leg)",
+    "id": "varicose-veins",
+    "condition": "Varicose veins and spider veins",
     "audience": "disease",
-    "summary": "Swelling of the arm or leg from impaired lymphatic drainage, including cases that have progressed over many years without results elsewhere. We assess the limb, the history, and the stage, then design a therapy protocol matched to the case.",
+    "summary": "Primary varicose and spider veins turn prominent when neglected, leading to skin issues and venous ulcers. Early, guided care prevents the long treatment that chronic stages demand.",
     "engagement": [
       "Detailed case study of the condition, history, and current treatment",
       "Customized, affordable protocol designed around the individual case",
@@ -64,10 +64,10 @@
     "draft": false
   },
   {
-    "id": "varicose-veins",
-    "condition": "Varicose veins and spider veins",
+    "id": "filariasis-elephantiasis",
+    "condition": "Filariasis and elephantiasis",
     "audience": "disease",
-    "summary": "Primary varicose and spider veins turn prominent when neglected, leading to skin issues and venous ulcers. Early, guided care prevents the long treatment that chronic stages demand.",
+    "summary": "Chronic swollen legs from filariasis or elephantiasis are managed with persistent, staged therapy, moving patients from immobility back toward independence.",
     "engagement": [
       "Detailed case study of the condition, history, and current treatment",
       "Customized, affordable protocol designed around the individual case",
@@ -128,6 +128,22 @@
     "draft": false
   },
   {
+    "id": "lymphedema",
+    "condition": "Lymphedema (arm and leg)",
+    "audience": "disease",
+    "summary": "Swelling of the arm or leg from impaired lymphatic drainage, including cases that have progressed over many years without results elsewhere. We assess the limb, the history, and the stage, then design a therapy protocol matched to the case.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
     "id": "dvt-vte-prevention",
     "condition": "DVT and VTE prevention",
     "audience": "disease",
@@ -164,22 +180,6 @@
     "condition": "Cellulitis and hyperkeratosis",
     "audience": "disease",
     "summary": "Chronic cellulitis and hyperkeratosis have benefited from our approach much sooner than expected, treated as part of a complete limb-care protocol.",
-    "engagement": [
-      "Detailed case study of the condition, history, and current treatment",
-      "Customized, affordable protocol designed around the individual case",
-      "Guided therapy with expert supervision, at home wherever possible",
-      "Regular follow-ups until the desired result is achieved"
-    ],
-    "durationNote": "Customized case to case",
-    "deviceIds": [],
-    "visible": true,
-    "draft": false
-  },
-  {
-    "id": "filariasis-elephantiasis",
-    "condition": "Filariasis and elephantiasis",
-    "audience": "disease",
-    "summary": "Chronic swollen legs from filariasis or elephantiasis are managed with persistent, staged therapy, moving patients from immobility back toward independence.",
     "engagement": [
       "Detailed case study of the condition, history, and current treatment",
       "Customized, affordable protocol designed around the individual case",
