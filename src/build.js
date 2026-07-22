@@ -319,6 +319,40 @@ const copyAdmin = async () => {
   }
 };
 
+// The owner's private strategy page ships pre-encrypted (plaintext + encryptor
+// live in the advisor workspace, tools/strategy/): a static file copied through
+// unchanged. It is noindexed and robots-disallowed; never add it to the sitemap.
+const copyStrategy = async () => {
+  const source = path.join(ROOT, 'strategy');
+  try {
+    await fs.access(source);
+    await fs.cp(source, path.join(DIST, 'strategy'), { recursive: true });
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+};
+
+// Plain-language site summary for AI assistants/crawlers (llms.txt). Low-cost,
+// generated from the same data as the page so it can never drift out of date.
+const llmsTxt = (company, protocols) => `# ${company.name}
+
+> ${company.tagline}
+
+${company.name} is a team of medical engineering professionals in ${company.address}, designing customized, affordable protocols for vascular and lymphatic disorders — with documented photographic recoveries and guided follow-up until the desired result. Amputation is not the only way out.
+
+## Conditions we treat
+
+${protocols.map((p) => `- ${p.condition}: ${p.summary}`).join('\n')}
+
+## Contact
+
+- WhatsApp: +91 ${company.whatsapp}
+- Email: ${company.email}
+- Website: ${SITE_URL}
+- Location: ${company.address}; guided therapy at home wherever possible, patients across India
+- Languages: English, Hindi
+`;
+
 const build = async () => {
   const [company, products, protocols, testimonials, themes, config, solutionsData, feedbackData, baseCss, clientJs] =
     await Promise.all([
@@ -395,15 +429,17 @@ const build = async () => {
     fs.writeFile(path.join(DIST, '404.html'), html),
     fs.writeFile(
       path.join(DIST, 'robots.txt'),
-      `User-agent: *\nAllow: /\nSitemap: ${SITE_URL}sitemap.xml\n`,
+      `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /strategy/\nDisallow: /changes/\nSitemap: ${SITE_URL}sitemap.xml\n`,
     ),
     fs.writeFile(
       path.join(DIST, 'sitemap.xml'),
       `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE_URL}</loc><lastmod>${new Date().toISOString().slice(0, 10)}</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url></urlset>\n`,
     ),
+    fs.writeFile(path.join(DIST, 'llms.txt'), llmsTxt(company, visibleProtocols)),
     fs.writeFile(path.join(DIST, '.nojekyll'), ''),
     copyFonts(),
     copyAdmin(),
+    copyStrategy(),
   ]);
 
   const jsBytes = Buffer.byteLength(clientJs);

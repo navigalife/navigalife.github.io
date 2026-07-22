@@ -74,6 +74,12 @@ sequence is encoded — use it instead of hand-running git:
 - **`main` has two writers — sync before pushing, never force.** Full procedure and
   rationale: the **STOP block** at the top of this file (the single source for this
   rule). Enforced by the `pre-push` hook + server-side force-push block.
+- **`/strategy` is a pre-encrypted artifact.** `strategy/index.html` is generated
+  ciphertext (the owner-only growth-plan page: noindex, robots-disallowed, never
+  in the sitemap). Plaintext source + encryptor live in the advisor workspace at
+  `~/dev/claude/advisor/tools/strategy/` — edit there and regenerate; never edit
+  the artifact in place, and never commit plaintext or the password to this
+  public repo.
 - **Patient evidence**: photographs may be cropped, rotated, tonally
   normalized, and metadata-stripped — never generated or generatively edited.
   No fabricated testimonials, names, or quotes. "Identity protected" is the
