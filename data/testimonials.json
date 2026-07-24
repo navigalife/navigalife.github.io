@@ -86,5 +86,26 @@
         "stage": "After therapy"
       }
     ]
+  },
+  {
+    "id": "story-005",
+    "featured": false,
+    "name": "",
+    "age": "",
+    "location": "India",
+    "condition": "Untreated CVI led to restricted Vascularity",
+    "duration": "3 months  therapy leads to recovery",
+    "remark": "Prolonged Chronic Venous Insufficiency & darker areas on lower limbs neglected for long time, pressure stockings used for 3-4 years led to restricted vascularity.  With our 3 months treatment, the ailment almost disappear.",
+    "quote": "",
+    "images": [
+      {
+        "src": "assets/testimonials/story-005-before.webp",
+        "stage": "Before therapy"
+      },
+      {
+        "src": "assets/testimonials/story-005-after.webp",
+        "stage": "After therapy"
+      }
+    ]
   }
 ]
