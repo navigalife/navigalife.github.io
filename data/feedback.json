@@ -1,9 +1,23 @@
 [
-  { "src": "assets/feedback/feedback-01.webp" },
-  { "src": "assets/feedback/feedback-02.webp" },
-  { "src": "assets/feedback/feedback-03.webp" },
-  { "src": "assets/feedback/feedback-04.webp" },
-  { "src": "assets/feedback/feedback-05.webp" },
-  { "src": "assets/feedback/feedback-06.webp" },
-  { "src": "assets/feedback/feedback-07.webp" }
+  {
+    "src": "assets/feedback/feedback-01.webp"
+  },
+  {
+    "src": "assets/feedback/feedback-02.webp"
+  },
+  {
+    "src": "assets/feedback/feedback-03.webp"
+  },
+  {
+    "src": "assets/feedback/feedback-04.webp"
+  },
+  {
+    "src": "assets/feedback/feedback-05.webp"
+  },
+  {
+    "src": "assets/feedback/feedback-06.webp"
+  },
+  {
+    "src": "assets/feedback/feedback-08.webp"
+  }
 ]
