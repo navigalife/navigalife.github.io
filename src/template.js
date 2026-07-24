@@ -466,19 +466,21 @@ const renderPage = ({
   // render always shows exactly one styled set, never a doubled "«…»".
   const heroHeadlineText = String(config.heroHeadline || '')
     .replace(/^[\s"“”'‘’]+|[\s"“”'‘’]+$/g, '');
+  // Every lockup variant carries its own measured intrinsic width/height (see
+  // prepareMarkSized in build.js) — the aspect differs per variant and moved with
+  // the Exotc350 wordmark, so a hard-coded 512x257 would cost a layout shift.
+  const lockupImgs = (mark, loading) =>
+    `<img class="lockup--ink" src="${mark.ink.src}" alt="" width="${mark.ink.width}" height="${mark.ink.height}" loading="${loading}" decoding="async">
+    <img class="lockup--paper" src="${mark.paper.src}" alt="" width="${mark.paper.width}" height="${mark.paper.height}" loading="${loading}" decoding="async">`;
   const lockup = (context) => `<span class="lockup" aria-hidden="true">
-    <img class="lockup--ink" src="${markPaths.ink}" alt="" width="512" height="257" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
-    <img class="lockup--paper" src="${markPaths.paper}" alt="" width="512" height="257" loading="${context === 'header' ? 'eager' : 'lazy'}" decoding="async">
+    ${lockupImgs(markPaths, context === 'header' ? 'eager' : 'lazy')}
   </span>`;
   // Footer-only lockup: the ™ is baked into these variants at the 'c' shoulder
   // (see assets/brand/logo-*-tm*.png) rather than positioned in CSS, so it stays
   // pixel-tight to the letterform. Two size wrappers — '-lg' (larger ™) for the
   // 54px desktop render, base for the 64px phone render — swapped by breakpoint in
-  // CSS (.lockup__size--sm hidden on desktop, --lg hidden ≤760px). Wider canvas
-  // than the plain mark → each img carries its own intrinsic width/height.
-  const tmImg = (mark) =>
-    `<img class="lockup--ink" src="${mark.ink.src}" alt="" width="${mark.ink.width}" height="${mark.ink.height}" loading="lazy" decoding="async">
-    <img class="lockup--paper" src="${mark.paper.src}" alt="" width="${mark.paper.width}" height="${mark.paper.height}" loading="lazy" decoding="async">`;
+  // CSS (.lockup__size--sm hidden on desktop, --lg hidden ≤760px).
+  const tmImg = (mark) => lockupImgs(mark, 'lazy');
   const footerLockup = () => `<span class="lockup" aria-hidden="true">
     <span class="lockup__size lockup__size--lg">${tmImg(markPathsTmLg)}</span>
     <span class="lockup__size lockup__size--sm">${tmImg(markPathsTm)}</span>
@@ -497,7 +499,15 @@ const renderPage = ({
   <script>(function(){document.documentElement.classList.add('js');try{var s=localStorage.getItem('medivasc-color-scheme')||localStorage.getItem('naviga-color-scheme');var d=s?s==='dark':matchMedia('(prefers-color-scheme:dark)').matches;if(d)document.documentElement.dataset.theme='dark'}catch(e){}})()</script>
   <title>${escapeHtml(config.seo.title)}</title>
   <meta name="description" content="${escapeHtml(config.seo.description)}">
-  <meta name="robots" content="index,follow">
+  <!-- max-image-preview:none — Google's *mobile* result for medivasc.in was pulling
+       the og:image in as a snippet thumbnail and centre-cropping it to a square,
+       which sliced the lockup and the kicker ("MediVasc" cut off, "…VENTION OF
+       FOOT AND LEG AMP…"). There is no meta that picks a different thumbnail, so
+       we opt out of image previews and let the result render as clean text, the
+       way desktop already did. og:image itself stays — WhatsApp/LinkedIn/X
+       previews are unaffected by this directive, and WhatsApp is our main channel.
+       Trade-off: no image thumbnail in Google results or Discover. -->
+  <meta name="robots" content="index,follow,max-image-preview:none">
 ${config.seo.googleVerification ? `  <meta name="google-site-verification" content="${escapeHtml(config.seo.googleVerification)}">\n` : ''}  <meta name="theme-color" content="${escapeHtml(themeBg)}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="${escapeHtml(company.name)}">

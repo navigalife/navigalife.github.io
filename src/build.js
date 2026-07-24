@@ -97,17 +97,11 @@ const buildGallery = async (srcs, widths) => {
   return { map, bySrc };
 };
 
-const prepareMark = async (name, width = 128) => {
-  const buffer = await sharp(path.join(ROOT, 'assets', 'brand', `${name}.png`))
-    .resize({ width, withoutEnlargement: true })
-    .png({ compressionLevel: 9 })
-    .toBuffer();
-  return writeHashed('assets/brand', name, 'png', buffer);
-};
-
-// Like prepareMark but also returns the resized intrinsic dimensions. Used for the
-// footer ™ lockup, whose canvas is wider than the plain mark (the ™ is baked at the
-// 'c' shoulder), so the <img> needs its own width/height to avoid a layout shift.
+// Resizes a stored lockup and returns its hashed path plus the resized intrinsic
+// dimensions. Every lockup variant has its own aspect (the ™ ones are wider — the
+// ™ is baked at the 'c' shoulder) and the aspect changed with the Exotc350
+// wordmark, so the <img> must carry measured width/height, never a constant, or
+// the header/footer take a layout shift on load.
 const prepareMarkSized = async (name, width = 512) => {
   const buffer = await sharp(path.join(ROOT, 'assets', 'brand', `${name}.png`))
     .resize({ width, withoutEnlargement: true })
@@ -141,8 +135,8 @@ const copyBrandAssets = async () => {
   );
   const [ogImage, ink, paper, inkTm, paperTm, inkTmLg, paperTmLg] = await Promise.all([
     processImage('assets/brand/og-image.png'),
-    prepareMark('logo-ink', 512),
-    prepareMark('logo-paper', 512),
+    prepareMarkSized('logo-ink', 512),
+    prepareMarkSized('logo-paper', 512),
     prepareMarkSized('logo-ink-tm', 512),
     prepareMarkSized('logo-paper-tm', 512),
     prepareMarkSized('logo-ink-tm-lg', 512),
