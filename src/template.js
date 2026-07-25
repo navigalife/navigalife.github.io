@@ -236,9 +236,10 @@ const renderJsonLd = ({ company, config, siteUrl }) => {
   // `sameAs` links, which help Google connect the site to those profiles and
   // disambiguate our name from unrelated "MediVasc" businesses abroad.
   const sameAs = Object.values(company.social || {}).filter(Boolean);
+  const orgId = `${siteUrl}#organization`;
   const organization = {
-    '@context': 'https://schema.org',
     '@type': 'MedicalOrganization',
+    '@id': orgId,
     name: company.legalName,
     // A clear India signal: our name collides with a French clinic, so we always
     // present as "MediVasc India" in the machine-readable identity too.
@@ -267,7 +268,25 @@ const renderJsonLd = ({ company, config, siteUrl }) => {
       : {}),
     ...(sameAs.length ? { sameAs } : {}),
   };
-  return JSON.stringify(organization).replaceAll('<', '\\u003c');
+  // The `WebSite` node is what Google reads for the *site name* — the line printed
+  // above the blue title in a result (it was falling back to the bare domain,
+  // "medivasc.in"). Homepage-only and root-domain-only by Google's rules, which is
+  // exactly where this template renders. Deliberately no `alternateName` here:
+  // Google may display an alternateName instead of `name`, and we want the header
+  // to read "MediVasc", not "MediVasc India" — the India disambiguation stays on
+  // the organisation node, which feeds the knowledge panel rather than this line.
+  // `name` must also stay consistent with <title> and og:site_name or Google
+  // ignores all of them and reverts to the domain.
+  const website = {
+    '@type': 'WebSite',
+    '@id': `${siteUrl}#website`,
+    name: company.name,
+    url: siteUrl,
+    publisher: { '@id': orgId },
+    inLanguage: 'en',
+  };
+  const graph = { '@context': 'https://schema.org', '@graph': [website, organization] };
+  return JSON.stringify(graph).replaceAll('<', '\\u003c');
 };
 
 // MediVasc Assistant — a conversational lead form that lives at bottom-right on every
