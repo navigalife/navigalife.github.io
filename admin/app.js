@@ -321,8 +321,21 @@ const defaultProtocol = () => ({
   draft: true,
 });
 
+// Story ids carry no meaning (patients are anonymous) — they only name the
+// evidence files, so the owner should never have to remember the sequence.
+// Suggest the next free story-NNN; the field stays editable while the story is
+// new, and saveEditor still rejects duplicates.
+const nextStoryId = () => {
+  let highest = 0;
+  for (const testimonial of state.draft.testimonials || []) {
+    const match = /^story-(\d+)$/.exec(testimonial.id || '');
+    if (match) highest = Math.max(highest, Number(match[1]));
+  }
+  return 'story-' + String(highest + 1).padStart(3, '0');
+};
+
 const defaultTestimonial = () => ({
-  id: '',
+  id: nextStoryId(),
   featured: false,
   name: '',
   age: '',
@@ -444,7 +457,7 @@ const renderTestimonialEditor = () => {
     '<form id="testimonial-form"><div class="editor-grid">' +
     '<label>Patient name (optional)<input name="name" value="' + h(testimonial.name || '') + '"><span class="field-help">Leave blank to keep the patient anonymous.</span></label>' +
     '<label>Patient age (optional)<input name="age" value="' + h(testimonial.age || '') + '" inputmode="numeric"><span class="field-help">Shown as “Patient aged N”. Leave blank to omit.</span></label>' +
-    '<label>Immutable id<input name="id" value="' + h(testimonial.id) + '" pattern="[a-z0-9\\-]+" required ' + (isNew ? '' : 'readonly') + '></label>' +
+    '<label>Immutable id<input name="id" value="' + h(testimonial.id) + '" pattern="[a-z0-9\\-]+" required ' + (isNew ? '' : 'readonly') + '>' + (isNew ? '<span class="field-help">Suggested for you and safe to keep. It names the photo files, so it locks once the story is saved.</span>' : '') + '</label>' +
     '<label>Location<input name="location" value="' + h(testimonial.location) + '" required></label>' +
     '<label class="field--full">Condition<input name="condition" value="' + h(testimonial.condition) + '" required><span class="field-help">Short clinical label shown on the card, e.g. “Venous ulcers from untreated varicose veins”. Do not put the age here.</span></label>' +
     '<label class="field--full">Recovery duration (optional)<input name="duration" value="' + h(testimonial.duration || '') + '" placeholder="e.g. Signs of recovery within 30 days"></label>' +
