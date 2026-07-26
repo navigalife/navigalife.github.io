@@ -163,25 +163,50 @@ export async function fitRuns(runs, maxWidth, style, { minScale = 0.8, step = 2 
   return { lines: await wrapRuns(runs, maxWidth, scaled), style: scaled };
 }
 
+// Words that should not be left dangling at the end of a line: an ampersand or
+// a short function word at a line break reads as a typo, and "&" is the worst
+// of them. Purely a ranking signal — a break is penalised, never forbidden.
+const WEAK_LINE_END = new Set(['&', 'and', 'or', 'the', 'a', 'an', 'of', 'to', 'in', 'on', 'for', 'with', 'is', 'not']);
+
 /**
- * Fit, then even out the line lengths.
+ * Fit, then choose the best line breaks.
  *
  * Greedy wrapping packs early lines full and strands whatever is left on the
- * last one — "Amputation is / not the only way / out". Re-wrapping at the
- * narrowest width that still yields the same number of lines spreads the words
- * across all of them without costing any vertical space. Same idea as CSS
- * `text-wrap: balance`.
+ * last one — "Prevent foot & leg / amputation". Re-wrapping at a narrower width
+ * yields a different set of breaks at no vertical cost, so every width that
+ * still produces the same number of lines is a candidate and they are scored:
+ * evenness of line length, plus a penalty for ending a line on a weak word.
+ *
+ * Scoring rather than simply taking the narrowest matters — the narrowest wrap
+ * of "Prevent foot & leg amputation" is the perfectly even "Prevent foot & /
+ * leg amputation", which hangs an ampersand off the line end.
  */
 export async function balanceRuns(runs, maxWidth, style, opts) {
   const { lines, style: fitted } = await fitRuns(runs, maxWidth, style, opts);
   if (lines.length < 2) return { lines, style: fitted };
 
+  const penalty = maxWidth * 0.75;
+  const score = (candidate) => {
+    const widths = candidate.map((l) => l.width);
+    let value = Math.max(...widths) - Math.min(...widths);
+    for (const line of candidate.slice(0, -1)) {
+      const last = line.words[line.words.length - 1];
+      if (last && WEAK_LINE_END.has(last.text.toLowerCase())) value += penalty;
+    }
+    return value;
+  };
+
   let best = lines;
-  const step = maxWidth * 0.02;
-  for (let width = maxWidth - step; width >= maxWidth * 0.7; width -= step) {
+  let bestScore = score(lines);
+  const step = maxWidth * 0.015;
+  for (let width = maxWidth - step; width >= maxWidth * 0.6; width -= step) {
     const candidate = await wrapRuns(runs, width, fitted);
     if (candidate.length !== lines.length) break;
-    best = candidate;
+    const value = score(candidate);
+    if (value < bestScore) {
+      best = candidate;
+      bestScore = value;
+    }
   }
   return { lines: best, style: fitted };
 }

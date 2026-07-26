@@ -1,14 +1,13 @@
 // Layout verification.
 //
-// Every defect in the previous generation of these assets was silent: the
-// renderer happily wrote a PNG with the website URL sitting on top of the
-// artwork, the last line of a flyer clipped by the canvas edge, and a contact
-// sheet whose bottom row ran off the bottom. None of it threw. These checks run
-// on the computed layout before anything is rasterised, so a broken asset is a
-// non-zero exit rather than a file someone has to notice.
+// Every defect in the first generation of these assets was silent: the renderer
+// happily wrote a PNG with the website URL sitting on top of the illustration,
+// the last line clipped by the canvas edge, and a contact sheet whose bottom row
+// ran off the bottom. None of it threw. These checks run on the computed layout
+// before anything is rasterised, so a broken asset is a non-zero exit rather
+// than a file someone has to notice.
 
 const SAFE = 'safe-area';
-const ART = 'art-overlap';
 const CONTRAST = 'contrast';
 const FLOW = 'flow';
 
@@ -54,12 +53,11 @@ const overlapArea = (a, b) =>
 /**
  * Check one composed layout.
  *
- * `plan.blocks` are the laid-out rectangles, `plan.art` the reserved
- * illustration column, `plan.gap` the slack between the top and bottom stacks.
+ * `plan.blocks` are the laid-out rectangles and `plan.gap` is the slack between
+ * the top stack and the footer.
  */
 export function verifyLayout({ plan, fmt, direction, format }) {
   const failures = [];
-  const bleed = fmt.bleed ?? 0;
 
   // 1. Everything stays inside the safe area.
   //    Print formats measure the safe area from the trim box, not the bleed
@@ -86,47 +84,45 @@ export function verifyLayout({ plan, fmt, direction, format }) {
     }
   }
 
-  // 2. No text block may enter the reserved artwork column.
-  //    The logo is exempt: it is placed, not flowed, and sits above the column.
-  for (const block of plan.blocks) {
-    if (block.name === 'logo') continue;
-    if (!intersects(block, plan.art)) continue;
-    const area = overlapArea(block, plan.art);
-    failures.push({
-      check: ART,
-      detail: `"${block.name}" overlaps the artwork column by ${Math.round(area)}px²`,
-    });
-  }
-
-  // 3. The top stack must not collide with the bottom stack.
+  // 2. The top stack must not collide with the footer.
   if (plan.gap < 0) {
     failures.push({ check: FLOW, detail: `top and bottom stacks collide by ${Math.abs(plan.gap).toFixed(0)}px` });
   }
 
-  // 4. Text must clear the WCAG AA floor against the surface behind it.
+  // 3. Text must clear the WCAG AA floor against the surface behind it.
   //    Large text (>= 24px at the format's own scale) gets the 3:1 floor.
   const pairs = [
-    { name: 'headline', fg: direction.ink, bg: direction.base, size: fmt.type.headline },
-    { name: 'accent word', fg: direction.accent, bg: direction.base, size: fmt.type.headline },
-    { name: 'body', fg: direction.muted, bg: direction.base, size: fmt.type.body },
-    { name: 'conditions', fg: direction.muted, bg: direction.base, size: fmt.type.cond },
-    { name: 'site', fg: direction.ink, bg: direction.base, size: fmt.type.site },
+    { name: 'headline', fg: direction.ink, size: fmt.type.headline },
+    { name: 'accent word', fg: direction.accent, size: fmt.type.headline },
+    { name: 'body', fg: direction.muted, size: fmt.type.body },
+    { name: 'conditions', fg: direction.muted, size: fmt.type.cond },
+    { name: 'cta', fg: direction.muted, size: fmt.type.cta },
+    { name: 'cta site', fg: direction.link, size: fmt.type.cta },
+  ];
+  // Two surfaces, because the oversized brand mark sits behind the type: text
+  // must clear the floor on the flat background *and* on the mark tint, since
+  // the copy runs full width across it.
+  const surfaces = [
+    { name: 'surface', color: direction.base },
+    { name: 'mark tint', color: direction.markTint },
   ];
   for (const pair of pairs) {
-    const ratio = contrastRatio(pair.fg, pair.bg);
-    if (ratio === null) continue;
-    const scale = fmt.w / 1080;
-    const isLarge = pair.size / scale >= 24;
-    const floor = isLarge ? 3 : 4.5;
-    if (ratio < floor) {
-      failures.push({
-        check: CONTRAST,
-        detail: `${pair.name} ${pair.fg} on ${pair.bg} is ${ratio.toFixed(2)}:1, below the ${floor}:1 floor`,
-      });
+    for (const surface of surfaces) {
+      const ratio = contrastRatio(pair.fg, surface.color);
+      if (ratio === null) continue;
+      const scale = fmt.w / 1080;
+      const isLarge = pair.size / scale >= 24;
+      const floor = isLarge ? 3 : 4.5;
+      if (ratio < floor) {
+        failures.push({
+          check: CONTRAST,
+          detail: `${pair.name} ${pair.fg} on ${surface.name} ${surface.color} is ${ratio.toFixed(2)}:1, below the ${floor}:1 floor`,
+        });
+      }
     }
   }
 
-  // 5. Platform chrome. An X header is not a flat canvas: the profile picture
+  // 4. Platform chrome. An X header is not a flat canvas: the profile picture
   //    is drawn over its bottom-left corner, so anything placed there is
   //    permanently hidden for every visitor.
   if (fmt.obstructions) {
@@ -139,12 +135,6 @@ export function verifyLayout({ plan, fmt, direction, format }) {
         });
       }
     }
-  }
-
-  // 6. Artwork must stay on the canvas vertically; horizontal bleed is allowed
-  //    (the illustration is designed to run off the right edge).
-  if (plan.art.y < -bleed || plan.art.y + plan.art.h > fmt.h + bleed) {
-    failures.push({ check: SAFE, detail: 'artwork column extends past the canvas vertically' });
   }
 
   return { ok: failures.length === 0, failures, id: `${direction.id} · ${format}` };
