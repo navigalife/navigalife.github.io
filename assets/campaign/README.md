@@ -12,6 +12,20 @@ The build is a verification gate, not just a renderer. It exits non-zero and
 writes nothing if any asset fails its checks, so a broken file cannot reach the
 `assets/campaign/` directory silently.
 
+## What is on a flyer
+
+Five elements, and nothing else:
+
+1. the lockup
+2. the headline, with one italic accent word
+3. one supporting line
+4. the conditions, set small
+5. `medivasc.in`
+
+No phone number, no WhatsApp block, no QR code, no address. The backgrounds are
+flat — no waves, halos, rules or edge bars. If something is being added here, the
+question to answer first is which of the five it is more important than.
+
 ## Directions
 
 | id | Reads as | Surface |
@@ -30,23 +44,18 @@ writes nothing if any asset fails its checks, so a broken file cannot reach the
 | `story` | 1080 × 1920 | WhatsApp Status, Instagram Story. Extra top/bottom insets clear the platform UI. |
 | `a5-print` | 1783 × 2516 @ 300 dpi | A5 handout with 3 mm bleed on all sides. Trim box is inset 35 px; all content sits well inside it. |
 
-## Nothing here is retyped from the site
+## Copy
 
-Anything that could drift from the live site is read from the site's own data at
-build time:
+Campaign copy is **written for the flyer, not lifted from the site**. A page has
+a reader who already arrived and is scrolling; a flyer has about two seconds of a
+stranger's attention, so it carries one claim and one line of support.
 
-- **Palette** — the theme named by `data/site-config.json` is looked up in
-  `data/themes.json` and its tokens are used directly. Switching the site theme
-  and rebuilding re-colours the whole campaign. The build throws if the theme id
-  does not resolve.
-- **Headline** — `heroHeadline` and `heroAccent` from `data/site-config.json`.
-  The accent word is matched by word, not position, so an admin edit flows
-  through. The build throws if the accent word is absent from the headline.
-- **Contact details** — `whatsapp`, `email` and `address` from
-  `data/company.json`. The phone is formatted and the `wa.me` link and QR code
-  are derived from the same field, so they cannot disagree.
-- **Logo** — `assets/brand/logo-{ink,paper}-tm-lg.png`, the same lockup files
-  the site ships.
+All of it is the `copy` object at the top of `build.mjs` — four values, one
+place. The build throws if the accent word is not present in the headline.
+
+The palette is still read from the site: `data/site-config.json` names a theme,
+`data/themes.json` supplies its tokens, and the build throws if the id does not
+resolve. Change the site theme, rebuild, and the campaign follows.
 
 ## What the build checks
 
@@ -57,15 +66,15 @@ build time:
 2. **Artwork overlap** — no text block may enter the reserved illustration
    column. The column is a first-class part of the layout, and text columns are
    narrowed to clear it.
-3. **Flow** — the top stack cannot collide with the bottom contact block.
+3. **Flow** — the top stack cannot collide with the footer.
 4. **Contrast** — every foreground/background pair clears the WCAG AA floor
    (4.5:1, or 3:1 for large text).
 5. **Platform chrome** — declared obstructions (currently the X avatar) must not
    cover any content.
 
-`qr.mjs` self-tests on every build: it checks that all Reed-Solomon syndromes of
-the finished codeword are zero, then reads the rendered matrix back the way a
-scanner would and asserts it decodes to the original URL.
+These are not decorative. Check 5 caught the site line disappearing under the X
+avatar after a two-point headline size increase; check 1 caught footer
+descenders hanging past the margin.
 
 ## Typography
 
@@ -80,6 +89,10 @@ librsvg exposes no metrics API. Every word is then positioned at an absolute
 - Headlines are wrapped, then re-wrapped at the narrowest width that yields the
   same number of lines, which evens out the line lengths and avoids stranding a
   single word on the last line.
+
+Vertical rhythm is justified rather than fixed: the gaps between logo, headline,
+support line and footer share the leftover height in proportion, so no format
+pools its slack into one slab.
 
 ## Artwork
 

@@ -107,13 +107,10 @@ export function verifyLayout({ plan, fmt, direction, format }) {
   //    Large text (>= 24px at the format's own scale) gets the 3:1 floor.
   const pairs = [
     { name: 'headline', fg: direction.ink, bg: direction.base, size: fmt.type.headline },
-    { name: 'body', fg: direction.ink, bg: direction.base, size: fmt.type.body },
-    { name: 'kicker', fg: direction.ink, bg: direction.base, size: fmt.type.kicker },
-    { name: 'conditions', fg: direction.muted, bg: direction.base, size: fmt.type.cond },
-    { name: 'fineprint', fg: direction.muted, bg: direction.base, size: fmt.type.fine },
-    { name: 'cta text', fg: direction.cta.text, bg: direction.cta.fill, size: fmt.type.cta },
     { name: 'accent word', fg: direction.accent, bg: direction.base, size: fmt.type.headline },
-    { name: 'qr modules', fg: direction.qr.dark, bg: direction.qr.light, size: 99 },
+    { name: 'body', fg: direction.muted, bg: direction.base, size: fmt.type.body },
+    { name: 'conditions', fg: direction.muted, bg: direction.base, size: fmt.type.cond },
+    { name: 'site', fg: direction.ink, bg: direction.base, size: fmt.type.site },
   ];
   for (const pair of pairs) {
     const ratio = contrastRatio(pair.fg, pair.bg);
