@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { loadFonts, wrap, wrapRuns, balanceRuns, renderLines, blockBox, blockHeight, escapeXml } from './text.mjs';
 import { verifyLayout, reportVerification } from './verify.mjs';
+import { composePosterFlyer, composePosterHeader } from './poster.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../..');
@@ -32,9 +33,10 @@ const readJson = async (p) => JSON.parse(await fs.readFile(path.join(root, p), '
 // Brand inputs
 // ---------------------------------------------------------------------------
 
-const [siteConfig, themes] = await Promise.all([
+const [siteConfig, themes, protocols] = await Promise.all([
   readJson('data/site-config.json'),
   readJson('data/themes.json'),
+  readJson('data/protocols.json'),
 ]);
 
 const theme = themes.find((t) => t.id === siteConfig.theme);
@@ -56,7 +58,47 @@ const copy = {
   body: 'Amputation is not the only way out. Home therapy protocols, planned case by case.',
   conditions: ['LYMPHEDEMA', 'DIABETIC FOOT', 'VENOUS ULCERS', 'DVT'],
   cta: { lead: 'Get in touch —', site: 'medivasc.in', tail: 'today' },
+
+  // The poster treatment carries more than the editorial ones: a two-clause
+  // claim, the process, and a call to action with a reason to act now. Line
+  // breaks in `claim` are authored, because where a poster headline breaks is a
+  // design decision; the size that fills the measure is solved, not typed.
+  poster: {
+    claim: ['PREVENT', 'AMPUTATION.', 'KEEP WALKING.'],
+    claimAccents: ['AMPUTATION.', 'WALKING.'],
+    support: 'A protocol built around your case, guided at home, and followed up until the result holds.',
+    // `from` ties each caption to the engagement step it summarises. The build
+    // fails if the step is no longer in data/protocols.json — the flyer cannot
+    // describe a process the site does not.
+    pillars: [
+      { icon: 'magnifier', caption: ['Case studied', 'in detail'], from: 'Detailed case study' },
+      { icon: 'clipboard', caption: ['Protocol built', 'for your case'], from: 'protocol designed around the individual case' },
+      { icon: 'home', caption: ['Therapy guided', 'at home'], from: 'at home wherever possible' },
+      { icon: 'cycle', caption: ['Followed up', 'to the result'], from: 'Regular follow-ups until the desired result' },
+    ],
+    cta: {
+      kicker: 'VISIT',
+      site: 'medivasc.in',
+      sub: 'Protocols, recovery records and how to reach us.',
+      claim: ['REFERRED FOR', 'AMPUTATION?', 'TALK TO US FIRST.'],
+    },
+  },
 };
+
+// The process row is site data, not campaign copy. Every protocol carries the
+// same four engagement steps; the flyer shows short forms of them, and this is
+// the check that keeps the two in step.
+const engagement = protocols.find((p) => p.visible && !p.draft)?.engagement ?? [];
+for (const pillar of copy.poster.pillars) {
+  if (!engagement.some((step) => step.toLowerCase().includes(pillar.from.toLowerCase()))) {
+    throw new Error(
+      `campaign: pillar "${pillar.caption.join(' ')}" cites "${pillar.from}", which is no longer an engagement step in data/protocols.json`,
+    );
+  }
+}
+if (engagement.length !== copy.poster.pillars.length) {
+  throw new Error(`campaign: protocols.json describes ${engagement.length} engagement steps, the poster shows ${copy.poster.pillars.length}`);
+}
 
 // The headline is split into runs so the accent word can be italic without a
 // hand-written line break. Matching is on the word, not an index, so rewording
@@ -127,6 +169,29 @@ const directions = [
     link: '#F0A97E',
     gradient: 'pine',
   },
+  // The poster. Its purple is the brand mark's own #582078, sampled from the
+  // owner's original logo — not a theme token. The website lockup is monochrome
+  // by owner rule (AGENTS.md) and the purple lives on collateral, which is what
+  // this is. Ink, paper and muted still track the theme, so a theme change still
+  // moves the flyer.
+  {
+    id: '04-violet',
+    label: 'POSTER',
+    compose: { stack: composePosterFlyer, landscape: composePosterHeader },
+    logo: 'logo_newfont/logo_tm/MediVasc-logo-tm-lg.png',
+    mark: null,
+    base: '#FBFAFD',
+    colour: {
+      paper: '#FBFAFD',
+      ink: '#0C0C0C',            // the wordmark's own black, so the two match exactly
+      muted: '#4C4557',
+      purple: '#582078',
+      line: '#E3D8EE',
+      onPurpleDim: '#D9C7EA',
+      onPurpleSoft: '#E4D6F0',
+      onPurpleLine: '#8659A5',
+    },
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -146,6 +211,9 @@ const FORMATS = {
     // The avatar is drawn over the bottom-left of the header at roughly a fifth
     // of the canvas width; content underneath it is never seen.
     obstructions: [{ name: 'X profile avatar', rect: { x: 0, y: 330, w: 310, h: 170 } }],
+    // Three lines of caps do not belong on a 3:1 canvas; the poster claim merges
+    // its authored phrases down to two here.
+    claimLines: 2,
     note: 'X / Twitter profile header',
   },
   portrait: {
@@ -434,21 +502,29 @@ function canvasSvg(fmt, body) {
 
 async function render(direction, format) {
   const fmt = FORMATS[format];
-  const compose = fmt.layout === 'landscape' ? composeLandscape : composeStack;
-  const plan = await compose(direction, format, fmt);
+  const compose = direction.compose
+    ? direction.compose[fmt.layout]
+    : fmt.layout === 'landscape' ? composeLandscape : composeStack;
+  const plan = await compose(direction, format, fmt, {
+    copy: copy.poster,
+    conditions: copy.conditions,
+    logoHeight: async (dir, width) => (await sharp(await logoBuffer(dir, width)).metadata()).height,
+  });
 
   const verification = verifyLayout({ plan, fmt, direction, format });
   if (!verification.ok) return { verification, target: null };
 
   const fill = direction.gradient ? `url(#${direction.gradient})` : direction.base;
   const background = canvasSvg(fmt, `<rect width="${fmt.w}" height="${fmt.h}" fill="${fill}"/>`);
-  const mark = await markLayer(direction, fmt);
+  // A treatment may have no background mark: the poster's field is its own
+  // white space, and a tonal graphic under a symmetric composition muddies it.
+  const mark = direction.mark ? [await markLayer(direction, fmt)] : [];
   const logo = await logoBuffer(direction, plan.logo.w);
   const target = path.join(outDir, `${direction.id}-${format}.png`);
 
   await sharp(background)
     .composite([
-      mark,
+      ...mark,
       { input: canvasSvg(fmt, plan.svgBody), left: 0, top: 0 },
       { input: logo, left: Math.round(plan.logo.x), top: Math.round(plan.logo.y) },
     ])
@@ -480,7 +556,9 @@ async function contactSheet(rendered) {
       const thumb = await sharp(file).resize({ width: cellW, height: cellW, fit: 'inside' }).png().toBuffer();
       row.push({ thumb, ...(await sharp(thumb).metadata()), format });
     }
-    cells.push({ dir, row });
+    // `--only` renders one treatment; a sheet row with nothing in it is not a
+    // row (and `Math.max()` of no cells is -Infinity, which sharp rejects).
+    if (row.length) cells.push({ dir, row });
   }
 
   const rowHeights = cells.map((c) => Math.max(...c.row.map((x) => x.height)) + rowLabelH + gutter);

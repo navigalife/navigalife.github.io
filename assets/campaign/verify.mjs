@@ -69,6 +69,7 @@ export function verifyLayout({ plan, fmt, direction, format }) {
     h: fmt.h - fmt.pad.top - fmt.pad.bottom,
   };
   for (const block of plan.blocks) {
+    if (block.bleed) continue;
     const slackLeft = block.x - safe.x;
     const slackRight = safe.x + safe.w - (block.x + block.w);
     const slackTop = block.y - safe.y;
@@ -91,7 +92,26 @@ export function verifyLayout({ plan, fmt, direction, format }) {
 
   // 3. Text must clear the WCAG AA floor against the surface behind it.
   //    Large text (>= 24px at the format's own scale) gets the 3:1 floor.
-  const pairs = [
+  //
+  //    A layout that draws colours the editorial treatments never use — white
+  //    type on a filled bar, say — declares its own pairs, each with the surface
+  //    it actually lands on. The default list below is the editorial one, where
+  //    every colour can land on either the flat background or the mark tint.
+  const scale = fmt.w / 1080;
+  if (plan.contrast) {
+    for (const pair of plan.contrast) {
+      const ratio = contrastRatio(pair.fg, pair.bg);
+      if (ratio === null) continue;
+      const floor = pair.size / scale >= 24 ? 3 : 4.5;
+      if (ratio < floor) {
+        failures.push({
+          check: CONTRAST,
+          detail: `${pair.name} ${pair.fg} on ${pair.bg} is ${ratio.toFixed(2)}:1, below the ${floor}:1 floor`,
+        });
+      }
+    }
+  }
+  const pairs = plan.contrast ? [] : [
     { name: 'headline', fg: direction.ink, size: fmt.type.headline },
     { name: 'accent word', fg: direction.accent, size: fmt.type.headline },
     { name: 'body', fg: direction.muted, size: fmt.type.body },
@@ -110,7 +130,6 @@ export function verifyLayout({ plan, fmt, direction, format }) {
     for (const surface of surfaces) {
       const ratio = contrastRatio(pair.fg, surface.color);
       if (ratio === null) continue;
-      const scale = fmt.w / 1080;
       const isLarge = pair.size / scale >= 24;
       const floor = isLarge ? 3 : 4.5;
       if (ratio < floor) {
@@ -135,6 +154,15 @@ export function verifyLayout({ plan, fmt, direction, format }) {
         });
       }
     }
+  }
+
+  // 5. Invariants the composer itself computed. A layout knows things the
+  //    verifier cannot infer from rectangles — that its four columns are evenly
+  //    pitched, that a caption stayed inside its column, that a headline still
+  //    fills its measure. It reports them; this is where they become a failure.
+  for (const check of plan.checks ?? []) {
+    if (check.ok) continue;
+    failures.push({ check: check.check ?? 'layout', detail: `${check.name}: ${check.detail}` });
   }
 
   return { ok: failures.length === 0, failures, id: `${direction.id} · ${format}` };
