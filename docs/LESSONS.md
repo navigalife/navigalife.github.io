@@ -230,3 +230,29 @@ STOP block in `AGENTS.md`, not a lesson here.
       surrounding straight/curly quotes** from `config.heroHeadline` before wrapping
       (`heroHeadlineText`), so exactly one styled set renders regardless of what's stored.
       Store the headline as **plain text** (no quotes) — the template owns the styling.
+
+## From the campaign flyer rebuild (advisor-implemented, assets only, 2026-07-26)
+
+24. **Generated raster assets must verify their own layout.**
+    - The Codex flyer set (`assets/codex-flyers`, six PNGs) shipped the headline as
+      **"theonly way out"** on every file: lines were built from `<tspan>` runs with
+      literal spaces at the run boundaries, and **SVG collapses that whitespace**.
+      It also hardcoded the `medivasc` theme while the site runs `meridian`, carried
+      **no phone number or wa.me link** on files named `*-whatsapp-flyer.png`, and
+      composited `medivasc.in` on top of the artwork in two X headers.
+    - None of it threw. A raster renderer has **no failure mode short of a crash** — a
+      visually broken PNG is indistinguishable to it from a correct one, which makes
+      this class of work uniquely unsuited to unverified execution.
+    - The rebuild (`assets/campaign`) is gated on its own checks: text is **measured**
+      by rasterising and scanning alpha (librsvg exposes no metrics API) and every word
+      is placed at an absolute `x`, so whitespace is never load bearing; `verify.mjs`
+      asserts safe area, artwork overlap, stack collision, WCAG AA contrast and declared
+      platform chrome (the X avatar overlay) and **exits non-zero without writing**.
+      It caught two shipped defects and three regressions introduced during the rebuild.
+    - Campaign copy, palette and contact details are **read from `data/themes.json`,
+      `data/site-config.json` and `data/company.json`**, with hard failures when the
+      theme id or the accent word does not resolve. Retyped brand values drift; derived
+      ones cannot.
+    - `assets/campaign` is deliberately **not in `src/build.js`'s deploy copy list** —
+      the same convention as `assets/brand/logo_newfont` and `assets/brand/sticker`.
+      Stored assets, not shipped ones.
