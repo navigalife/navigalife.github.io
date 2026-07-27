@@ -99,7 +99,21 @@ const fmt = {
   // it took when the stack was smaller it read as a corner mark rather than as
   // the thing that signs the card.
   logo: 348,
-  mark: { size: 0.86, x: 0.54, y: -0.10 },
+  // The mark is a C — an open ring of atoms — and at the scale the flyer uses it
+  // (roughly canvas-width) only two or three atoms land on the page, which reads
+  // as texture rather than as a molecule. Small enough to see whole, it reads as
+  // what it is: the ring arcs in from the right edge, its opening off-canvas.
+  //
+  // Specified by where it lands, not by raw scale. `span` is how far it reaches
+  // in from the right edge as a fraction of the width; `bleed` is how much runs
+  // off past it. Vertically centred on whatever height the rhythm solved.
+  //
+  // `bleed` trades atom count against the arc's presence: at 0.05 the whole C
+  // sits inside the band and reads as a small badge floating in it; at 0.30 it
+  // is a true half-ring filling the height, but the atoms are back to being
+  // large and few. 0.15 keeps the arc running the full height and the network
+  // legible, which is the point of pulling back this far.
+  mark: { span: 0.30, bleed: 0.15 },
 };
 
 // Fraunces, the signed-off flyer's own face, set in capitals. Capitals accent by
@@ -126,18 +140,30 @@ async function logoBuffer(width) {
 }
 
 async function markLayer() {
-  const size = Math.round(fmt.mark.size * fmt.w);
-  const shape = await sharp(path.join(root, 'assets/brand', direction.mark)).resize({ width: size }).png().toBuffer();
+  const { span, bleed } = fmt.mark;
+  const size = Math.round((span + bleed) * fmt.w);
+  // Trimmed first, like the lockup. The file carries transparent padding around
+  // the C, so positioning its edge puts the *artwork* short of where it was
+  // asked to reach — 27.8% in rather than 30%.
+  const shape = await sharp(path.join(root, 'assets/brand', direction.mark))
+    .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: 2 })
+    .resize({ width: size })
+    .png()
+    .toBuffer();
   const { width, height } = await sharp(shape).metadata();
   const tinted = await sharp({ create: { width, height, channels: 4, background: direction.markTint } })
     .composite([{ input: shape, blend: 'dest-in' }])
     .png()
     .toBuffer();
 
-  const x = Math.round(fmt.mark.x * fmt.w);
-  const y = Math.round(fmt.mark.y * fmt.w);
+  // Left edge at `1 - span` of the width, so the visible arc is exactly the
+  // right `span` of the canvas whatever the mark's own aspect turns out to be.
+  const x = Math.round(fmt.w * (1 - span));
+  const y = Math.round((fmt.h - height) / 2);
   const left = Math.max(0, -x);
   const top = Math.max(0, -y);
+  // Sharp refuses to composite past the canvas edge, so the overflow is cropped
+  // here rather than clamped — the mark is meant to bleed.
   const cropW = Math.min(width - left, fmt.w - Math.max(0, x));
   const cropH = Math.min(height - top, fmt.h - Math.max(0, y));
   if (cropW <= 0 || cropH <= 0) throw new Error('mission: the mark falls entirely off the canvas');

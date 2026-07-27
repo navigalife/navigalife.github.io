@@ -34,6 +34,26 @@ up with a 119px rhythm nobody picked. Change `fmt.step` and the canvas follows.
   holds the message up under the lockup and gathers the whole leftover into one
   field below — different card.
 
+## The mark
+
+The MediVasc mark is a **C** — an open ring of atoms — and the flyer sets it at
+roughly canvas width, which puts two or three atoms on the page and reads as
+texture rather than as a molecule. Here it is pulled back until the network is
+legible: the ring arcs in from the right edge with its opening off-canvas.
+
+It is specified by where it lands, not by scale. `span` is how far it reaches in
+from the right edge (0.30); `bleed` is how much runs off past it (0.15), and it
+is vertically centred on whatever height the rhythm solved.
+
+`bleed` is the real dial, trading atom count against the arc's presence: at 0.05
+the whole C sits inside the band and reads as a small badge floating in it; at
+0.30 it is a true half-ring filling the height, but the atoms are back to being
+large and few.
+
+The mark is trimmed before it is placed, like the lockup. The file carries
+transparent padding around the C, so positioning its edge put the *artwork* at
+27.8% in rather than the 30% asked for.
+
 ## What the renderer solves rather than takes as input
 
 - **The size**, against the measure: authored line breaks are honoured
@@ -58,7 +78,8 @@ is the one that absorbs the even-height rounding), and the flush-right edge
 missing by more than a pixel.
 
 Measured off the rendered PNG rather than off the layout math: `AMPUTATION` and
-`PREVENTION` both end at x=1351, and the four gaps come out 93/95/96/95px.
+`PREVENTION` both end at x=1351, the four gaps come out 93/95/96/95px, and the
+mark's ink reaches in to x=1138 — 29.8% of the width from the right.
 
 Nothing here ships: `assets/campaign` is not in `src/build.js`'s deploy copy
 list.
