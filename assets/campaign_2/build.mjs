@@ -3,10 +3,11 @@
 //   node assets/campaign_2/build.mjs             # render everything
 //   node assets/campaign_2/build.mjs --only 02   # render one treatment
 //
-// One instruction, in the owner's own words, finished by a prohibition sign
-// built to ISO 3864-1 (`sign.mjs`). The owner's phrase is not retyped into each
-// treatment: it is one constant, asserted below to be exactly what the page
-// says once the lead and the enclosed word are put back together.
+// What the clinic does, said explicitly, and then what it asks you to do, in
+// the owner's own words — under a prohibition sign built to ISO 3864-1
+// (`sign.mjs`), which is a mark on the page and not the page. Neither line is
+// retyped into a treatment: the claim is asserted against the owner's phrase
+// and the eyebrow against `data/company.json`'s tagline.
 //
 // The measured-text engine, the layout verifier, the background fields and the
 // call-to-action pill are `assets/campaign`'s — imported, not copied. A second
@@ -33,9 +34,10 @@ const readJson = async (p) => JSON.parse(await fs.readFile(path.join(root, p), '
 // Brand inputs
 // ---------------------------------------------------------------------------
 
-const [siteConfig, themes] = await Promise.all([
+const [siteConfig, themes, company] = await Promise.all([
   readJson('data/site-config.json'),
   readJson('data/themes.json'),
+  readJson('data/company.json'),
 ]);
 
 const theme = themes.find((t) => t.id === siteConfig.theme);
@@ -48,27 +50,36 @@ const dark = theme.dark;
 // ---------------------------------------------------------------------------
 // Copy
 //
-// The owner asked for this campaign to say one thing. It is written here once,
-// in full, and the page is assembled out of its two halves — the lead line and
-// the word inside the sign — so the two cannot drift apart or be quietly
-// improved into "Prevent amputation" by a later edit.
+// Two things have to be said, and both are held to a source rather than typed
+// into a treatment:
+//
+//   * the owner's instruction, verbatim — one constant, asserted against the
+//     claim's authored line breaks, so it cannot be quietly improved into
+//     "Prevent amputation" by a later edit;
+//   * what the clinic does, explicitly — the eyebrow, asserted against the
+//     first sentence of `data/company.json`'s tagline, so the flyer cannot end
+//     up describing a practice the site no longer describes.
+//
+// The eyebrow keeps the owner's ampersand; the assertion normalises "&" and
+// "and" before comparing, because that is a typesetting choice and not a
+// difference in what is being claimed.
 // ---------------------------------------------------------------------------
 
 const OWNER_PHRASE = 'Say no to amputation';
 
 const copy = {
-  lead: 'Say no to',
-  // Lower case here is the source of truth; the sign sets it in caps, which is
-  // the safety-sign voice and not a second copy of the word.
-  prohibited: 'amputation',
-  // Picked out in the sign's red, so the negation reads before the sentence
-  // does. Italic where the lead is set in the site's serif.
-  accent: 'no',
+  eyebrow: 'PREVENTION OF FOOT & LEG AMPUTATION',
+  // Line breaks are authored: where a claim this short breaks is a design
+  // decision. The size that fills the measure is solved, not typed.
+  claim: ['Say no to', 'amputation.'],
+  // Picked out in the sign's red, and italic where the claim is set in the
+  // site's serif, so the negation reads before the sentence does.
+  accents: ['no'],
   conditions: ['LYMPHEDEMA', 'DIABETIC FOOT', 'VENOUS ULCERS', 'DVT'],
   pill: { label: 'Visit', site: 'medivasc.in' },
 
-  // What the flyer says under the sign. Two lengths, because a left-aligned
-  // treatment gives a third of its width to the background field.
+  // What the flyer says under the claim. Two lengths, because a left-aligned
+  // treatment gives part of its width to the background field.
   //
   // Deliberately absent: any claim that amputation is always avoidable, and any
   // claim about survival. What is asserted is that the decision is worth a
@@ -84,14 +95,25 @@ const copy = {
   },
 };
 
-if (`${copy.lead} ${copy.prohibited}` !== OWNER_PHRASE) {
+const flatClaim = copy.claim.join(' ').replace(/[.]$/, '');
+if (flatClaim !== OWNER_PHRASE) {
   throw new Error(
-    `campaign_2: the page reads "${copy.lead} ${copy.prohibited}", the owner asked for "${OWNER_PHRASE}". ` +
+    `campaign_2: the claim reads "${flatClaim}", the owner asked for "${OWNER_PHRASE}". ` +
       'The campaign says the owner\'s phrase exactly, or it does not build.',
   );
 }
-if (!copy.lead.split(/\s+/).some((w) => w.toLowerCase() === copy.accent.toLowerCase())) {
-  throw new Error(`campaign_2: the accent word "${copy.accent}" is not in the lead "${copy.lead}"`);
+if (!copy.accents.every((a) => flatClaim.split(/\s+/).some((w) => w.toLowerCase() === a.toLowerCase()))) {
+  throw new Error(`campaign_2: accent "${copy.accents.join(', ')}" is not a word in the claim "${flatClaim}"`);
+}
+
+const normalise = (s) =>
+  s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z ]+/g, ' ').replace(/\s+/g, ' ').trim();
+const taglineClaim = company.tagline.split('.')[0];
+if (normalise(copy.eyebrow) !== normalise(taglineClaim)) {
+  throw new Error(
+    `campaign_2: the eyebrow says "${copy.eyebrow}", data/company.json says "${taglineClaim}". ` +
+      'The flyer states what the clinic states, or it does not build.',
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -112,7 +134,7 @@ const directions = [
     label: 'PAPER',
     logo: 'logo_newfont/logo_tm/MediVasc-logo-tm-lg.png',
     base: light['--bg'],
-    design: { align: 'center', lead: 'serif', copy: 'standard', logoWidth: 300 },
+    design: { align: 'center', voice: 'serif', copy: 'standard', logoWidth: 300, claimCap: 150 },
     colour: {
       paper: light['--bg'],
       ink: light['--ink'],
@@ -132,7 +154,7 @@ const directions = [
     label: 'INK',
     logo: 'logo_newfont/logo_tm/MediVasc-logo-white-tm-lg.png',
     base: dark['--bg'],
-    design: { align: 'center', lead: 'serif', copy: 'standard', logoWidth: 300 },
+    design: { align: 'center', voice: 'serif', copy: 'standard', logoWidth: 300, claimCap: 150 },
     colour: {
       paper: dark['--bg'],
       ink: dark['--ink'],
@@ -152,7 +174,7 @@ const directions = [
     label: 'ROYAL',
     logo: 'logo_newfont/logo_tm/MediVasc-logo-white-tm-lg.png',
     base: '#170823',
-    design: { align: 'center', lead: 'caps', copy: 'standard', field: 'royal', logoWidth: 290 },
+    design: { align: 'center', voice: 'caps', copy: 'standard', field: 'royal', logoWidth: 290, claimCap: 142 },
     // The field is darker than the flyer set's royal, and deliberately: the
     // brightest point of that one (#56227A lifted by its own glow) leaves the
     // sign's red at 2.4:1 against it, and a prohibition sign that does not
@@ -186,8 +208,8 @@ const directions = [
     // treatment takes the aurora instead: a drift of ribbons at the foot, which
     // has no dense zone to keep type out of.
     design: {
-      align: 'left', lead: 'caps', copy: 'brief', field: 'aurora',
-      logoWidth: 260, measure: 0.88, supportMeasure: 0.72,
+      align: 'left', voice: 'caps', copy: 'brief', field: 'aurora',
+      logoWidth: 260, measure: 0.82, supportMeasure: 0.72, claimCap: 142,
     },
     colour: {
       paper: '#FBFAFD',
@@ -352,7 +374,7 @@ async function contactSheet(rendered) {
       `<defs><style>${fontCss}</style></defs>` +
       `<rect width="${sheetW}" height="${sheetH}" fill="#EEEAE2"/>` +
       `<text x="${padSheet}" y="76" font-family="'Instrument Sans', sans-serif" font-size="38" font-weight="600" fill="#182A2E">MediVasc · “${escapeXml(OWNER_PHRASE)}” · ${cells.length} treatments × ${cells[0].row.length} formats</text>` +
-      `<text x="${padSheet}" y="116" font-family="'Instrument Sans', sans-serif" font-size="21" fill="#55666B">The graphic is an ISO 3864-1 general prohibition sign, struck across the word and nothing else. Palette read from the live site theme (${escapeXml(theme.label)}); every asset gated by verify.mjs.</text>` +
+      `<text x="${padSheet}" y="116" font-family="'Instrument Sans', sans-serif" font-size="21" fill="#55666B">The graphic is an ISO 3864-1 general prohibition sign, set as a mark rather than as the page. Palette read from the live site theme (${escapeXml(theme.label)}); every asset gated by verify.mjs.</text>` +
       labels.join('') +
       `</svg>`,
   );

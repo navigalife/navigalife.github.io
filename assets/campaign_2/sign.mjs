@@ -5,32 +5,26 @@
 // assets drew — a slash laid across an illustration of a foot, which read as a
 // blade through the limb and inverted the message (review finding 4).
 //
-// So this module builds the real thing, from the standard's own proportions,
-// and it enforces two rules that make the difference between a sign and a
-// decoration:
+// So this module builds the real thing, from the standard's own proportions:
+// inner ground 0.80 of the outer diameter, band and bar each 0.10 of it, the bar
+// at exactly 45° descending left to right, and red over at least 35% of the
+// sign's area. Every one of those is computed from what is actually drawn and
+// reported as a check the build can fail on.
 //
-//   * the geometry is the standard's, not a designer's approximation. Inner
-//     ground 0.80 of the outer diameter, band and bar each 0.10 of it, the bar
-//     at exactly 45° descending left to right, and red covering at least 35% of
-//     the sign area. Every one of those is computed from what is actually drawn
-//     and reported as a check.
-//   * the bar strikes the prohibited thing and nothing else. What is enclosed
-//     here is the *word* — the procedure being refused — never a limb. A
-//     prohibition sign drawn over a leg says legs are prohibited.
-//
-// The enclosed word is measured, not guessed: its size is solved so its box
-// fits inside the inner circle with clearance, and both the fit and a
-// legibility floor are checks the build can fail on.
-
-import { advance } from '../campaign/text.mjs';
-import { line } from '../campaign/poster.mjs';
+// It encloses nothing. ISO 3864-1's P001 is a complete sign with an empty
+// ground — the general prohibition — and at the size this campaign uses it,
+// beside the words rather than instead of them, anything inside it would be
+// unreadable. What must never end up inside it is a limb: a prohibition sign
+// drawn over a leg says legs are prohibited. `compose.mjs` enforces that as
+// geometry — the bar is tested against every laid-out block on the page and the
+// build fails if it reaches any of them.
 
 /**
  * ISO 3864-1 general prohibition sign, as fractions of the outer diameter.
  *
- * `redFloor` is the standard's own requirement that red cover at least 35% of
- * the area of the sign; the geometry above satisfies it at 36.2%, which is the
- * reason those two ratios are 0.80 and 0.10 rather than anything else.
+ * `redFloor` is the standard's requirement that red cover at least 35% of the
+ * area of the sign; the geometry above satisfies it at 36.2%, which is the
+ * reason those ratios are 0.80 and 0.10 rather than anything else.
  */
 export const SPEC = Object.freeze({
   inner: 0.80,   // diameter of the inner ground
@@ -74,10 +68,8 @@ export function barPolygon({ cx, cy, d, angle = SPEC.angle, bar = SPEC.bar }) {
 /**
  * Does the bar cross an axis-aligned block?
  *
- * Separating-axis test over the four candidate axes — the block's two, and the
- * bar's own two. Used in both directions: the sign asserts that the bar *does*
- * strike the word it encloses, and the composition asserts that it strikes
- * nothing else on the page.
+ * Separating-axis test over the four candidate axes — the block's two and the
+ * bar's own two.
  */
 export function barStrikes(poly, box) {
   const rect = [
@@ -99,70 +91,16 @@ export function barStrikes(poly, box) {
 }
 
 /**
- * The sign, with `word` enclosed and struck.
+ * The sign.
  *
- * Sizing the word is solved rather than tuned: advance width is linear in font
- * size, so one probe measurement gives the width at any size, and the largest
- * size whose box still fits inside the inner circle is found by bisection on
- * that closed form. The chosen size is then measured for real and checked — a
- * solved layout that is never verified against the rasteriser is how the last
- * set of these shipped broken.
- *
- * `legibleFloor` is the smallest cap size the format will tolerate. A sign
- * shrunk to fit a banner until its word is unreadable is a failure, not a
- * compromise, and this is where it is caught.
+ * `floor` is the smallest diameter this format will accept. Subtle is the
+ * brief; illegible is not, and a sign whose band lands under a pixel and a half
+ * on a 300 dpi print file has stopped being a sign.
  */
-export async function prohibitionSign(
-  word,
-  { cx, cy, d, red, ground, ink, tracking = 0.045, legibleFloor = 0, id = 'sign' },
-) {
+export function prohibitionSign({ cx, cy, d, red, ground, floor = 0, id = 'sign' }) {
   const outer = d / 2;
   const innerR = (d * SPEC.inner) / 2;
-  const margin = d * 0.055;
-  const clear = innerR - margin;
-
-  const styleAt = (size) => ({ family: 'sans', size, weight: 600, tracking: size * tracking, fill: ink });
-
-  const probe = 100;
-  const probeWidth = await advance(word, styleAt(probe));
-  // The half-height the fit has to clear is the verifier's own, not a tidy
-  // symmetric estimate: the block box runs from 0.82em above the baseline to
-  // 0.26em below it, and the line is placed by its cap height, which leaves the
-  // box 0.08em low. Assuming it centred puts the corner 1px outside the ground
-  // and fails the check it was meant to satisfy.
-  const rise = (size) => Math.max(0.82 - 0.36, 0.26 + 0.36) * size;
-  const fits = (size) => {
-    const half = (probeWidth * size) / probe / 2;
-    const drop = rise(size);
-    return drop < clear && half <= Math.sqrt(clear * clear - drop * drop);
-  };
-
-  let size = Math.floor(d * 0.34);
-  if (!fits(size)) {
-    let lo = 6;
-    let hi = size;
-    for (let i = 0; i < 28; i++) {
-      const mid = (lo + hi) / 2;
-      if (fits(mid)) lo = mid;
-      else hi = mid;
-    }
-    size = Math.max(6, Math.floor(lo));
-  }
-
-  const style = styleAt(size);
-  const capHeight = size * 0.72;
-  const placed = await line(word, style, { cx, baseline: cy + capHeight / 2, align: 'center' });
-
-  const corners = [
-    [placed.box.x, placed.box.y],
-    [placed.box.x + placed.box.w, placed.box.y],
-    [placed.box.x, placed.box.y + placed.box.h],
-    [placed.box.x + placed.box.w, placed.box.y + placed.box.h],
-  ];
-  const worst = Math.max(...corners.map(([px, py]) => Math.hypot(px - cx, py - cy)));
-
   const barW = d * SPEC.bar;
-  const poly = barPolygon({ cx, cy, d });
   const coverage = redCoverage();
 
   // The bar is drawn last and clipped to the outer circle: an unclipped
@@ -172,7 +110,6 @@ export async function prohibitionSign(
   const draw =
     `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${outer.toFixed(2)}" fill="${red}"/>` +
     `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${innerR.toFixed(2)}" fill="${ground}"/>` +
-    placed.draw +
     `<g clip-path="url(#${id}-outer)">` +
     `<rect x="${(cx - outer).toFixed(2)}" y="${(cy - barW / 2).toFixed(2)}" width="${d.toFixed(2)}" height="${barW.toFixed(2)}" ` +
     `fill="${red}" transform="rotate(${SPEC.angle} ${cx.toFixed(2)} ${cy.toFixed(2)})"/></g>`;
@@ -183,9 +120,7 @@ export async function prohibitionSign(
     defs,
     draw,
     box: { x: cx - outer, y: cy - outer, w: d, h: d },
-    bar: poly,
-    wordBox: placed.box,
-    wordSize: size,
+    bar: barPolygon({ cx, cy, d }),
     diameter: d,
     checks: [
       {
@@ -201,21 +136,9 @@ export async function prohibitionSign(
         detail: `red is ${(coverage * 100).toFixed(1)}% of the sign area, floor ${(SPEC.redFloor * 100).toFixed(0)}%`,
       },
       {
-        name: `the prohibited word sits inside the sign`,
-        ok: worst <= clear + 0.5,
-        detail: `furthest corner ${worst.toFixed(0)}px from the centre, ground clear to ${clear.toFixed(0)}px`,
-      },
-      {
-        name: 'the prohibited word is legible',
-        ok: size >= legibleFloor,
-        detail: `word set at ${size}px, floor ${legibleFloor.toFixed(0)}px`,
-      },
-      {
-        // The point of the graphic. A sign whose bar misses the word it encloses
-        // is a red ring with a stripe in it.
-        name: 'the bar strikes the prohibited word',
-        ok: barStrikes(poly, placed.box),
-        detail: `bar at ${SPEC.angle}° across a ${placed.box.w.toFixed(0)}×${placed.box.h.toFixed(0)}px word`,
+        name: 'the sign is large enough to read as one',
+        ok: d >= floor && barW >= 3,
+        detail: `${d.toFixed(0)}px across (floor ${floor.toFixed(0)}px), band ${barW.toFixed(1)}px`,
       },
     ],
   };

@@ -1,62 +1,38 @@
-// The composition: one instruction, completed by the sign.
+// The composition: what the clinic does, then what it asks you to do.
 //
-// The page reads "Say no to" and then the graphic finishes the sentence — the
-// word AMPUTATION, enclosed in a prohibition sign and struck by its bar. That
-// is why the sign is the largest object here and the lead line is not: the
-// graphic is carrying the claim, not illustrating it.
+// Three registers carry the message, in this order:
 //
-// Everything below the sign is what the flyer set already learned it needs: one
-// line of support, one call to action that names the site, and the conditions.
-// There is no process row. Under a sign this size a four-column diagram is
-// noise, and the flyer set (`assets/campaign`) is where that register belongs.
+//   1. the eyebrow — `Prevention of foot & leg amputation`, the clinic's own
+//      line, asserted in `build.mjs` against `data/company.json`'s tagline
+//   2. the sign — the prohibition mark, small, sitting between the two
+//   3. the claim — `Say no to amputation.`, the owner's phrase, set large
 //
-// The layout rules are inherited from that engine rather than re-invented:
-// type scales by canvas *width*, gaps by leftover *height*, and the composition
-// is solved — registers are measured at full size, overflow shrinks the type
-// scale until they fit, underflow opens the gaps to a ceiling and splits what
-// is left as air above and below the stack.
+// The sign is a mark and not the page. An earlier version made it the hero,
+// nearly a full measure across with the word AMPUTATION set inside it and
+// struck; it read as a warning label rather than as a clinic's flyer. Held to
+// about a fifth of the measure it does what a "say no to" graphic is for —
+// it says *no* before the sentence does — and the words carry the message.
+//
+// The layout rules are `assets/campaign`'s, inherited rather than re-invented:
+// type scales by canvas *width*, gaps by leftover *height*, the composition is
+// solved rather than tuned, and leftover air is split evenly top and bottom.
 
 import { wrapRuns, balanceRuns, renderLines, blockBox, wrap } from '../campaign/text.mjs';
-import { line, footerStrip } from '../campaign/poster.mjs';
-import { ctaPill } from '../campaign/composer.mjs';
+import { claimBlock, line, footerStrip } from '../campaign/poster.mjs';
+import { ctaPill, CLAIM_VOICE } from '../campaign/composer.mjs';
 import { buildField } from '../campaign/field.mjs';
 import { loadMark } from '../campaign/mark.mjs';
 import { prohibitionSign, barStrikes } from './sign.mjs';
 
-// The lead's voice is a parameter, like the flyer set's claim voice: the site's
-// own Fraunces with the negation italic, or safety-sign caps. Both say the same
-// four words, and the sign says the fifth.
-const LEAD_VOICE = {
-  serif: { family: 'serif', accentFamily: 'serifItalic', size: 82, weight: 600, trackingRatio: -0.020, optical: 1.06 },
-  caps: { family: 'sans', accentFamily: null, size: 44, weight: 600, trackingRatio: 0.075, optical: 1.02 },
-};
-
-const BASE_GAPS = { logo: 50, lead: 30, sign: 44, support: 52, cta: 42 };
+const BASE_GAPS = { logo: 46, eyebrow: 32, sign: 38, claim: 40, support: 50, cta: 42 };
 
 function setup(direction, ctx) {
   const d = direction.design;
-  const voice = LEAD_VOICE[d.lead];
-  if (!voice) throw new Error(`campaign_2: no lead voice "${d.lead}"`);
+  const voice = CLAIM_VOICE[d.voice];
+  if (!voice) throw new Error(`campaign_2: no claim voice "${d.voice}"`);
   const set = ctx.copy.sets[d.copy];
   if (!set) throw new Error(`campaign_2: no copy set named "${d.copy}"`);
   return { d, c: direction.colour, voice, set };
-}
-
-/** The lead, with the negation picked out in the sign's own red. */
-function leadRuns(ctx, c, voice, upper) {
-  const accent = ctx.copy.accent.toLowerCase();
-  const runs = ctx.copy.lead.split(/\s+/).map((word) => {
-    const isAccent = word.replace(/[^a-z]/gi, '').toLowerCase() === accent;
-    return {
-      text: upper ? word.toUpperCase() : word,
-      family: isAccent && voice.accentFamily ? voice.accentFamily : voice.family,
-      fill: isAccent ? c.red : c.ink,
-    };
-  });
-  if (!runs.some((r) => r.fill === c.red)) {
-    throw new Error(`campaign_2: the accent word "${ctx.copy.accent}" does not occur in the lead "${ctx.copy.lead}"`);
-  }
-  return runs;
 }
 
 /** Type over the dense part of a background mark is unreadable, so it is barred. */
@@ -73,12 +49,13 @@ function keepOutChecks(keepOut, blocks) {
 }
 
 /**
- * The bar strikes the word and nothing else.
+ * The bar strikes nothing.
  *
  * This is review finding 4 written as a check. The first generation stroked a
- * prohibition slash across an illustration of a foot; a bar that reaches any
- * block other than the word it encloses is striking the wrong thing, and the
- * build stops rather than shipping the inversion.
+ * prohibition slash across an illustration of a foot — a bar through a limb
+ * reads as a blade through it, and a prohibition sign over a leg says legs are
+ * prohibited. This sign's ground is empty and must stay that way, so anything
+ * the bar reaches is a defect and stops the build.
  */
 function strikeChecks(sign, blocks) {
   return blocks
@@ -87,33 +64,56 @@ function strikeChecks(sign, blocks) {
       check: 'artwork',
       name: `the bar does not strike "${b.name}"`,
       ok: !barStrikes(sign.bar, b),
-      detail: 'the sign’s bar may cross the word it encloses and nothing else',
+      detail: 'the sign’s ground is empty; the bar may cross nothing',
     }));
 }
 
 function contrastPairs({ c, surfaces, sizes }) {
   const pairs = [];
   const onField = [
-    { name: 'lead', fg: c.ink, size: sizes.lead },
-    { name: 'lead accent', fg: c.red, size: sizes.lead },
+    { name: 'eyebrow', fg: c.eyebrow ?? c.muted, size: sizes.eyebrow },
+    { name: 'claim', fg: c.ink, size: sizes.claim },
+    { name: 'claim accent', fg: c.accent ?? c.red, size: sizes.claim },
     { name: 'support', fg: c.muted, size: sizes.support },
     { name: 'conditions', fg: c.footerInk ?? c.ink, size: sizes.footer },
-    // The band is a large graphic element against whatever field it lands on:
-    // a red sign that does not separate from its background is not a sign.
-    { name: 'sign band', fg: c.red, size: sizes.band },
   ];
   for (const item of onField) {
     for (const surface of surfaces) {
       pairs.push({ name: `${item.name} on ${surface.name}`, fg: item.fg, bg: surface.color, size: item.size });
     }
   }
-  pairs.push(
-    { name: 'prohibited word on the sign ground', fg: c.signInk ?? c.ink, bg: c.ground, size: sizes.word },
-    { name: 'sign band on the sign ground', fg: c.red, bg: c.ground, size: sizes.band },
-    { name: 'cta pill label', fg: c.pillInk, bg: c.pillFill, size: sizes.pill },
-  );
+  // The band is a graphic and not text: 3:1 at any size. A sign that does not
+  // separate from what is behind it — the field, or its own ground — is not a
+  // sign, and both surfaces are checked.
+  for (const surface of [...surfaces, { name: 'the sign ground', color: c.ground }]) {
+    pairs.push({ name: `sign band on ${surface.name}`, fg: c.red, bg: surface.color, size: sizes.band, floor: 3 });
+  }
+  pairs.push({ name: 'cta pill label', fg: c.pillInk, bg: c.pillFill, size: sizes.pill });
   return pairs;
 }
+
+/**
+ * The claim, at the size that fills its measure, in the treatment's voice.
+ *
+ * A caps treatment upper-cases the authored phrases here rather than carrying a
+ * second copy of them in caps — `build.mjs` asserts the owner's phrase against
+ * the source strings, and an upper-cased duplicate would be outside that check.
+ */
+const claimFor = (ctx, c, voice, measure, cap, lineCount, upper = false) =>
+  claimBlock(upper ? ctx.copy.claim.map((p) => p.toUpperCase()) : ctx.copy.claim,
+    upper ? ctx.copy.accents.map((a) => a.toUpperCase()) : ctx.copy.accents, measure, {
+    cap,
+    ink: c.ink,
+    accentFill: c.accent ?? c.red,
+    lineCount,
+    lineHeight: voice.lineHeight,
+    family: voice.family,
+    weight: voice.weight,
+    trackingRatio: voice.trackingRatio,
+    accentFamily: voice.accentFamily,
+    optical: voice.optical,
+    boxed: voice.boxed,
+  });
 
 // ---------------------------------------------------------------------------
 // The flyer — square, portrait, story, print
@@ -130,7 +130,7 @@ export async function composeSignFlyer(direction, format, fmt, ctx) {
   const alignLeft = d.align === 'left';
   const align = alignLeft ? 'left' : 'center';
   const anchorX = alignLeft ? fmt.pad.x : cx;
-  const measureW = contentW * (d.measure ?? (alignLeft ? 0.70 : 1));
+  const measureW = contentW * (d.measure ?? (alignLeft ? 0.80 : 1));
 
   let sign = null;
 
@@ -147,42 +147,51 @@ export async function composeSignFlyer(direction, format, fmt, ctx) {
       logo: true,
     }));
 
-    const leadSize = Math.round(voice.size * ts);
-    const leadStyle = {
-      family: voice.family, size: leadSize, weight: voice.weight,
-      tracking: voice.trackingRatio * leadSize, fill: c.ink,
-    };
-    const leadLines = await wrapRuns(leadRuns(ctx, c, voice, d.lead === 'caps'), Infinity, leadStyle);
-    push('lead', leadSize * voice.optical, BASE_GAPS.lead, async (y) => {
-      const opts = { x: anchorX, baseline: y + leadSize * (voice.family === 'serif' ? 0.80 : 0.76), lineHeight: leadSize * 1.1, style: leadStyle, align };
-      return { draw: renderLines(leadLines, opts), box: blockBox(leadLines, opts) };
+    // The clinic's own line, said plainly and said first.
+    const eyebrowSize = Math.round(23 * ts);
+    const eyebrowStyle = { family: 'sans', size: eyebrowSize, weight: 600, tracking: eyebrowSize * 0.16, fill: c.eyebrow ?? c.muted };
+    const eyebrowLines = await wrapRuns([{ text: ctx.copy.eyebrow }], measureW, eyebrowStyle);
+    const eyebrowLead = eyebrowSize * 1.5;
+    push('eyebrow', (eyebrowLines.length - 1) * eyebrowLead + eyebrowSize * 1.04, BASE_GAPS.eyebrow, async (y) => {
+      const opts = { x: anchorX, baseline: y + eyebrowSize * 0.82, lineHeight: eyebrowLead, style: eyebrowStyle, align };
+      return { draw: renderLines(eyebrowLines, opts), box: blockBox(eyebrowLines, opts) };
     });
 
-    // The sign takes the height the rest of the composition leaves, up to the
-    // measure. Scaling it with the type instead makes a square canvas shrink
-    // everything — the flyer ends up with small type *and* a small sign, and a
-    // third of the width unused. Its diameter is patched in below, once the
-    // registers around it have been measured.
-    const signEntry = { name: 'sign', height: 0, gap: BASE_GAPS.sign * ts, place: null };
-    let diameter = 0;
-    signEntry.place = async (y) => {
-      sign = await prohibitionSign(ctx.copy.prohibited.toUpperCase(), {
+    // A mark, not the page: a fixed fraction of the measure, so it keeps the
+    // same optical weight on a square as on an A5 sheet.
+    const diameter = (d.signWidth ?? 0.20) * measureW;
+    push('sign', diameter, BASE_GAPS.sign, async (y) => {
+      sign = prohibitionSign({
         cx: alignLeft ? fmt.pad.x + diameter / 2 : cx,
         cy: y + diameter / 2,
         d: diameter,
         red: c.red,
         ground: c.ground,
-        ink: c.signInk ?? c.ink,
-        legibleFloor: fmt.w * 0.030,
+        floor: fmt.w * 0.11,
         id: `sign-${direction.id}`,
       });
       return { draw: sign.draw, box: sign.box, checks: sign.checks };
-    };
-    seq.push(signEntry);
+    });
+
+    // The claim gets its own measure, narrower than the page's. Two short lines
+    // set across a full measure either fill it at a size the page cannot carry
+    // or sit in it at 59% and read as a headline that lost its nerve.
+    const claimW = contentW * (d.claimMeasure ?? (alignLeft ? d.measure ?? 0.80 : 0.74));
+    const claim = await claimFor(ctx, c, voice, claimW, (d.claimCap ?? 150) * ts, d.claimLines ?? 2, d.voice === 'caps');
+    push('claim', claim.height, BASE_GAPS.claim, async (y) => {
+      const opts = {
+        x: anchorX,
+        baseline: y + claim.size * (voice.family === 'serif' ? 0.86 : 0.76),
+        lineHeight: claim.size * voice.lineHeight,
+        style: claim.style,
+        align,
+      };
+      return { draw: renderLines(claim.lines, opts), box: blockBox(claim.lines, opts) };
+    });
 
     const supportSize = Math.round(27 * ts);
     const supportStyle = { family: 'sans', size: supportSize, weight: 400, tracking: 0, fill: c.muted };
-    const supportW = contentW * (d.supportMeasure ?? (alignLeft ? d.measure ?? 0.70 : 0.82));
+    const supportW = contentW * (d.supportMeasure ?? (alignLeft ? d.measure ?? 0.80 : 0.82));
     const { lines: supportLines } = await balanceRuns([{ text: set.support }], supportW, supportStyle, { minScale: 1 });
     const supportLead = supportSize * 1.44;
     push('support', (supportLines.length - 1) * supportLead + supportSize * 1.04, BASE_GAPS.support, async (y) => {
@@ -207,23 +216,20 @@ export async function composeSignFlyer(direction, format, fmt, ctx) {
       return { draw: placed.draw, box: placed.box, checks: placed.checks };
     });
 
+    const blocksH = seq.reduce((a, s) => a + s.height, 0);
     const gapsH = seq.reduce((a, s) => a + s.gap, 0);
-    const withoutSign = seq.reduce((a, s) => a + s.height, 0) + gapsH;
-    diameter = Math.max(0, Math.min(measureW, available - withoutSign - 2));
-    signEntry.height = diameter;
-
     return {
-      k, ts, seq, gapsH, diameter, total: withoutSign + diameter,
-      // The sign has a floor as well as a ceiling: below it the graphic has
-      // stopped being the page and the type around it is what needs to give.
-      room: diameter / measureW,
-      sizes: { lead: leadSize, support: supportSize, pill: pillProbe.size, footer: footerProbe.size, band: diameter * 0.1 },
+      k, ts, seq, gapsH, total: blocksH + gapsH, claimFill: claim.fill,
+      sizes: {
+        eyebrow: eyebrowSize, claim: claim.size, support: supportSize,
+        pill: pillProbe.size, footer: footerProbe.size, band: diameter * 0.1,
+      },
     };
   };
 
   let m = await measure(1);
-  for (let pass = 0; pass < 4 && m.room < (d.signFloor ?? 0.40); pass++) {
-    const next = Math.max(0.55, m.k * 0.88);
+  for (let pass = 0; pass < 4 && m.total > available; pass++) {
+    const next = Math.max(0.58, m.k * ((available - 2) / m.total));
     if (next >= m.k) break;
     m = await measure(next);
   }
@@ -250,9 +256,9 @@ export async function composeSignFlyer(direction, format, fmt, ctx) {
 
   checks.push(...strikeChecks(sign, blocks));
   checks.push({
-    name: 'the sign still holds the page',
-    ok: m.room >= (d.signFloor ?? 0.40),
-    detail: `sign is ${(m.room * 100).toFixed(0)}% of the measure, floor ${((d.signFloor ?? 0.40) * 100).toFixed(0)}%`,
+    name: 'claim fills its measure',
+    ok: m.claimFill >= (d.fillFloor ?? 0.70),
+    detail: `longest line covers ${(m.claimFill * 100).toFixed(0)}% of the measure, floor ${((d.fillFloor ?? 0.70) * 100).toFixed(0)}%`,
   });
 
   const field = d.field
@@ -280,7 +286,7 @@ export async function composeSignFlyer(direction, format, fmt, ctx) {
     contrast: contrastPairs({
       c,
       surfaces: field?.surfaces ?? [{ name: 'surface', color: c.paper }],
-      sizes: { ...m.sizes, word: sign.wordSize },
+      sizes: m.sizes,
     }),
   };
 }
@@ -290,12 +296,18 @@ export async function composeSignFlyer(direction, format, fmt, ctx) {
 // ---------------------------------------------------------------------------
 
 /**
- * Landscape: identity and instruction on the left, the sign on the right.
+ * Landscape: the message on the left, the sign and the call to action on the
+ * right, the conditions along the bottom of the text column.
  *
- * The left column is measured against the profile avatar rather than the canvas
- * — X draws the avatar over the bottom-left corner, and content placed there is
- * permanently hidden for every visitor. The conditions run along the bottom
- * right for the same reason.
+ * The first version of this header put a full-height sign hard against the
+ * right margin and a short column against the left, which left a third of the
+ * banner as a hole in the middle. What closes it is giving the claim the room:
+ * the left column measures out to the right-hand group, and the claim's size is
+ * solved to fill it on one line.
+ *
+ * The column is measured against the profile avatar rather than the canvas — X
+ * draws the avatar over the bottom-left corner, and content placed there is
+ * permanently hidden for every visitor.
  */
 export async function composeSignHeader(direction, format, fmt, ctx) {
   const { d, c, voice } = setup(direction, ctx);
@@ -307,52 +319,58 @@ export async function composeSignHeader(direction, format, fmt, ctx) {
   const checks = [];
   const track = (name, box) => { blocks.push({ name, ...box }); return box; };
 
-  // The sign first: it takes the height it can have, and what is left of the
-  // width is the left column's.
-  const diameter = Math.min(fmt.h - fmt.pad.top - fmt.pad.bottom, fmt.w * 0.30);
-  const signCx = fmt.w - fmt.pad.x - diameter / 2;
-  // Centred in the safe band, not on the canvas: the top and bottom margins of
-  // a header are not equal, and a sign that fills the band and is centred on
-  // the canvas hangs 3px over the top margin.
-  const sign = await prohibitionSign(ctx.copy.prohibited.toUpperCase(), {
-    cx: signCx,
-    cy: fmt.pad.top + (fmt.h - fmt.pad.top - fmt.pad.bottom) / 2,
+  // The right-hand group first — sign over pill, centred on each other — because
+  // its width is what the claim's measure is left with.
+  const diameter = (d.headerSign ?? 0.115) * fmt.w;
+  const pillProbe = await ctaPill(ctx.copy.pill, {
+    x: 0, cx: 0, y: 0, align: 'left', ts: u * 0.84, fill: c.pillFill, ink: c.pillInk, measure: fmt.w * 0.34,
+  });
+  const groupW = Math.max(diameter, pillProbe.box.w);
+  const groupCx = fmt.w - fmt.pad.x - groupW / 2;
+  const groupGap = 34 * u;
+  const groupH = diameter + groupGap + pillProbe.height;
+  const groupTop = fmt.pad.top + Math.max(0, (fmt.h - fmt.pad.top - fmt.pad.bottom - groupH) / 2);
+
+  const sign = prohibitionSign({
+    cx: groupCx,
+    cy: groupTop + diameter / 2,
     d: diameter,
     red: c.red,
     ground: c.ground,
-    ink: c.signInk ?? c.ink,
-    legibleFloor: fmt.w * 0.014,
+    floor: fmt.w * 0.07,
     id: `sign-${direction.id}`,
   });
   draw.push(sign.draw);
   track('sign', sign.box);
   checks.push(...sign.checks);
 
-  const signLeft = signCx - diameter / 2;
-  const columnW = signLeft - 60 * u - fmt.pad.x;
+  const placedPill = await ctaPill(ctx.copy.pill, {
+    x: 0, cx: groupCx, y: groupTop + diameter + groupGap, align: 'center',
+    ts: u * 0.84, fill: c.pillFill, ink: c.pillInk, measure: fmt.w * 0.34,
+  });
+  draw.push(placedPill.draw);
+  const pillBox = track('cta', placedPill.box);
+  checks.push(...placedPill.checks);
+
+  const columnRight = groupCx - groupW / 2 - 56 * u;
+  const measureW = columnRight - fmt.pad.x;
   const avatar = (fmt.obstructions ?? []).find((o) => o.rect.x < fmt.pad.x + 40 * u);
   const floor = avatar ? avatar.rect.y - 18 * u : fmt.h - fmt.pad.bottom;
 
-  // The left column is solved the same way the flyer is: measured at full size,
-  // then shrunk until it clears the avatar.
+  // The column is solved the same way the flyer is: measured at full size, then
+  // shrunk until it clears the avatar.
   const column = async (k) => {
     const ts = u * k;
-    const logoW = Math.round(172 * ts);
+    const logoW = Math.round(178 * ts);
     const logoH = await ctx.logoHeight(direction, logoW);
-    // The header's column has one job and 260px of height to do it in, so the
-    // lead takes as much of that as the registers around it can spare.
-    const leadSize = Math.round(voice.size * 1.05 * ts);
-    const leadStyle = {
-      family: voice.family, size: leadSize, weight: voice.weight,
-      tracking: voice.trackingRatio * leadSize, fill: c.ink,
+    const eyebrowSize = Math.round(21 * ts);
+    const eyebrowStyle = { family: 'sans', size: eyebrowSize, weight: 600, tracking: eyebrowSize * 0.16, fill: c.eyebrow ?? c.muted };
+    const claim = await claimFor(ctx, c, voice, measureW, (d.headerClaimCap ?? 104) * ts, d.headerClaimLines ?? 1, d.voice === 'caps');
+    const gaps = [20 * ts, 22 * ts];
+    return {
+      k, ts, logoW, logoH, eyebrowSize, eyebrowStyle, claim, gaps,
+      total: logoH + gaps[0] + eyebrowSize * 1.04 + gaps[1] + claim.boxHeight,
     };
-    const leadLines = await wrapRuns(leadRuns(ctx, c, voice, d.lead === 'caps'), columnW, leadStyle);
-    const pill = await ctaPill(ctx.copy.pill, {
-      x: fmt.pad.x, cx: 0, y: 0, align: 'left', ts: ts * 0.86, fill: c.pillFill, ink: c.pillInk, measure: columnW,
-    });
-    const gaps = [22 * ts, 22 * ts];
-    const leadH = (leadLines.length - 1) * leadSize * 1.1 + leadSize * voice.optical;
-    return { k, ts, logoW, logoH, leadSize, leadStyle, leadLines, leadH, pill, gaps, total: logoH + gaps[0] + leadH + gaps[1] + pill.height };
   };
 
   let col = await column(1);
@@ -366,34 +384,31 @@ export async function composeSignHeader(direction, format, fmt, ctx) {
   const logoBox = track('logo', { x: fmt.pad.x, y: Math.round(y), w: col.logoW, h: col.logoH });
   y += col.logoH + col.gaps[0];
 
-  const leadOpts = {
+  const eyebrow = await line(ctx.copy.eyebrow, col.eyebrowStyle, { x: fmt.pad.x, baseline: y + col.eyebrowSize * 0.82, align: 'left' });
+  draw.push(eyebrow.draw);
+  track('eyebrow', eyebrow.box);
+  y += col.eyebrowSize * 1.04 + col.gaps[1];
+
+  const claimOpts = {
     x: fmt.pad.x,
-    baseline: y + col.leadSize * (voice.family === 'serif' ? 0.80 : 0.76),
-    lineHeight: col.leadSize * 1.1,
-    style: col.leadStyle,
+    baseline: y + col.claim.size * (voice.family === 'serif' ? 0.86 : 0.76),
+    lineHeight: col.claim.size * voice.lineHeight,
+    style: col.claim.style,
   };
-  draw.push(renderLines(col.leadLines, leadOpts));
-  track('lead', blockBox(col.leadLines, leadOpts));
-  y += col.leadH + col.gaps[1];
+  draw.push(renderLines(col.claim.lines, claimOpts));
+  const claimBox = track('claim', blockBox(col.claim.lines, claimOpts));
 
-  const placedPill = await ctaPill(ctx.copy.pill, {
-    x: fmt.pad.x, cx: 0, y, align: 'left', ts: col.ts * 0.86, fill: c.pillFill, ink: c.pillInk, measure: columnW,
-  });
-  draw.push(placedPill.draw);
-  const pillBox = track('cta', placedPill.box);
-  checks.push(...placedPill.checks);
-
-  // The conditions sit in the one band of an X header that is always visible
-  // and otherwise dead: bottom right, clear of the avatar and of the sign.
+  // The conditions sit in the one band of an X header that is always visible and
+  // otherwise dead: along the bottom of the text column, clear of the avatar.
   const condStyle = { family: 'sans', size: Math.round(17 * u), weight: 600, tracking: 17 * u * 0.15, fill: c.footerInk ?? c.muted };
   const condOpts = {
-    x: signLeft - 40 * u,
+    x: columnRight,
     baseline: fmt.h - fmt.pad.bottom - condStyle.size * 0.22,
     lineHeight: condStyle.size * 1.5,
     style: condStyle,
     align: 'right',
   };
-  const condLines = await wrap(ctx.conditions.join('   ·   '), columnW, condStyle);
+  const condLines = await wrap(ctx.conditions.join('   ·   '), measureW, condStyle);
   draw.push(renderLines(condLines, condOpts));
   const condBox = track('conditions', blockBox(condLines, condOpts));
 
@@ -406,9 +421,14 @@ export async function composeSignHeader(direction, format, fmt, ctx) {
 
   checks.push(
     {
+      name: 'claim fills its measure',
+      ok: col.claim.fill >= (d.headerFillFloor ?? 0.72),
+      detail: `longest line covers ${(col.claim.fill * 100).toFixed(0)}% of the measure, floor ${((d.headerFillFloor ?? 0.72) * 100).toFixed(0)}%`,
+    },
+    {
       name: 'left column clears the profile avatar',
-      ok: pillBox.y + pillBox.h <= floor + 1,
-      detail: `column ends at ${(pillBox.y + pillBox.h).toFixed(0)}px, avatar starts at ${floor.toFixed(0)}px`,
+      ok: claimBox.y + claimBox.h <= floor + 1,
+      detail: `column ends at ${(claimBox.y + claimBox.h).toFixed(0)}px, avatar starts at ${floor.toFixed(0)}px`,
     },
     {
       name: 'conditions strip clears the profile avatar',
@@ -416,9 +436,16 @@ export async function composeSignHeader(direction, format, fmt, ctx) {
       detail: `strip starts at ${condBox.x.toFixed(0)}px, avatar ends at ${avatar ? (avatar.rect.x + avatar.rect.w).toFixed(0) : 'n/a'}px`,
     },
     {
-      name: 'the left column clears the sign',
-      ok: Math.max(...blocks.filter((b) => b.name !== 'sign').map((b) => b.x + b.w)) <= signLeft - 1,
-      detail: `column ends at ${Math.max(...blocks.filter((b) => b.name !== 'sign').map((b) => b.x + b.w)).toFixed(0)}px, sign starts at ${signLeft.toFixed(0)}px`,
+      name: 'the text column clears the sign and the call to action',
+      ok: Math.max(claimBox.x + claimBox.w, condBox.x, eyebrow.box.x + eyebrow.box.w) <= Math.min(sign.box.x, pillBox.x) - 1,
+      detail:
+        `column ends at ${Math.max(claimBox.x + claimBox.w, condBox.x).toFixed(0)}px, ` +
+        `the right-hand group starts at ${Math.min(sign.box.x, pillBox.x).toFixed(0)}px`,
+    },
+    {
+      name: 'the conditions clear the claim',
+      ok: condBox.y >= claimBox.y + claimBox.h - 1,
+      detail: `strip at ${condBox.y.toFixed(0)}px, claim ends at ${(claimBox.y + claimBox.h).toFixed(0)}px`,
     },
   );
 
@@ -435,8 +462,8 @@ export async function composeSignHeader(direction, format, fmt, ctx) {
       c,
       surfaces: field?.surfaces ?? [{ name: 'surface', color: c.paper }],
       sizes: {
-        lead: col.leadSize, support: condStyle.size, pill: placedPill.size,
-        footer: condStyle.size, band: diameter * 0.1, word: sign.wordSize,
+        eyebrow: col.eyebrowSize, claim: col.claim.size, support: condStyle.size,
+        pill: placedPill.size, footer: condStyle.size, band: diameter * 0.1,
       },
     }),
   };

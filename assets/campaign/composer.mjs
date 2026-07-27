@@ -120,7 +120,7 @@ function ruleMark(style, { x, cx, y, align, ts, colour }) {
 // Shared setup
 // ---------------------------------------------------------------------------
 
-const CLAIM_VOICE = {
+export const CLAIM_VOICE = {
   // The poster voice: caps, tight, the accent clause in purple.
   caps: { family: 'sans', weight: 600, trackingRatio: -0.014, accentFamily: null, optical: 0.74, boxed: 1.02, lineHeight: 0.94 },
   // The site's voice: Fraunces, sentence case, the accent word italic — the same

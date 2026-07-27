@@ -102,7 +102,11 @@ export function verifyLayout({ plan, fmt, direction, format }) {
     for (const pair of plan.contrast) {
       const ratio = contrastRatio(pair.fg, pair.bg);
       if (ratio === null) continue;
-      const floor = pair.size / scale >= 24 ? 3 : 4.5;
+      // A pair may state its own floor. Text is 4.5:1, or 3:1 once it is large;
+      // a graphic element that is not text — a sign's band, a rule that carries
+      // meaning — is 3:1 at any size (WCAG 1.4.11), and sizing it in points to
+      // get there would be a fiction.
+      const floor = pair.floor ?? (pair.size / scale >= 24 ? 3 : 4.5);
       if (ratio < floor) {
         failures.push({
           check: CONTRAST,
