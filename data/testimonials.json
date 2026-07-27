@@ -107,5 +107,26 @@
         "stage": "After therapy"
       }
     ]
+  },
+  {
+    "id": "story-006",
+    "featured": false,
+    "name": "",
+    "age": "",
+    "location": "India",
+    "condition": "Progression of primary lymphedema to elephantiasis",
+    "duration": "60 days therapy prevented the progression of prolonged disease",
+    "remark": "Neglect of primary lymphedema for several years turned into elephantiasis choking the whole vascularity of the limbs, which further aggravated to hyperkeratosis and chronic skin disorder.  However 60 days persistent therapy under our guidance prevented the progression of disease and patient’s mobility and optimism elevated with hopes.",
+    "quote": "",
+    "images": [
+      {
+        "src": "assets/testimonials/story-006-before.webp",
+        "stage": "Before therapy"
+      },
+      {
+        "src": "assets/testimonials/story-006-after.webp",
+        "stage": "After therapy"
+      }
+    ]
   }
 ]
