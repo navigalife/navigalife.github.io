@@ -75,20 +75,27 @@ const copy = {
   cta: { lead: 'VISIT', site: 'medivasc.in' },
 };
 
-// 3:2. 1620 × 1080 keeps the short edge at the campaign's own 1080, so the type
-// scale carries over from the signed-off portrait rather than being re-guessed.
+// The width is fixed and the height is not: `h` is solved from the rhythm at the
+// bottom of this file, because the card is a stack of five things one step
+// apart and its height is whatever that comes to. Started at 3:2 with the step
+// falling out of the canvas; the step is the design and the canvas follows it.
 const fmt = {
   w: 1620,
-  h: 1080,
+  h: null,
   dpi: 72,
   pad: { x: 104, top: 88, bottom: 88 },
   // The stack gets a measure, not the full column: the right of the canvas is
   // given to the mark, and a line run edge to edge would sit on top of it.
   measure: 0.86,
-  // `stack` is a ceiling, not a size — the setting is solved against the box and
-  // only clamped here.
+  // `stack` is a ceiling, not a size — the setting is solved against the measure
+  // and only clamped here.
   type: { stack: 210, cta: 46 },
-  // The lockup carries the top of a card whose type runs to 130px. At the 300px
+  // The one gap in the card: lockup to first line, line to line, last line to
+  // the destination. The visible space between two lines comes out ~7px more,
+  // since a line's box is fractionally taller than the capitals in it — 88 here
+  // renders as 95, which is 80% of the 119 the 3:2 canvas used to force.
+  step: 88,
+  // The lockup carries the top of a card whose type runs to 90px. At the 300px
   // it took when the stack was smaller it read as a corner mark rather than as
   // the thing that signs the card.
   logo: 348,
@@ -153,15 +160,15 @@ function arrow(x, centerY, size, color, weight) {
 }
 
 /**
- * Set the authored lines at the largest common size that fits the measure and
- * the height available to them.
+ * Set the authored lines at the largest common size that fits the measure.
  *
- * `balanceRuns` in text.mjs solves the other problem — it chooses the breaks. It
- * cannot be used here: these breaks are given, and re-wrapping would silently
- * discard them. Returns how much of the measure the longest line fills, so the
- * caller can reject a setting that came out timid.
+ * Width alone, now that the canvas height follows the type rather than
+ * constraining it. `balanceRuns` in text.mjs solves the other problem — it
+ * chooses the breaks. It cannot be used here: these breaks are given, and
+ * re-wrapping would silently discard them. Returns how much of the measure the
+ * longest line fills, so the caller can reject a setting that came out timid.
  */
-async function setStack(maxWidth, maxHeight, base, { minScale = 0.45, step = 2 } = {}) {
+async function setStack(maxWidth, base, { minScale = 0.45, step = 2 } = {}) {
   const set = async (size) => {
     const style = { ...base, size, tracking: base.tracking * (size / base.size) };
     const measured = await Promise.all(
@@ -178,8 +185,7 @@ async function setStack(maxWidth, maxHeight, base, { minScale = 0.45, step = 2 }
   const floor = Math.max(1, Math.round(base.size * minScale));
   for (let size = base.size; size >= floor; size -= step) {
     const candidate = await set(size);
-    const height = candidate.lines.length * size * VOICE.body;
-    if (candidate.lines.every((l) => l.width <= maxWidth) && height <= maxHeight) return candidate;
+    if (candidate.lines.every((l) => l.width <= maxWidth)) return candidate;
   }
   return set(floor);
 }
@@ -194,11 +200,44 @@ async function setStack(maxWidth, maxHeight, base, { minScale = 0.45, step = 2 }
 // gathers the whole leftover into one field below it. Different card.
 // ---------------------------------------------------------------------------
 
-async function compose() {
-  const { w, h, pad, type } = fmt;
+/**
+ * Solve the type and, from it, the canvas.
+ *
+ * The stack is set against the measure; the height is then whatever five things
+ * one `step` apart add up to. Doing it the other way round — fixing 3:2 and
+ * letting the step be the residual — is how the first version ended up with a
+ * 119px rhythm nobody chose.
+ */
+async function solve() {
+  const { w, pad, type, step } = fmt;
+  const u = w / 1620;
+  const measure = (w - pad.x * 2) * fmt.measure;
+
+  const logoW = Math.round(fmt.logo * u);
+  const logoH = (await sharp(await logoBuffer(logoW)).metadata()).height;
+
+  const stack = await setStack(measure, {
+    family: VOICE.family, size: type.stack, weight: VOICE.weight,
+    tracking: type.stack * VOICE.trackingRatio, fill: direction.ink,
+  });
+  const lineH = stack.style.size * VOICE.body;
+
+  // n lines between the lockup and the destination means n+1 gaps: logo→first,
+  // each line→the next, last→destination. The call to action's own box is
+  // `cta * 1.08` deep from its top to below its baseline.
+  const n = stack.lines.length;
+  const h = pad.top + logoH + n * lineH + (n + 1) * step + type.cta * 1.08 + pad.bottom;
+
+  // Even, because an odd dimension is a half-pixel centre for anything that
+  // later scales or crops this.
+  return { stack, lineH, logoW, logoH, measure, h: 2 * Math.round(h / 2) };
+}
+
+async function compose(solved) {
+  const { w, h, pad, type, step } = fmt;
+  const { stack, lineH, logoW, logoH, measure } = solved;
   const u = w / 1620;
   const contentW = w - pad.x * 2;
-  const measure = contentW * fmt.measure;
 
   const blocks = [];
   const checks = [];
@@ -206,8 +245,6 @@ async function compose() {
   const draw = [];
 
   // --- lockup --------------------------------------------------------------
-  const logoW = Math.round(fmt.logo * u);
-  const logoH = (await sharp(await logoBuffer(logoW)).metadata()).height;
   const logoBox = track('logo', { x: pad.x, y: pad.top, w: logoW, h: logoH });
 
   // --- the destination, sitting on the bottom safe line ---------------------
@@ -229,18 +266,6 @@ async function compose() {
   track('cta', { ...ctaBox, w: arrowX + arrowSize - pad.x });
 
   // --- the stack ------------------------------------------------------------
-  const base = {
-    family: VOICE.family, size: type.stack, weight: VOICE.weight,
-    tracking: type.stack * VOICE.trackingRatio, fill: direction.ink,
-  };
-  const minStep = 46 * u;
-  const stack = await setStack(
-    measure,
-    ctaBox.y - pad.top - logoH - (copy.stack.length + 1) * minStep,
-    base,
-  );
-  const lineH = stack.style.size * VOICE.body;
-
   // A mission set at two thirds of its measure reads as a caption. The floor is
   // a check rather than a comment: reworded copy that no longer fills the column
   // fails the build instead of shipping small.
@@ -251,16 +276,15 @@ async function compose() {
     detail: `longest line fills ${(stack.fill * 100).toFixed(0)}% of the measure, floor 82%`,
   });
 
-  // n lines between the lockup and the destination means n+1 gaps: logo→first,
-  // each line→the next, last→destination. Dividing by n drops one of them and
-  // jams the closing line onto the call to action.
-  const n = stack.lines.length;
-  const step = (ctaBox.y - pad.top - logoH - n * lineH) / (n + 1);
+  // The step is an input now, so the thing worth checking is that the canvas
+  // solved from it actually holds it — a rounding to an even height, a logo that
+  // trimmed taller than expected, and the last gap is the one that absorbs it.
+  const closing = ctaBox.y - (pad.top + logoH + stack.lines.length * (lineH + step));
   checks.push({
     check: 'flow',
-    name: 'even rhythm',
-    ok: step >= minStep,
-    detail: `${step.toFixed(0)}px between elements, floor ${minStep.toFixed(0)}px`,
+    name: 'closing gap',
+    ok: Math.abs(closing - step) <= 2,
+    detail: `${closing.toFixed(1)}px before the call to action, the step is ${step}px`,
   });
 
   // The right edge is the longest flush-left line's own edge, not an abstract
@@ -319,7 +343,10 @@ const canvasSvg = (body) =>
 
 await fs.mkdir(outDir, { recursive: true });
 
-const plan = await compose();
+const solved = await solve();
+fmt.h = solved.h;
+
+const plan = await compose(solved);
 const verification = verifyLayout({ plan, fmt, direction, format: 'mission' });
 if (!reportVerification([{ id: 'mission', verification }])) {
   console.error('\nmission: layout verification failed — nothing written.');
@@ -338,4 +365,7 @@ await sharp(canvasSvg(`<rect width="${fmt.w}" height="${fmt.h}" fill="${directio
   .png({ compressionLevel: 9, adaptiveFiltering: true })
   .toFile(target);
 
-console.log(`\nWrote ${path.relative(root, target)} (${fmt.w}×${fmt.h}, 3:2)`);
+console.log(
+  `\nWrote ${path.relative(root, target)} — ${fmt.w}×${fmt.h} ` +
+    `(${(fmt.w / fmt.h).toFixed(3)}:1), type ${solved.stack.style.size}px, step ${fmt.step}px`,
+);
