@@ -128,5 +128,26 @@
         "stage": "After therapy"
       }
     ]
+  },
+  {
+    "id": "story-007",
+    "featured": false,
+    "name": "",
+    "age": "",
+    "location": "India",
+    "condition": "Hysterectomy oncology led to cellulitis",
+    "duration": "Near - normal recovery in 90 days",
+    "remark": "Post Hysterectomy  and radiation therapy, injury to proximal lymphatic vessels and lymph nodes  led to development of chronic cellulitis. 30 days therapy showed significant improvement and over 90 days, patient improved to near normal levels and advised therapy at regular intervals.",
+    "quote": "",
+    "images": [
+      {
+        "src": "assets/testimonials/story-007-before.webp",
+        "stage": "Before therapy"
+      },
+      {
+        "src": "assets/testimonials/story-007-after.webp",
+        "stage": "After therapy"
+      }
+    ]
   }
 ]
