@@ -22,6 +22,7 @@ import sharp from 'sharp';
 import { loadFonts, wrap, wrapRuns, balanceRuns, renderLines, blockBox, blockHeight, escapeXml } from './text.mjs';
 import { verifyLayout, reportVerification } from './verify.mjs';
 import { composePosterFlyer, composePosterHeader } from './poster.mjs';
+import { composeFieldFlyer, composeFieldHeader } from './composer.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../..');
@@ -83,7 +84,72 @@ const copy = {
       claim: ['REFERRED FOR', 'AMPUTATION?', 'TALK TO US FIRST.'],
     },
   },
+
+  // The pill: one line, one destination. Shared by every field treatment.
+  pill: { label: 'Visit', site: 'medivasc.in' },
+
+  // The field treatments each speak once. Line breaks in `claim` are authored;
+  // the accent words are matched by exact word, so a claim can be reworded
+  // without re-marking anything by index.
+  //
+  // What is deliberately absent from all four: any claim about survival. The
+  // site claims limb preservation and a return to independence and does not
+  // claim a mortality benefit, so neither does the campaign — which is why
+  // `Preserve Life` and `Longer Lives` do not appear here.
+  fields: {
+    halo: {
+      // The site's own hero line, set in the site's own voice. It is asserted
+      // against data/site-config.json below rather than retyped.
+      claim: ['Amputation is not', 'the only way out.'],
+      accents: ['only'],
+      lines: 2,
+      support: 'Vascular and lymphatic protocols, designed case by case, guided at home, and followed up until the result holds.',
+    },
+    lattice: {
+      // Short lines on purpose: this treatment gives the right of the canvas to
+      // the mark, so its claim sets in about two thirds of the measure the
+      // centred treatments get, and a long word pair would set it small.
+      claim: ['SAVE THE LIMB.', 'STAY INDEPENDENT.'],
+      accents: ['STAY', 'INDEPENDENT.'],
+      lines: 2,
+      support: 'Studied case by case. Guided at home. Followed up until the result holds.',
+    },
+    royal: {
+      claim: ['PREVENT AMPUTATION.', 'KEEP WALKING.'],
+      accents: ['KEEP', 'WALKING.'],
+      lines: 2,
+      support: 'A protocol built around your case, guided at home, and followed up until the result holds.',
+    },
+    signal: {
+      // The eyebrow carries what this is; the claim carries how it is done. A
+      // claim this quiet on its own would leave a stranger guessing.
+      eyebrow: 'PREVENTING FOOT & LEG AMPUTATION',
+      // No full stop: the italic 'e' leans away from it and leaves a visible
+      // gap that reads as a spacing bug rather than punctuation.
+      claim: ['One limb', 'at a time'],
+      accents: ['at', 'a', 'time'],
+      lines: 2,
+      support: 'Lymphedema, venous ulcers, diabetic foot and DVT — studied case by case and guided at home.',
+    },
+  },
 };
+
+// The halo treatment sets the site's hero headline, and the break between its
+// two lines is authored. Retyped copy drifts the moment the owner edits the
+// hero in the admin CMS, so the two are held together here instead.
+{
+  const set = copy.fields.halo;
+  const flat = set.claim.join(' ').replace(/[.]$/, '');
+  if (flat !== siteConfig.heroHeadline) {
+    throw new Error(
+      `campaign: the halo claim reads "${flat}", but data/site-config.json's hero reads "${siteConfig.heroHeadline}". ` +
+        'Re-break the claim to match the site, or give the treatment a claim of its own.',
+    );
+  }
+  if (!set.accents.includes(siteConfig.heroAccent)) {
+    throw new Error(`campaign: the halo claim accents "${set.accents.join(', ')}", the site accents "${siteConfig.heroAccent}"`);
+  }
+}
 
 // The process row is site data, not campaign copy. Every protocol carries the
 // same four engagement steps; the flyer shows short forms of them, and this is
@@ -190,6 +256,127 @@ const directions = [
       onPurpleDim: '#D9C7EA',
       onPurpleSoft: '#E4D6F0',
       onPurpleLine: '#8659A5',
+    },
+  },
+
+  // -------------------------------------------------------------------------
+  // The field treatments (composer.mjs). One composition — lockup, [eyebrow],
+  // claim, rule, support, [pillars], pill, conditions — over four surfaces,
+  // with the alignment and the claim's voice as parameters. Every colour below
+  // is checked against the field's own surfaces, not against the paper it
+  // started from: see `field.mjs`.
+  // -------------------------------------------------------------------------
+  {
+    id: '05-halo',
+    label: 'HALO',
+    compose: { stack: composeFieldFlyer, landscape: composeFieldHeader },
+    // White, not the purple-mark lockup: brand purple on a deep violet field
+    // reads as a hole where the mark should be.
+    logo: 'logo_newfont/logo_tm/MediVasc-logo-white-tm-lg.png',
+    mark: null,
+    base: '#0C0512',
+    design: { field: 'halo', align: 'center', voice: 'serif', rule: 'node', pillars: 'outline', copy: 'halo', claimCap: 92, logoWidth: 300, headerClaimLines: 1 },
+    colour: {
+      paper: '#0C0512',
+      ink: '#F7F2FB',
+      muted: '#C6B3D6',
+      accent: '#C58CEA',
+      rule: '#C58CEA',
+      line: '#3B2551',
+      purple: '#582078',
+      pillFill: '#7A32A6',
+      pillInk: '#FFFFFF',
+      discStroke: '#7C5798',
+      iconInk: '#E4CFF3',
+      footerInk: '#C6B3D6',
+      fieldTop: '#3A1155',
+      fieldMid: '#190A26',
+      fieldEdge: '#0B0510',
+      glow: '#A45BD8',
+      glowHot: '#DFB3F8',
+    },
+  },
+  {
+    id: '06-lattice',
+    label: 'LATTICE',
+    compose: { stack: composeFieldFlyer, landscape: composeFieldHeader },
+    logo: 'logo_newfont/logo_tm/MediVasc-logo-tm-lg.png',
+    mark: null,
+    base: '#FBFAFD',
+    design: { field: 'lattice', align: 'left', voice: 'caps', rule: 'bar', pillars: null, copy: 'lattice', claimCap: 96, measure: 0.74 },
+    colour: {
+      paper: '#FBFAFD',
+      ink: '#0C0C0C',
+      muted: '#4C4557',
+      accent: '#582078',
+      rule: '#582078',
+      line: '#E3D8EE',
+      purple: '#582078',
+      pillFill: '#582078',
+      pillInk: '#FFFFFF',
+      footerInk: '#4C4557',
+    },
+  },
+  {
+    id: '07-royal',
+    label: 'ROYAL',
+    compose: { stack: composeFieldFlyer, landscape: composeFieldHeader },
+    logo: 'logo_newfont/logo_tm/MediVasc-logo-white-tm-lg.png',
+    mark: null,
+    base: '#1E0B2E',
+    // The pill inverts here: a purple pill on a purple field is a shape, not a
+    // button. White fill with purple type is the only pairing on this surface
+    // that still reads as the one thing to act on.
+    design: { field: 'royal', align: 'center', voice: 'caps', rule: 'bar', pillars: 'outline', copy: 'royal', claimCap: 100 },
+    colour: {
+      paper: '#FFFFFF',
+      ink: '#FFFFFF',
+      muted: '#DCCBEC',
+      accent: '#CFA4F0',
+      rule: '#CFA4F0',
+      line: '#7A5A96',
+      purple: '#582078',
+      pillFill: '#FFFFFF',
+      pillInk: '#4A1A6B',
+      discStroke: '#A683C0',
+      iconInk: '#F1E6FA',
+      footerInk: '#EADDF6',
+      fieldTop: '#56227A',
+      fieldMid: '#35134E',
+      fieldEdge: '#1B0A2A',
+      glow: '#9A55C8',
+    },
+  },
+  {
+    id: '08-signal',
+    label: 'SIGNAL',
+    compose: { stack: composeFieldFlyer, landscape: composeFieldHeader },
+    logo: 'logo_newfont/logo_tm/MediVasc-logo-tm-lg.png',
+    mark: null,
+    base: '#FCFBFE',
+    // A three-word claim gets a narrower measure and a much larger cap: filling
+    // the full column would mean setting "at a time." at a size the page cannot
+    // carry, and leaving it at poster size would strand it mid-canvas.
+    design: {
+      field: 'aurora', align: 'center', voice: 'serif', rule: 'node', pillars: 'filled', copy: 'signal',
+      claimCap: 132, measure: 0.70, fillFloor: 0.62, headerClaimLines: 1, headerClaimCap: 96,
+    },
+    colour: {
+      paper: '#FCFBFE',
+      ink: '#14101B',
+      muted: '#514A5E',
+      accent: '#6B2A93',
+      eyebrow: '#6B2A93',
+      rule: '#6B2A93',
+      line: '#E7DCF1',
+      purple: '#582078',
+      discFill: '#582078',
+      pillFill: '#582078',
+      pillInk: '#FFFFFF',
+      iconInk: '#FFFFFF',
+      footerInk: '#14101B',
+      ribbonCool: '#7A3BB0',
+      ribbonWarm: '#C69BE8',
     },
   },
 ];
@@ -490,13 +677,13 @@ async function composeLandscape(direction, format, fmt) {
 // Render
 // ---------------------------------------------------------------------------
 
-function canvasSvg(fmt, body) {
+function canvasSvg(fmt, body, defs = '') {
   return Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${fmt.w}" height="${fmt.h}" viewBox="0 0 ${fmt.w} ${fmt.h}">` +
       `<defs><style>${fontCss}</style>` +
       `<linearGradient id="pine" x1="0" y1="0" x2="1" y2="1">` +
       `<stop offset="0" stop-color="#0E6B63"/><stop offset=".55" stop-color="#0C4A45"/><stop offset="1" stop-color="#092F2C"/>` +
-      `</linearGradient></defs>${body}</svg>`,
+      `</linearGradient>${defs}</defs>${body}</svg>`,
   );
 }
 
@@ -507,15 +694,23 @@ async function render(direction, format) {
     : fmt.layout === 'landscape' ? composeLandscape : composeStack;
   const plan = await compose(direction, format, fmt, {
     copy: copy.poster,
+    campaign: copy,
     conditions: copy.conditions,
+    root,
     logoHeight: async (dir, width) => (await sharp(await logoBuffer(dir, width)).metadata()).height,
   });
 
   const verification = verifyLayout({ plan, fmt, direction, format });
   if (!verification.ok) return { verification, target: null };
 
+  // A treatment may draw its own background — a gradient field, a tonal mark, a
+  // drift of ribbons — in which case it supplies the defs those need too.
   const fill = direction.gradient ? `url(#${direction.gradient})` : direction.base;
-  const background = canvasSvg(fmt, `<rect width="${fmt.w}" height="${fmt.h}" fill="${fill}"/>`);
+  const background = canvasSvg(
+    fmt,
+    plan.background ?? `<rect width="${fmt.w}" height="${fmt.h}" fill="${fill}"/>`,
+    plan.defs ?? '',
+  );
   // A treatment may have no background mark: the poster's field is its own
   // white space, and a tonal graphic under a symmetric composition muddies it.
   const mark = direction.mark ? [await markLayer(direction, fmt)] : [];
@@ -594,8 +789,8 @@ async function contactSheet(rendered) {
     `<svg xmlns="http://www.w3.org/2000/svg" width="${sheetW}" height="${sheetH}">` +
       `<defs><style>${fontCss}</style></defs>` +
       `<rect width="${sheetW}" height="${sheetH}" fill="#EEEAE2"/>` +
-      `<text x="${padSheet}" y="76" font-family="'Instrument Sans', sans-serif" font-size="38" font-weight="600" fill="#182A2E">MediVasc campaign · 3 treatments × ${cells[0].row.length} formats</text>` +
-      `<text x="${padSheet}" y="116" font-family="'Instrument Sans', sans-serif" font-size="21" fill="#55666B">One instruction, one supporting line, one call to action. Palette read from the live site theme (${escapeXml(theme.label)}).</text>` +
+      `<text x="${padSheet}" y="76" font-family="'Instrument Sans', sans-serif" font-size="38" font-weight="600" fill="#182A2E">MediVasc campaign · ${cells.length} treatments × ${cells[0].row.length} formats</text>` +
+      `<text x="${padSheet}" y="116" font-family="'Instrument Sans', sans-serif" font-size="21" fill="#55666B">Editorial column, poster, and four field treatments. Palette read from the live site theme (${escapeXml(theme.label)}); every asset gated by verify.mjs.</text>` +
       labels.join('') +
       `</svg>`,
   );

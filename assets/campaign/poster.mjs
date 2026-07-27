@@ -71,7 +71,7 @@ const ICONS = {
   ],
 };
 
-function icon(name, cx, cy, size, color, weightUnits = 1.7) {
+export function icon(name, cx, cy, size, color, weightUnits = 1.7) {
   const paths = ICONS[name];
   if (!paths) throw new Error(`poster: no icon "${name}"`);
   const s = size / 24;
@@ -84,7 +84,7 @@ function icon(name, cx, cy, size, color, weightUnits = 1.7) {
 }
 
 /** An arrow inside a filled disc — the sans subset has no arrow glyph. */
-function arrowDisc(cx, cy, d, discFill, arrowColor) {
+export function arrowDisc(cx, cy, d, discFill, arrowColor) {
   const len = d * 0.44;
   const head = len * 0.42;
   const x = cx - len / 2;
@@ -103,14 +103,14 @@ function arrowDisc(cx, cy, d, discFill, arrowColor) {
 // ---------------------------------------------------------------------------
 
 /** One measured line, placed by its centre or its left edge. */
-async function line(text, style, { cx, x, baseline, align = 'center' }) {
+export async function line(text, style, { cx, x, baseline, align = 'center' }) {
   const lines = await wrapRuns([{ text }], Infinity, style);
   const opts = { x: align === 'center' ? cx : x, baseline, lineHeight: style.size * 1.2, style, align };
   return { draw: renderLines(lines, opts), box: blockBox(lines, opts), width: lines[0]?.width ?? 0 };
 }
 
 /** Several measured lines in one style, as a block. */
-async function stack(rows, style, { x, cx, baseline, lineHeight, align = 'left' }) {
+export async function stack(rows, style, { x, cx, baseline, lineHeight, align = 'left' }) {
   const lines = [];
   for (const row of rows) lines.push((await wrapRuns([{ text: row }], Infinity, style))[0]);
   const opts = { x: align === 'center' ? cx : x, baseline, lineHeight, style, align };
@@ -155,12 +155,35 @@ function groupPhrases(phrases, count) {
  * linear in font size, so one probe measurement gives the answer and the second
  * pass is the exact one that gets placed.
  */
-async function claimBlock(phrases, accents, measure, { cap, ink, accentFill, lineCount, lineHeight }) {
+export async function claimBlock(
+  phrases,
+  accents,
+  measure,
+  {
+    cap,
+    ink,
+    accentFill,
+    lineCount,
+    lineHeight,
+    // The caps-sans claim is the poster's voice. A treatment that speaks in the
+    // site's editorial serif passes its own family here, and gets a taller
+    // optical box because lowercase has descenders and caps do not.
+    family = 'sans',
+    weight = 600,
+    trackingRatio = -0.014,
+    accentFamily = null,
+    optical = 0.74,
+    boxed = 1.02,
+  },
+) {
   const groups = groupPhrases(phrases, lineCount);
-  const styleAt = (size) => ({ family: 'sans', size, weight: 600, tracking: -size * 0.014, fill: ink });
+  const styleAt = (size) => ({ family, size, weight, tracking: trackingRatio * size, fill: ink });
 
   const runsFor = (group) =>
-    group.join(' ').split(/\s+/).map((word) => ({ text: word, fill: accents.includes(word) ? accentFill : ink }));
+    group.join(' ').split(/\s+/).map((word) => {
+      const isAccent = accents.includes(word);
+      return { text: word, fill: isAccent ? accentFill : ink, family: isAccent && accentFamily ? accentFamily : family };
+    });
 
   const widthsAt = async (size) => {
     const st = styleAt(size);
@@ -187,11 +210,11 @@ async function claimBlock(phrases, accents, measure, { cap, ink, accentFill, lin
     style: styleAt(size),
     size,
     fill: Math.max(...lines.map((l) => l.width)) / measure,
-    // `height` is the optical height used for stacking registers — caps, so no
+    // `height` is the optical height used for stacking registers — for caps, no
     // descender. `boxHeight` is the rectangle the verifier sees, which includes
     // the generous descent estimate; a clearance test has to use that one.
-    height: (lines.length - 1) * size * lineHeight + size * 0.74,
-    boxHeight: (lines.length - 1) * size * lineHeight + size * 1.02,
+    height: (lines.length - 1) * size * lineHeight + size * optical,
+    boxHeight: (lines.length - 1) * size * lineHeight + size * boxed,
   };
 }
 
@@ -206,7 +229,18 @@ async function claimBlock(phrases, accents, measure, { cap, ink, accentFill, lin
  * shares, and `build.mjs` refuses to run if a caption's source phrase has left
  * that list — the flyer cannot describe a process the site does not.
  */
-async function pillarRow(pillars, { x, y, width, colour, ts }) {
+export async function pillarRow(
+  pillars,
+  {
+    x, y, width, colour, ts,
+    // A treatment on a dark or coloured field draws the discs as outlines: a
+    // filled purple disc on a purple ground is a hole, not an icon.
+    discFill = colour.purple,
+    discStroke = null,
+    iconColour = colour.paper,
+    ruleColour = colour.line,
+  },
+) {
   const cols = pillars.length;
   const colW = width / cols;
   const disc = 92 * ts;
@@ -226,8 +260,11 @@ async function pillarRow(pillars, { x, y, width, colour, ts }) {
   for (const [i, pillar] of pillars.entries()) {
     const cx = x + colW * (i + 0.5);
     centres.push(cx);
-    draw.push(`<circle cx="${cx.toFixed(2)}" cy="${discCy.toFixed(2)}" r="${(disc / 2).toFixed(2)}" fill="${colour.purple}"/>`);
-    draw.push(icon(pillar.icon, cx, discCy, disc * 0.54, colour.paper, 1.75));
+    draw.push(
+      `<circle cx="${cx.toFixed(2)}" cy="${discCy.toFixed(2)}" r="${((disc - (discStroke ? Math.max(1.4, 1.8 * ts) : 0)) / 2).toFixed(2)}" ` +
+        `fill="${discFill ?? 'none'}"${discStroke ? ` stroke="${discStroke}" stroke-width="${Math.max(1.4, 1.8 * ts).toFixed(2)}"` : ''}/>`,
+    );
+    draw.push(icon(pillar.icon, cx, discCy, disc * 0.54, iconColour, 1.75));
 
     for (const [row, text] of pillar.caption.entries()) {
       const placed = await line(text, style, { cx, baseline: firstBaseline + row * captionLead });
@@ -250,7 +287,7 @@ async function pillarRow(pillars, { x, y, width, colour, ts }) {
   for (let i = 1; i < cols; i++) {
     const rx = x + colW * i;
     draw.push(
-      `<path d="M${rx.toFixed(2)} ${ruleTop.toFixed(2)}V${ruleBottom.toFixed(2)}" stroke="${colour.line}" ` +
+      `<path d="M${rx.toFixed(2)} ${ruleTop.toFixed(2)}V${ruleBottom.toFixed(2)}" stroke="${ruleColour}" ` +
         `stroke-width="${Math.max(1, 1.4 * ts).toFixed(2)}"/>`,
     );
   }
@@ -469,9 +506,12 @@ async function ctaPanel(copy, { x, y, w, h, colour, ts, radius }) {
  * The footer strip: the conditions, separated by the mark's own node dots and
  * flanked by hairlines out to the margins.
  */
-async function footerStrip(conditions, { cx, baseline, width, colour, ts }) {
+export async function footerStrip(
+  conditions,
+  { cx, baseline, width, colour, ts, inkColour = colour.ink, dotColour = colour.purple, ruleColour = colour.line },
+) {
   const size = Math.round(18 * ts);
-  const style = { family: 'sans', size, weight: 600, tracking: size * 0.15, fill: colour.ink };
+  const style = { family: 'sans', size, weight: 600, tracking: size * 0.15, fill: inkColour };
   const dotR = Math.max(1.4, 2.3 * ts);
   const gap = size * 1.9;
   const pull = size * 1.7;
@@ -487,7 +527,7 @@ async function footerStrip(conditions, { cx, baseline, width, colour, ts }) {
     draw.push((await line(condition, style, { x, baseline, align: 'left' })).draw);
     x += widths[i];
     if (i < conditions.length - 1) {
-      draw.push(`<circle cx="${(x + gap / 2).toFixed(2)}" cy="${ruleY.toFixed(2)}" r="${dotR.toFixed(2)}" fill="${colour.purple}"/>`);
+      draw.push(`<circle cx="${(x + gap / 2).toFixed(2)}" cy="${ruleY.toFixed(2)}" r="${dotR.toFixed(2)}" fill="${dotColour}"/>`);
       x += gap;
     }
   }
@@ -496,7 +536,7 @@ async function footerStrip(conditions, { cx, baseline, width, colour, ts }) {
   for (const [a, b] of [[margin, left - pull], [left + total + pull, margin + width]]) {
     if (b - a > 8) {
       draw.push(
-        `<path d="M${a.toFixed(2)} ${ruleY.toFixed(2)}H${b.toFixed(2)}" stroke="${colour.line}" ` +
+        `<path d="M${a.toFixed(2)} ${ruleY.toFixed(2)}H${b.toFixed(2)}" stroke="${ruleColour}" ` +
           `stroke-width="${Math.max(1, 1.4 * ts).toFixed(2)}"/>`,
       );
     }

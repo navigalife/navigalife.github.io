@@ -1,8 +1,9 @@
 # MediVasc campaign assets
 
-Four surface treatments rendered across five delivery formats, from one layout
-engine and two compositions — an editorial column (`01`–`03`) and a poster
-(`04`).
+Eight surface treatments rendered across five delivery formats, from one layout
+engine and three compositions — an editorial column (`01`–`03`), a poster
+(`04`), and a configurable field composition (`05`–`08`) that carries a
+background field of its own.
 
 ```sh
 node assets/campaign/build.mjs             # render everything
@@ -52,6 +53,37 @@ The claim is deliberately not `PRESERVE LIFE`: the site claims limb preservation
 and a return to independence, and it does not claim a mortality benefit. `KEEP
 WALKING.` is the strongest line the site's own copy supports.
 
+### The field treatments (`05`–`08`)
+
+The same registers as the poster, with the composition itself as a parameter —
+alignment, the claim's voice, whether there is an eyebrow, whether the process
+row is drawn, and which background field sits behind it:
+
+1. the lockup
+2. **an eyebrow**, optional — tracked caps, for a claim that does not say on its
+   own what the clinic does
+3. **the claim** — caps sans, or the site's own Fraunces with the accent word
+   italic
+4. a short rule: a bar, or a hairline pinched by one of the mark's own nodes
+5. one supporting line
+6. **the process** — the same four pillars, filled discs or outlines
+7. **the call to action** — a pill: `Visit medivasc.in →`
+8. the conditions, as a footer strip
+
+The pill replaces the poster's two-group bar. The bar is right for an A5 page a
+reader is holding; on a phone the pill is the stronger object — one line, one
+destination, and enough ground to read as something you could press. It is sized
+from its own measured label, so the label cannot crowd the radius.
+
+Each treatment speaks once, and none of them claims a survival benefit:
+
+| id | Claim | Why it is defensible |
+|---|---|---|
+| `05-halo` | *Amputation is not the only way out.* | The site's own hero line — asserted against `data/site-config.json`, not retyped |
+| `06-lattice` | SAVE THE LIMB. STAY INDEPENDENT. | `company.json`: care "that restores independence" |
+| `07-royal` | PREVENT AMPUTATION. KEEP WALKING. | The poster's claim, on the boldest surface |
+| `08-signal` | *One limb at a time*, under an eyebrow that names the work | Says nothing beyond what the process is |
+
 ## Copy
 
 Campaign copy is **written for the flyer, not lifted from the site**. A page has
@@ -80,11 +112,25 @@ resolve. Change the site theme, rebuild, and the campaign follows.
 | `02-ink` | Near-black, paper type (theme `dark` tokens) |
 | `03-pine` | Pine gradient, paper type |
 | `04-violet` | Poster: near-white paper, caps claim, brand purple |
+| `05-halo` | Deep violet, lit from behind the claim by one ring. Serif claim, outlined discs |
+| `06-lattice` | Paper, left-aligned, the mark oversized and bled off the right edge. No process row |
+| `07-royal` | Deep purple gradient, caps claim, outlined discs, and a **white** pill |
+| `08-signal` | Paper, eyebrow, serif claim, a drift of purple ribbons at the foot |
 
 `04-violet`'s purple is the brand mark's own `#582078`, sampled from the owner's
 original logo — not a theme token. The website lockup is monochrome by owner rule
 (`AGENTS.md`) and the purple lives on collateral, which is what this is. Its ink,
 paper and muted values still track the theme.
+
+`05`–`08` extend that purple into a full range, because a deep violet field
+cannot be built from one hex: `#582078` on near-black is a hole rather than a
+colour, which is also why the two dark treatments set the **white** lockup and
+not the purple-mark one. Each treatment declares its own ramp and every colour in
+it is held against the field's real surfaces (see below).
+
+`07-royal` inverts the pill deliberately. A purple pill on a purple field is a
+shape; white with purple type is the only pairing on that surface that still
+reads as the one thing to act on.
 
 | id | Size | Notes |
 |---|---|---|
@@ -113,6 +159,51 @@ graphic under a symmetric composition muddies it; the four icon discs and the
 purple bar are already carrying the colour. A treatment sets `mark: null` and the
 mark layer is skipped.
 
+### The fields (`field.mjs`)
+
+`05`–`08` draw their own background, and all four are geometry — a raster behind
+a vector layout is what made the first generation of these assets read as a
+template with a photo dropped into it.
+
+- **halo** — a radial violet field with one luminous ring. The ring is an
+  annulus filled with a radial gradient, not a stroked circle under a blur:
+  librsvg's filter support is not something to bet a print file on, and stops
+  give exact control of where the light falls off.
+- **lattice** — the mark oversized and bled off the right edge, atoms carrying
+  the wash and bonds nearly gone, each large node haloed so it reads as a tonal
+  field rather than a diagram.
+- **royal** — a deep purple gradient lit from the top, with the mark ghosted
+  into a corner at 3.8% white.
+- **aurora** — six ribbons drifting across the foot of the page. Each is a sine
+  with a second harmonic under an envelope, sampled and converted Catmull-Rom to
+  Bézier: stroking the polyline directly leaves visible facets on a 1783px print
+  canvas.
+
+Two things about a field are enforced rather than trusted:
+
+- **it declares the surfaces its type can land on** — a gradient contributes
+  both ends, a wash contributes its densest point (the atom tint *plus* its
+  glow, composited). Every foreground colour is then checked against all of
+  them, so a treatment cannot pass contrast by declaring only the paper colour
+  it started from.
+- **it cannot light or shade what was composed to be read.** The halo is given
+  the band between the bottom of the lockup and the top of the register after
+  the support, and exists only inside it; left as a full circle it drew straight
+  through the process row and around the wordmark. The lattice declares a
+  keep-out rectangle over its dense middle, and any block except the pill
+  overlapping it fails the build — the pill is opaque and carries its own
+  ground, so it is the one thing a wash is allowed to pass behind.
+
+### The mark, as vector (`mark.mjs`)
+
+`assets/brand/mark-{ink,paper}.png` is a flat raster in one colour: fine for a
+tonal wash, useless for a field that needs the atoms at one opacity and the bonds
+at another. So the mark's primitives are **parsed out of the committed lockup
+SVG** — 21 bonds as `<line>`, 19 atoms as `<circle>`, the wordmark as `<path>` —
+rather than transcribed into this directory. A transcription would be a second
+copy of an owner-approved geometry, free to drift. This cannot drift; if the
+brand file changes shape the parse fails by count and says so.
+
 ## What the build checks
 
 `verify.mjs` runs against the computed layout of each asset before rasterising:
@@ -128,14 +219,25 @@ mark layer is skipped.
    not. The poster reports whether its four columns are evenly pitched, whether
    each caption stayed inside its column, whether the two halves of the call to
    action still clear the divider, whether the claim still fills its measure, and
-   whether every centred block is actually centred to the pixel. Any of them
-   coming back false is a failed build.
+   whether every centred block is actually centred to the pixel. The field
+   composition adds: the pill fits its measure and keeps its optical padding,
+   every enclosed block sits inside the halo, no block sits on the dense part of
+   a background mark, and on a header the claim clears the pill and the pill
+   clears the conditions strip. Any of them coming back false is a failed build.
 
 These are not decorative. Check 4 caught the call to action disappearing under
 the X avatar after a two-point headline increase; check 3 caught the terracotta
 accent failing AA on the paper surface at CTA size, which is why the call to
 action has its own `link` colour; check 1 caught footer descenders hanging past
-the bottom margin.
+the bottom margin; check 5 caught the halo treatment's header setting its serif
+claim across half an empty banner, which is why that one treatment breaks its
+claim onto a single line at 3:1.
+
+The claim-fill floor is 70% of the measure, and `08-signal` lowers its own to
+62%. That is a treatment-level decision, not a waiver: the floor exists to catch
+a claim that quietly *shrank* to fit, and a three-word claim already set at the
+largest size the page can carry is not that. Where the floor stands is in the
+treatment, in one line, next to the reason.
 
 ## Typography
 
@@ -188,6 +290,33 @@ Three consequences worth knowing:
   avoiding it. The left column's height is measured against the avatar's top
   edge, and the conditions strip is aligned to the call-to-action panel's left
   edge — the one band of an X header that is always visible and otherwise dead.
+
+## How the field treatments fit every format
+
+`composer.mjs` inherits both rules above and adds one, which is what lets the
+same composition carry a treatment with a process row and one without:
+
+- **leftover air is split evenly, top and bottom.** Gap expansion has a ceiling
+  — past it the registers stop reading as one composition — and a sparse
+  treatment has enough slack to reach it. Whatever the ceiling leaves over used
+  to sit under the footer as a dead band a third of the canvas deep. It is now
+  air above *and* below the stack, which is the difference between a composition
+  that is centred and one that has fallen over.
+
+Three more consequences worth knowing:
+
+- The **support line has its own measure**, not the claim's. Tying them together
+  made `08-signal` — three words of claim — set its support in a narrow column,
+  three lines where two would do, for no reason but the length of the headline
+  above it.
+- The claim's **voice** is a parameter, not a fork: `caps` is the poster's, and
+  `serif` is the site's own Fraunces with the accent word italic, which is the
+  treatment the homepage gives its own headline. A serif claim gets a taller
+  optical box, because lowercase has descenders and caps do not.
+- How many lines the claim breaks into **on a 3:1 canvas is the treatment's
+  call**. Two lines of caps fill a banner; two lines of a serif sentence leave it
+  half empty. The fill check is what says so, and `05-halo` and `08-signal` set
+  one line there in answer to it.
 
 ## History
 
