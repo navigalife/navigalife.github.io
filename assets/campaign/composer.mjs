@@ -43,7 +43,7 @@ import { loadMark } from './mark.mjs';
  * cannot end up with the label crowding the radius; what is checked is that the
  * result still fits the measure it was given.
  */
-async function ctaPill(words, { x, cx, y, align, ts, fill, ink, measure }) {
+export async function ctaPill(words, { x, cx, y, align, ts, fill, ink, measure }) {
   const size = Math.round(35 * ts);
   const style = { family: 'sans', size, weight: 600, tracking: -size * 0.006, fill: ink };
   const label = `${words.label} ${words.site}`;
