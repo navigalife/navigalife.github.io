@@ -59,30 +59,71 @@ const direction = {
 // authored, because where a three-word mission breaks is a design decision and
 // not something a wrapper should decide from a column width. `accent` is matched
 // by word, so the mission can be reworded without re-marking anything by index.
+//
+// The last line sets flush right against the measure. That is what turns a
+// left-aligned stack into a composition: the column gains a second live edge,
+// and the point of the mission — the accent word — arrives at it.
 // ---------------------------------------------------------------------------
 
 const copy = {
   eyebrow: 'MISSION',
   accent: 'prevention',
-  cta: { lead: 'Visit', site: 'medivasc.in' },
+  site: 'medivasc.in',
+};
+
+// The two voices the campaign already speaks in, taken from composer.mjs so the
+// mission card cannot invent a third. Caps is sans and accents by colour alone —
+// an italic capital is a different letterform, not an emphasis.
+//
+// `body` is the visual height of one line as a fraction of the size, and it is
+// not the same as the line box: capitals have no descender, so measuring them
+// with a descender allowance puts a phantom 26% under every line and makes an
+// evenly stepped stack look bottom-heavy.
+const VOICE = {
+  caps: { family: 'sans', weight: 600, trackingRatio: -0.010, italicAccent: false, leading: 1.02, baseline: 0.76, body: 0.80, lead: 'VISIT' },
+  serifCaps: { family: 'serif', weight: 600, trackingRatio: -0.008, italicAccent: false, leading: 1.06, baseline: 0.74, body: 0.78, lead: 'VISIT' },
+  serif: { family: 'serif', weight: 600, trackingRatio: -0.024, italicAccent: true, leading: 1.05, baseline: 0.80, body: 1.08, lead: 'Visit' },
 };
 
 const VARIANTS = [
   {
-    id: 'a',
-    note: 'two lines — the mission as one phrase, the point on its own line',
-    claim: ['Foot & leg amputation', 'prevention'],
-    measure: 0.68,
+    id: 'sketch',
+    note: 'the drawing as drawn — caps, two lines, evenly spaced down the card',
+    voice: 'caps',
+    // Caps, because the sketch is caps and it means it: `medivasc.in` is written
+    // lowercase inside an otherwise capitalised line, so the case is authored.
+    claim: ['FOOT & LEG AMPUTATION', { text: 'PREVENTION', align: 'right' }],
+    measure: 0.80,
+    // Evenly spaced, because the sketch is: MISSION, the two claim lines and the
+    // destination each sit one ruled line apart, all the way down the page. The
+    // signed-off portrait's rhythm — message up top, one collected void, footer
+    // on the base — is a different composition and does not belong to this one.
+    rhythm: 'even',
   },
   {
-    id: 'b',
+    id: 'serif-caps',
+    // The sketch's structure in the signed-off flyer's typeface. Caps are the
+    // owner's call and the campaign sets caps in the sans — but the sans caps
+    // are a plain grotesque, and on a card whose only other voice is Fraunces
+    // they read as someone else's. Same words, same rhythm, brand letterforms.
+    note: 'the sketch in the flyer’s own serif — caps, two lines, evenly spaced',
+    voice: 'serifCaps',
+    claim: ['FOOT & LEG AMPUTATION', { text: 'PREVENTION', align: 'right' }],
+    measure: 0.86,
+    rhythm: 'even',
+  },
+  {
+    id: 'serif',
     // Three lines are height-bound on a 3:2 canvas, not width-bound, so a wide
     // measure cannot be filled at any size that also fits. The column narrows to
     // match the setting the height allows — which is also the better shape here:
     // a tall column on the left, the mark reading clear on the right.
-    note: 'three lines — a narrow column, the mark given the right half',
-    claim: ['Foot & leg', 'amputation', 'prevention'],
+    note: 'the site voice — Fraunces, three lines, the portrait flyer’s rhythm',
+    voice: 'serif',
+    claim: ['Foot & leg', 'amputation', { text: 'prevention', align: 'right' }],
     measure: 0.50,
+    rightMeasure: 0.62,
+    rhythm: 'collected',
   },
 ];
 
@@ -100,7 +141,9 @@ const fmt = {
   // and only clamped here, so a short line breaks into a large setting and a
   // long one into a smaller — which is the whole difference between the two
   // variants below.
-  type: { eyebrow: 26, claim: 210, cta: 40 },
+  // The eyebrow is set large on purpose. MISSION is not a label on this card —
+  // it is the first word read, and at label size it looked like one.
+  type: { eyebrow: 54, claim: 210, cta: 40 },
   mark: { size: 0.88, x: 0.50, y: -0.12 },
 };
 
@@ -161,49 +204,80 @@ function arrow(x, centerY, size, color, weight) {
  * the longest line actually fills, so the caller can reject a setting that came
  * out timid.
  */
-async function setAuthored(lines, maxWidth, maxHeight, lineHeight, style, { minScale = 0.45, step = 2 } = {}) {
+async function setAuthored(authored, maxHeight, lineHeight, style, { minScale = 0.45, step = 2 } = {}) {
+  const set = async (size) => {
+    const scaled = { ...style, size, tracking: (style.tracking ?? 0) * (size / style.size) };
+    const wrapped = await Promise.all(authored.map((a) => wrapRuns(a.runs, Number.MAX_SAFE_INTEGER, scaled)));
+    const lines = wrapped.map((w, i) => ({ ...w[0], align: authored[i].align, max: authored[i].max }));
+    // Each line is measured against its own column, so the fill floor still
+    // means "this setting is not timid" when the flush-right line runs to a
+    // wider edge than the ones above it.
+    return { lines, style: scaled, fill: Math.max(...lines.map((l) => l.width / l.max)) };
+  };
+
   const floor = Math.max(1, Math.round(style.size * minScale));
   for (let size = style.size; size >= floor; size -= step) {
-    const scaled = { ...style, size, tracking: (style.tracking ?? 0) * (size / style.size) };
-    const wrapped = await Promise.all(lines.map((runs) => wrapRuns(runs, Number.MAX_SAFE_INTEGER, scaled)));
-    const flat = wrapped.map((w) => w[0]);
+    const candidate = await set(size);
     // Solved against the box, not the column. Three short lines want a far
     // larger setting than two long ones, and on a 3:2 canvas it is the height
     // that stops them — fitting on width alone puts variant b through the floor.
-    const fits = flat.every((l) => l.width <= maxWidth) && blockHeight(flat, size * lineHeight, scaled) <= maxHeight;
-    if (fits) {
-      return { lines: flat, style: scaled, fill: Math.max(...flat.map((l) => l.width)) / maxWidth };
-    }
+    const fits =
+      candidate.lines.every((l) => l.width <= l.max) &&
+      blockHeight(candidate.lines, size * lineHeight, candidate.style) <= maxHeight;
+    if (fits) return candidate;
   }
-  const scaled = { ...style, size: floor, tracking: (style.tracking ?? 0) * (floor / style.size) };
-  const wrapped = await Promise.all(lines.map((runs) => wrapRuns(runs, Number.MAX_SAFE_INTEGER, scaled)));
-  const flat = wrapped.map((w) => w[0]);
-  return { lines: flat, style: scaled, fill: Math.max(...flat.map((l) => l.width)) / maxWidth };
+  return set(floor);
 }
 
-/** Split an authored line into runs, italicising and accenting the point word. */
-function claimRuns(line) {
+/**
+ * Normalise one authored line: split into runs, italicise and accent the point
+ * word, and carry its alignment. A line is a string, or `{ text, align }` when
+ * it does not set flush left.
+ */
+function authoredLine(line, columns, voice) {
+  const { text, align = 'left' } = typeof line === 'string' ? { text: line } : line;
   const target = copy.accent.toLowerCase();
-  return line.split(/\s+/).map((word) => {
+  const runs = text.split(/\s+/).map((word) => {
     const isAccent = word.replace(/[^a-z]/gi, '').toLowerCase() === target;
-    return { text: word, family: isAccent ? 'serifItalic' : 'serif', fill: isAccent ? direction.accent : undefined };
+    return {
+      text: word,
+      family: isAccent && voice.italicAccent ? 'serifItalic' : voice.family,
+      fill: isAccent ? direction.accent : undefined,
+    };
   });
+  return { runs, align, max: align === 'right' ? columns.right : columns.left };
 }
 
 // ---------------------------------------------------------------------------
 // Layout
 //
-// The vertical rhythm is the signed-off portrait's, turned on its side: lockup
-// at the top, the message directly under it, then one collected void carrying
-// the mark, then the footer on the bottom safe line. Spreading the slack across
-// every gap instead opens three small holes, which reads as a mistake.
+// Two rhythms, because the drawing and the signed-off flyer do not share one.
+//
+//   even       MISSION, each claim line and the destination one equal step
+//              apart, all the way down the card. This is the sketch: the owner
+//              set every element one ruled line from the next.
+//   collected  the portrait flyer's rhythm — message up under the lockup, the
+//              whole of the leftover gathered into one field for the mark, the
+//              footer on the base line.
+//
+// Both are right; they are different cards. What is never right is spreading
+// the slack across some gaps and not others, which opens holes.
 // ---------------------------------------------------------------------------
 
 async function compose(variant) {
   const { w, h, pad, type } = fmt;
   const u = w / 1620;
+  const voice = VOICE[variant.voice];
+  if (!voice) throw new Error(`mission: no voice "${variant.voice}"`);
   const contentW = w - pad.x * 2;
-  const measure = contentW * (variant.measure ?? fmt.measure);
+  // Two edges, not one. The flush-left lines run to `left`; the flush-right line
+  // hangs to `right`. They are the same column unless a variant says otherwise —
+  // and one has to, because in the three-line setting `prevention` is itself the
+  // longest line, so aligning it to the left lines' own edge moves it by nothing.
+  const columns = {
+    left: contentW * (variant.measure ?? fmt.measure),
+    right: contentW * (variant.rightMeasure ?? variant.measure ?? fmt.measure),
+  };
 
   const blocks = [];
   const checks = [];
@@ -227,7 +301,7 @@ async function compose(variant) {
 
   const ctaStyle = { family: 'sans', size: type.cta, weight: 600, tracking: 0, fill: direction.muted };
   const ctaLines = await wrapRuns(
-    [{ text: copy.cta.lead, fill: direction.muted }, { text: copy.cta.site, fill: direction.link }],
+    [{ text: voice.lead, fill: direction.muted }, { text: copy.site, fill: direction.link }],
     contentW,
     ctaStyle,
   );
@@ -249,31 +323,27 @@ async function compose(variant) {
   };
   const eyebrowLines = await wrapRuns([{ text: copy.eyebrow }], contentW, eyebrowStyle);
   const eyebrowH = blockHeight(eyebrowLines, type.eyebrow * 1.4, eyebrowStyle);
+  // MISSION is capitals too, so it gets the same descender-free measurement the
+  // claim does when the stack is being stepped evenly.
+  const eyebrowCap = type.eyebrow * 0.80;
 
-  // The message starts under the lockup; the claim may take everything down to
-  // the footer bar one held-back void, which is the field the mark reads in.
-  const claimTop = pad.top + logoH + 82 * u + eyebrowH + 34 * u;
+  // The band the message lives in: under the lockup, down to the destination.
+  const bandTop = pad.top + logoH + 82 * u;
+  const bandBottom = ctaBox.y;
   const minVoid = 76 * u;
 
-  const LEADING = 1.05;
-  const claimBase = { family: 'serif', size: type.claim, weight: 600, tracking: -type.claim * 0.024, fill: direction.ink };
+  const claimBase = {
+    family: voice.family, size: type.claim, weight: voice.weight,
+    tracking: type.claim * voice.trackingRatio, fill: direction.ink,
+  };
   const claim = await setAuthored(
-    variant.claim.map(claimRuns),
-    measure,
-    ctaBox.y - claimTop - minVoid,
-    LEADING,
+    variant.claim.map((line) => authoredLine(line, columns, voice)),
+    bandBottom - bandTop - eyebrowH - 34 * u - minVoid,
+    voice.leading,
     claimBase,
   );
-  const claimLH = claim.style.size * LEADING;
+  const claimLH = claim.style.size * voice.leading;
   const claimH = blockHeight(claim.lines, claimLH, claim.style);
-
-  // A setting that is height-bound leaves nothing over and sits where it starts.
-  // One that is width-bound — the two-line variant — leaves a void, and dropping
-  // the whole of it under the message opens a hole the mark cannot fill on a
-  // canvas this shallow. So the leftover is split: a little above the message,
-  // the rest below, which reads as air rather than as a missing element.
-  const slack = Math.max(0, (ctaBox.y - minVoid) - (claimTop + claimH));
-  const drop = slack * 0.34;
 
   // A mission set at two thirds of its measure reads as a caption. The floor is
   // a check rather than a comment: a reworded claim that no longer fills the
@@ -282,19 +352,61 @@ async function compose(variant) {
     check: 'fill',
     name: 'claim measure',
     ok: claim.fill >= 0.82,
-    detail: `longest line fills ${(claim.fill * 100).toFixed(0)}% of the measure, floor 82%`,
+    detail: `longest line fills ${(claim.fill * 100).toFixed(0)}% of its column, floor 82%`,
   });
 
-  const eyebrowY = pad.top + logoH + 82 * u + drop;
+  // Where each element lands. `even` steps the eyebrow, every claim line and the
+  // destination by one equal gap; `collected` keeps the flyer's tight message
+  // and gathers the leftover into the field below it.
+  const lineH = claim.style.size * voice.body;
+  let eyebrowY;
+  let claimBaselines;
+  if (variant.rhythm === 'even') {
+    // n claim lines between the eyebrow and the destination means n+1 gaps:
+    // eyebrow→first, each line→the next, last→destination. Dividing by n drops
+    // the last one and jams the closing line onto the call to action.
+    const n = claim.lines.length;
+    const step = (bandBottom - bandTop - eyebrowCap - n * lineH) / (n + 1);
+    checks.push({
+      check: 'flow',
+      name: 'even rhythm',
+      ok: step >= 40 * u,
+      detail: `${step.toFixed(0)}px between elements, floor ${Math.round(40 * u)}px`,
+    });
+    eyebrowY = bandTop;
+    let cursor = bandTop + eyebrowCap + step;
+    claimBaselines = claim.lines.map(() => {
+      const baseline = cursor + claim.style.size * voice.baseline;
+      cursor += lineH + step;
+      return baseline;
+    });
+  } else {
+    // A setting that is height-bound leaves nothing over. One that is
+    // width-bound leaves a void, and dropping the whole of it under the message
+    // opens a hole the mark cannot fill on a canvas this shallow — so a third
+    // of it is lifted above, and the gap below reads as air.
+    const claimTop = bandTop + eyebrowH + 34 * u;
+    const drop = Math.max(0, (bandBottom - minVoid) - (claimTop + claimH)) * 0.34;
+    eyebrowY = bandTop + drop;
+    claimBaselines = claim.lines.map((_, i) => claimTop + drop + claim.style.size * voice.baseline + i * claimLH);
+  }
+
   const eyebrowOpts = { x: pad.x, baseline: eyebrowY + type.eyebrow * 0.82, lineHeight: type.eyebrow * 1.4, style: eyebrowStyle };
   draw.push(renderLines(eyebrowLines, eyebrowOpts));
   track('eyebrow', blockBox(eyebrowLines, eyebrowOpts));
 
-  const y = claimTop + drop;
-  const claimOpts = { x: pad.x, baseline: y + claim.style.size * 0.8, lineHeight: claimLH, style: claim.style };
-  draw.push(renderLines(claim.lines, claimOpts));
-  track('claim', blockBox(claim.lines, claimOpts));
-  const messageBottom = y + claimH;
+  // Each line is emitted on its own so it can take its own edge and its own
+  // baseline: `renderLines` aligns and steps a whole block. A flush-right line
+  // anchors to its column, not to the longest line above it — an edge that moves
+  // with the copy is not an edge.
+  let messageBottom = eyebrowY + eyebrowH;
+  for (const [i, line] of claim.lines.entries()) {
+    const x = line.align === 'right' ? pad.x + columns.right - line.width : pad.x;
+    const opts = { x, baseline: claimBaselines[i], lineHeight: claimLH, style: claim.style };
+    draw.push(renderLines([line], opts));
+    const box = track(`claim line ${i + 1}`, blockBox([line], opts));
+    messageBottom = Math.max(messageBottom, box.y + box.h);
+  }
 
   return {
     blocks,
