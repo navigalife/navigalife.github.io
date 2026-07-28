@@ -8,3 +8,13 @@ dist/
 
 # Owner-supplied raw assets (patient photos, docs) — never ship raw
 owner-assets/
+
+# Local admin test harness — a copy of admin/index.html wired to a mocked GitHub
+# API. It must never reach admin/ on a public site, and it is one `git add -A`
+# away from doing so, so name it here rather than relying on it staying untracked.
+admin/__harness.html
+
+# Derived campaign bundle: byte-identical copies of files already tracked under
+# assets/campaign*/ plus the JPEGs whatsapp.mjs builds from them. 4.4MB of pure
+# duplication, and its own README says nothing in it ships. Rebuild, don't commit.
+assets/campaign-combined/
