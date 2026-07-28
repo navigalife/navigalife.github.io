@@ -15,6 +15,12 @@ owner-assets/
 # so, so the whole `__` prefix is fenced rather than left to stay untracked.
 admin/__*.html
 
+# Glyph outlines extracted from the licensed Exotc350 face so the campaign
+# renderer can draw the wordmark (its librsvg ignores @font-face, so the face
+# cannot be set as text). Shipping outlines from a licensed font in a public repo
+# is shipping the font; regenerate locally with the advisor's tools/brand/glyphs.py.
+assets/campaign/fonts/
+
 # Derived campaign bundle: byte-identical copies of files already tracked under
 # assets/campaign*/ plus the JPEGs whatsapp.mjs builds from them. 4.4MB of pure
 # duplication, and its own README says nothing in it ships. Rebuild, don't commit.
