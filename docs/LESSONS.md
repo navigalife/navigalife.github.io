@@ -256,3 +256,34 @@ STOP block in `AGENTS.md`, not a lesson here.
     - `assets/campaign` is deliberately **not in `src/build.js`'s deploy copy list** —
       the same convention as `assets/brand/logo_newfont` and `assets/brand/sticker`.
       Stored assets, not shipped ones.
+
+## From the mission card + the gitignore pass (advisor-implemented, assets only, 2026-07-28)
+
+25. **A doc that quotes measured pixels is stale the moment the render moves.**
+    - `assets/campaign/mission/README.md` was written against the Fraunces card and
+      survived four re-renders unchanged: it claimed **1620 × 982 at 1.650:1** for a
+      card that is **1620 × 1088 at 1.489:1**, an **88px** step that is **100px**, a
+      mark dial called **`bleed` at 0.15** that is **`overflow` at 0.05**, a `setStack`
+      helper renamed `setLine`, and four "measured off the rendered PNG" values from a
+      PNG that no longer exists. Every number was true when written.
+    - These renderers already compute the numbers and already assert them. **Paste the
+      verifier's own output into the doc** instead of retyping a measurement — a block
+      that is copied from a run is re-copied when the run changes, and a sentence that
+      is retyped is not. `verify.mjs` returns only *failures*; passing checks carry
+      their details too, and they are what a README should be quoting.
+    - A generator that reads a **gitignored input** must fail with the recipe, not with
+      `ENOENT`: `mission.mjs` names the file, says why it is not committed, and points
+      at `tools/brand/glyphs.py`. The README repeats it **above** the build command,
+      because a prerequisite discovered after the command has already failed is a
+      prerequisite the doc did not carry.
+
+26. **`!` does not re-admit a file under an ignored `dir/`.**
+    - Fencing `assets/campaign-combined/` as derived output also fenced `whatsapp.mjs`,
+      the 100-line WhatsApp encoder nothing else reproduces (4:5 portraits → mozjpeg
+      q90 at 4:4:4, no resampling, each rule a non-zero exit). Untracked, unbacked-up,
+      one `git clean` from gone.
+    - Git will not descend into an excluded directory, so `!dir/keep.mjs` under `dir/`
+      is silently inert — the obvious fix looks right and changes nothing. Fence the
+      **contents** (`dir/*`) and negate under that.
+    - Before ignoring a directory as "derived", check it for the thing that *derives*
+      it. Output directories accumulate their own tooling.
