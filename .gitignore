@@ -24,4 +24,13 @@ assets/campaign/fonts/
 # Derived campaign bundle: byte-identical copies of files already tracked under
 # assets/campaign*/ plus the JPEGs whatsapp.mjs builds from them. 4.4MB of pure
 # duplication, and its own README says nothing in it ships. Rebuild, don't commit.
-assets/campaign-combined/
+#
+# The two exceptions are the only things in there nothing else can produce:
+# whatsapp.mjs (the encoder — 4:5 portraits to mozjpeg q90 4:4:4, no resampling,
+# each rule enforced) and the README that says how to re-copy the bundle. Fencing
+# the directory itself would make these unrecoverable, so the *contents* are
+# fenced and the two sources re-admitted — a `!` under a `dir/` rule is ignored
+# by git, which is why this is `dir/*`.
+assets/campaign-combined/*
+!assets/campaign-combined/whatsapp.mjs
+!assets/campaign-combined/README.md
