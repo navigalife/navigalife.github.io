@@ -148,11 +148,31 @@ input::placeholder,textarea::placeholder{color:var(--ink-muted)}
 .theme-option__btn{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--preview-primary);color:var(--preview-bg);font-size:.6rem;font-weight:600}
 .theme-option__swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 .theme-option__swatches span{height:18px;border-radius:5px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 12%,transparent)}
-.publish-status{position:fixed;z-index:45;right:24px;bottom:88px;width:min(420px,calc(100% - 48px));padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--surface);box-shadow:0 16px 48px color-mix(in srgb,var(--ink) 14%,transparent)}
+/* The status toast floats over the editor, so everything here is about it being
+   easy to get rid of: a close button, a countdown bar showing it will leave on
+   its own, and a resting place that doesn't cover the form underneath.
+   `bottom` is 88px only to clear the unsaved bar — when that bar is hidden the
+   toast drops to 24px instead of hovering above an empty strip. */
+.publish-status{position:fixed;z-index:45;right:24px;bottom:88px;width:min(400px,calc(100% - 48px));padding:14px 52px 15px 16px;border:1px solid var(--line);border-radius:10px;background:var(--surface);box-shadow:0 16px 48px color-mix(in srgb,var(--ink) 14%,transparent);overflow:hidden;animation:status-in 180ms ease-out}
+.publish-status:has(+ .unsaved-bar[hidden]){bottom:24px}
 .publish-status strong{display:block;margin-bottom:3px}
 .publish-status p{margin:0;color:var(--ink-muted);font-size:.875rem}
 .publish-status a{color:var(--primary)}
 .publish-status .button{margin-top:10px}
+/* Full 44px touch target, but no border or fill — in a box this size a bordered
+   icon button reads as the toast's primary action, which the × is not. */
+.status-close{display:grid;position:absolute;z-index:1;top:5px;right:5px;width:44px;height:44px;padding:0;place-items:center;border:0;border-radius:8px;background:none;color:var(--ink-muted);cursor:pointer}
+.status-close:hover{background:var(--surface-2);color:var(--ink)}
+.status-close svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round}
+/* Only drawn while a message is actually counting down — messages carrying an
+   action button never get the class, so the absence of a bar is the signal that
+   this one is waiting on the owner. */
+.status-countdown{position:absolute;right:0;bottom:0;left:0;height:2px;background:var(--primary);transform:scaleX(0);transform-origin:left}
+.publish-status.is-counting .status-countdown{animation:status-countdown 7s linear forwards}
+.publish-status:hover .status-countdown,.publish-status:focus-within .status-countdown{animation-play-state:paused}
+@keyframes status-countdown{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes status-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.publish-status{animation:none}}
 .unsaved-bar{position:fixed;z-index:40;right:0;bottom:0;left:0;display:flex;min-height:68px;align-items:center;justify-content:center;gap:36px;padding:12px 24px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface) 96%,transparent);box-shadow:0 -12px 36px color-mix(in srgb,var(--ink) 8%,transparent);backdrop-filter:blur(12px)}
 .unsaved-bar span{display:flex;flex-direction:column}
 .unsaved-bar small{color:var(--ink-muted)}

@@ -130,16 +130,84 @@ const setAuthStatus = (message) => {
   authStatus.textContent = message;
 };
 
+// The status toast is an overlay sitting on top of the editor, so it must not
+// outstay its welcome: it now carries a close button and clears itself after
+// STATUS_DISMISS_MS. The one exception is a message carrying an action button —
+// "Branch changed → reload and reapply" is the owner's recovery path out of a
+// publish conflict, and a recovery path that disappears after seven seconds is
+// worse than no recovery path at all. Those stay until dismissed.
+const STATUS_DISMISS_MS = 7000;
+let statusTimer = null;
+let statusSticky = false;
+let statusKey = '';
+
+const stopStatusTimer = () => {
+  if (statusTimer) clearTimeout(statusTimer);
+  statusTimer = null;
+};
+
+// Re-arms both halves of the countdown — the timeout that actually dismisses and
+// the bar that shows it coming. Restarting the CSS animation needs the class off,
+// a reflow, then the class back on; without the reflow the browser coalesces the
+// two class changes and the animation never replays.
+const startStatusTimer = () => {
+  stopStatusTimer();
+  publishStatus.classList.remove('is-counting');
+  if (statusSticky || publishStatus.hidden) return;
+  // Refuse to arm while the owner is in the toast. Without this the pause holds
+  // only until the next showStatus — and pollActions re-sends every five seconds
+  // during a build, so a hovered or keyboard-focused toast would quietly restart
+  // its countdown and vanish out from under them. pointerleave/focusout call this
+  // again, which is when it actually arms.
+  if (publishStatus.matches(':hover') || publishStatus.contains(document.activeElement)) return;
+  void publishStatus.offsetWidth;
+  publishStatus.classList.add('is-counting');
+  statusTimer = setTimeout(clearStatus, STATUS_DISMISS_MS);
+};
+
 const showStatus = (title, message, options = {}) => {
+  const key = JSON.stringify([title, message, options.action || '']);
   publishStatus.hidden = false;
-  publishStatus.innerHTML = '<strong>' + h(title) + '</strong><p>' + message + '</p>' +
-    (options.action ? '<button class="button button--quiet" type="button" data-global-action="' + h(options.action) + '">' + h(options.actionLabel) + '</button>' : '');
+  statusSticky = Boolean(options.action);
+  // pollActions re-sends the same message every POLL_INTERVAL for as long as a
+  // build runs. Rewriting the DOM on each identical one would restart the
+  // countdown bar mid-sweep and pull focus off the close button, so an unchanged
+  // message only re-arms the timer — which is what keeps a running build's toast
+  // on screen instead of flickering every five seconds.
+  if (key !== statusKey) {
+    statusKey = key;
+    publishStatus.innerHTML =
+      '<button class="status-close" type="button" data-global-action="dismiss-status" aria-label="Dismiss this message">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+      '<strong>' + h(title) + '</strong><p>' + message + '</p>' +
+      (options.action ? '<button class="button button--quiet" type="button" data-global-action="' + h(options.action) + '">' + h(options.actionLabel) + '</button>' : '') +
+      '<span class="status-countdown" aria-hidden="true"></span>';
+  }
+  startStatusTimer();
 };
 
 const clearStatus = () => {
+  stopStatusTimer();
+  statusKey = '';
+  statusSticky = false;
   publishStatus.hidden = true;
+  publishStatus.classList.remove('is-counting');
   publishStatus.replaceChildren();
 };
+
+// Reading a message should never race its own countdown: hovering or tabbing into
+// the toast holds it, and leaving gives it the full seven seconds again rather
+// than the remainder, so a message can't vanish the instant the pointer drifts off.
+// Re-arming waits a tick rather than running inside the event: during pointerleave
+// the toast can still match :hover, and during focusout document.activeElement has
+// not settled off the old element yet. Re-arming synchronously would read that
+// stale state, hit the "owner is still in here" guard above, refuse — and then
+// nothing would be left to dismiss the toast at all.
+const rearmStatusTimer = () => setTimeout(startStatusTimer, 0);
+publishStatus.addEventListener('pointerenter', stopStatusTimer);
+publishStatus.addEventListener('pointerleave', rearmStatusTimer);
+publishStatus.addEventListener('focusin', stopStatusTimer);
+publishStatus.addEventListener('focusout', rearmStatusTimer);
 
 const sessionToken = () => sessionStorage.getItem(TOKEN_SESSION_KEY) || '';
 
@@ -1323,6 +1391,7 @@ rebuildButton.addEventListener('click', async () => {
 publishStatus.addEventListener('click', async (event) => {
   const button = event.target.closest('[data-global-action]');
   if (!button) return;
+  if (button.dataset.globalAction === 'dismiss-status') return clearStatus();
   if (button.dataset.globalAction === 'reload-reapply') {
     try { await reloadAndReapply(); } catch (error) { handleApiError(error); }
   }
