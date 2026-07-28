@@ -261,7 +261,23 @@ const renderProtocolsList = () => {
     '<div class="row-meta">' + h(audienceLabel(protocol.audience)) + '</div>' +
     '<div class="status-badges"><span class="badge ' + (protocol.visible ? 'badge--active' : '') + '">' + (protocol.visible ? 'Visible' : 'Hidden') + '</span>' + (protocol.draft ? '<span class="badge badge--draft">Draft</span>' : '') + '</div>' +
     rowActions('protocols', index, items.length) + '</div>');
-  return listPage('protocols', 'Protocols', 'The public site lists each protocol’s condition, grouped by track. Summaries stay internal.', rows);
+  return listPage('protocols', 'Protocols', 'The public site lists each protocol’s condition, grouped by track. Summaries stay internal.', rows) +
+    renderEligibilityEditor();
+};
+
+// The "who is not eligible" notice that renders directly under the conditions
+// list on the public site. Stored in site-config (kind `config`), but edited
+// here because that is where it lives on the page. Both fields are required
+// together: clearing both removes the section, clearing one is refused.
+const renderEligibilityEditor = () => {
+  const eligibility = state.draft.config.eligibility || {};
+  return '<section class="editor-shell" style="margin-top:32px">' +
+    '<form id="eligibility-form"><div class="field-group"><div class="field-group__heading"><div><h2>Eligibility notice</h2>' +
+    '<p>Shown as a cautionary panel directly below the conditions list on the public site. Leave both fields blank to remove the section entirely; a blank line separates paragraphs.</p></div></div>' +
+    '<div class="editor-grid">' +
+    '<label class="field--full">Heading<input name="eligibilityHeading" value="' + h(eligibility.heading || '') + '" placeholder="Who is not eligible for our treatment protocols"></label>' +
+    '<label class="field--full">Notice text<textarea name="eligibilityBody" rows="7">' + h(eligibility.body || '') + '</textarea></label>' +
+    '</div></div><div class="form-actions"><button class="button button--primary" type="button" data-action="save-eligibility">Save eligibility draft</button></div></form></section>';
 };
 
 const storyTypeLabel = (testimonial) => {
@@ -944,6 +960,7 @@ const handleEditorAction = async (button) => {
   if (action === 'save-editor') return saveEditor();
   if (action === 'save-company') return saveCompany(editorRoot.querySelector('#company-form'));
   if (action === 'save-appearance') return saveAppearance(editorRoot.querySelector('#appearance-form'));
+  if (action === 'save-eligibility') return saveEligibility(editorRoot.querySelector('#eligibility-form'));
   if (action === 'set-color-mode') return setColorMode(button.dataset.mode);
   if (action === 'select-theme') {
     state.draft.config.theme = button.dataset.themeId;
@@ -1041,6 +1058,26 @@ const saveAppearance = (form) => {
   state.draft.config.heroStats = heroStats;
   markDirty('config');
   showStatus('Appearance draft saved', 'The theme and copy changes are held in memory until you publish.');
+};
+
+// Mirrors the build's eligibility check (see src/build.js validate) so the owner
+// is stopped here rather than at a failed publish: a heading with no notice text
+// (or the reverse) is a half-configured section, not a way to hide it.
+const saveEligibility = (form) => {
+  if (!form.reportValidity()) return;
+  const data = new FormData(form);
+  const heading = String(data.get('eligibilityHeading') || '').trim();
+  const body = String(data.get('eligibilityBody') || '').trim();
+  if (Boolean(heading) !== Boolean(body)) {
+    showStatus('Eligibility notice needs both fields', 'Fill in the heading and the notice text, or clear both to remove the section.');
+    return;
+  }
+  // Spread, don't replace: `accent` (the word rendered in --accent inside the
+  // heading) is config-only with no field here, and rebuilding the object from
+  // the two form values would silently drop it on the owner's first publish.
+  state.draft.config.eligibility = { ...state.draft.config.eligibility, heading, body };
+  markDirty('config');
+  showStatus('Eligibility draft saved', body ? 'The notice is held in memory until you publish.' : 'The section will be removed when you publish.');
 };
 
 const collectChanges = () => {

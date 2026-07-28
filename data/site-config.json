@@ -5,6 +5,11 @@
   "heroAccent": "only",
   "heroSub": "We are medical engineering professionals specializing in vascular and lymphatic disorders. When years of treatment bring no improvement / results, we study the case right from its origin to current medical condition,  design a customized  affordable solution & protocol to achieve desired results with our specialized  guidance at regular intervals.",
   "heroStats": [],
+  "eligibility": {
+    "heading": "Who is not eligible for our treatment protocols",
+    "accent": "not eligible",
+    "body": "Patients with sepsis (septicemia) or severe infections, significant limb swelling (fluid retention), oozing wounds, persistent fever, and blood test findings indicating a serious infection are not eligible for our treatment protocols. Such patients require immediate hospital-based intensive medical care, as delaying treatment may allow the infection to spread to vital organs, resulting in a life-threatening condition."
+  },
   "seo": {
     "title": "MediVasc | Prevention of Foot and Leg Amputation",
     "description": "MediVasc designs customized, affordable protocols for lymphedema, venous ulcers, diabetic foot, DVT, filariasis, and bedridden or elderly patients, with documented recoveries and follow-up until the desired result.",

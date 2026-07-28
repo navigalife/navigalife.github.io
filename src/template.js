@@ -430,6 +430,29 @@ const renderPage = ({
       </div>
     </section>`
     : '';
+  // The one section that says no (data/site-config.json → eligibility, edited
+  // from the admin's Protocols tab). Heading and body are both owner-copy, so
+  // the section renders only when both are filled and disappears cleanly when
+  // they are cleared — the same graceful degrade as the solutions/voices rows.
+  const eligibility = config.eligibility || {};
+  const eligibilityHeading = String(eligibility.heading || '').trim();
+  const eligibilityBody = String(eligibility.body || '').trim();
+  const eligibilitySection = eligibilityHeading && eligibilityBody
+    ? `<section class="section eligibility" id="eligibility">
+      <div class="container">
+        <div class="section-heading" data-reveal>
+          <div>
+            <p class="kicker">Eligibility</p>
+            <h2>${accentuate(eligibilityHeading, eligibility.accent)}</h2>
+          </div>
+          <div class="eligibility__body">${eligibilityBody
+            .split(/\n\n+/)
+            .map((paragraph) => `<p>${escapeHtml(paragraph.trim())}</p>`)
+            .join('')}</div>
+        </div>
+      </div>
+    </section>`
+    : '';
   const voices = Array.isArray(feedbackImages) ? feedbackImages : [];
   const voicesSection = voices.length
     ? `<section class="section voices" id="voices">
@@ -694,6 +717,8 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
         </div>
       </div>
     </section>
+
+    ${eligibilitySection}
 
     <section class="section act" id="act">
       <div class="container">

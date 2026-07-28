@@ -170,6 +170,24 @@ html:not(.js) .recoveries__more{display:none}
 .condition-list li{display:flex;min-height:48px;align-items:center;gap:12px;border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent);font-size:1.0625rem;font-weight:500}
 .condition-list .icon{color:var(--good)}
 
+/* Eligibility notice — the one section that says no. It borrows the page's own
+   vocabulary: the stock .kicker (no colour overrides — every kicker on the site
+   is neutral border, ink label, --accent dot), the stock .section-heading
+   two-column rhythm, and .about__copy's type. The single deliberate departure
+   is the --alert rule down the copy, which is the only thing marking this as a
+   caution. Sits under #conditions and vanishes when the copy is cleared. */
+.eligibility{border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.eligibility .section-heading{margin-bottom:0;align-items:start}
+.eligibility h2{max-width:16ch;margin-bottom:0}
+.eligibility__body{padding-left:clamp(20px,2vw,28px);border-left:2px solid color-mix(in srgb,var(--alert) 42%,transparent)}
+/* Body copy mirrors .about__copy exactly — same size, same muted tone with the
+   opening paragraph in full ink, and the natural paragraph rhythm rather than a
+   tightened one. Keep the two in step if either changes. */
+.eligibility__body p{color:var(--ink-muted);font-size:1.1875rem}
+.eligibility__body p:first-child{color:var(--ink)}
+.eligibility__body p:last-child{margin-bottom:0}
+
+
 .act__panel{--panel-ink:var(--bg);--panel-muted:color-mix(in srgb,var(--bg) 78%,transparent);--panel-btn-bg:var(--bg);--panel-btn-ink:var(--ink);position:relative;overflow:hidden;border-radius:32px;padding:clamp(36px,6vw,72px);background:color-mix(in srgb,var(--ink) 94%,var(--primary));color:var(--panel-ink);box-shadow:0 36px 90px -28px color-mix(in srgb,var(--ink) 50%,transparent)}
 [data-theme="dark"] .act__panel{--panel-ink:var(--ink);--panel-muted:var(--ink-muted);--panel-btn-bg:var(--primary);--panel-btn-ink:var(--primary-ink);background:color-mix(in srgb,var(--surface) 88%,var(--primary));box-shadow:0 36px 90px -28px rgb(0 0 0/.55)}
 .act__panel::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(38rem 26rem at 86% -22%,color-mix(in srgb,var(--primary) 30%,transparent),transparent 64%),radial-gradient(30rem 24rem at -8% 118%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 60%)}
@@ -198,7 +216,11 @@ html:not(.js) .recoveries__more{display:none}
 .contact{padding-block:clamp(3.25rem,6vw,5.5rem);border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
 .contact__layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,.85fr);gap:clamp(48px,9vw,136px);align-items:start}
 .contact__intro p{color:var(--ink-muted)}
-.contact__details{border-top:1px solid color-mix(in srgb,var(--line) 80%,transparent)}
+/* The first row's own 20px top padding pushed its WHATSAPP label that far below
+   the "Start with your case" cap line, so the two columns read as misaligned.
+   Lift the whole rail by that padding to put the first label on the heading.
+   Reset it when the layout stacks (≤1000) or the rail rides up into the intro. */
+.contact__details{margin-top:-20px;border-top:1px solid color-mix(in srgb,var(--line) 80%,transparent)}
 .contact-row{display:grid;grid-template-columns:28px 1fr;gap:16px;align-items:center;padding:20px 10px;border-bottom:1px solid color-mix(in srgb,var(--line) 80%,transparent);border-radius:0;color:var(--ink);text-decoration:none;transition:background-color 200ms ease,border-radius 200ms ease}
 .contact-row:hover{background:color-mix(in srgb,var(--surface-2) 70%,transparent);border-radius:14px}
 .contact-row--static{cursor:default}
@@ -317,6 +339,7 @@ html:not(.js) .recoveries__more{display:none}
   .condition-list{grid-template-columns:1fr}
   .quote-story-grid{columns:1}
   .about__layout,.contact__layout{grid-template-columns:1fr;gap:40px}
+  .contact__details{margin-top:0}
   .about__title h2{position:static}
   .contact__layout{gap:28px}
   .act__panel{border-radius:24px;padding:32px 24px}

@@ -176,6 +176,18 @@ const validate = ({ products, protocols, testimonials, themes, config, solutions
     );
   }
 
+  // The eligibility notice is optional (both fields blank = no section), but a
+  // heading with no body — or the reverse — is a half-configured section, not a
+  // way to hide it. The admin's Protocols tab enforces the same pair rule.
+  const eligibility = config.eligibility || {};
+  const eligibilityHeading = String(eligibility.heading || '').trim();
+  const eligibilityBody = String(eligibility.body || '').trim();
+  if (Boolean(eligibilityHeading) !== Boolean(eligibilityBody)) {
+    throw new Error(
+      'Eligibility notice needs both a heading and body text (or neither, to remove the section).',
+    );
+  }
+
   const protocolIds = new Set();
   const visibleProtocols = protocols.filter((protocol) => protocol.visible && !protocol.draft);
   for (const protocol of visibleProtocols) {
