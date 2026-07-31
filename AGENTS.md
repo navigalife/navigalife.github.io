@@ -77,7 +77,7 @@ sequence is encoded — use it instead of hand-running git:
 - **`/strategy` is a pre-encrypted artifact.** `strategy/index.html` is generated
   ciphertext (the owner-only growth-plan page: noindex, robots-disallowed, never
   in the sitemap). Plaintext source + encryptor live in the advisor workspace at
-  `~/dev/claude/advisor/tools/strategy/` — edit there and regenerate; never edit
+  `~/dev/claude/advisor/projects/navigalife/tools/strategy/` — edit there and regenerate; never edit
   the artifact in place, and never commit plaintext or the password to this
   public repo.
 - **Patient evidence**: photographs may be cropped, rotated, tonally
