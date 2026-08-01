@@ -1,6 +1,6 @@
 @font-face{font-family:"Instrument Sans";font-style:normal;font-weight:400 600;font-display:swap;src:url("../assets/fonts/instrument-sans-latin-400-600.woff2") format("woff2")}
 @font-face{font-family:"Fraunces";font-style:normal;font-weight:600;font-display:swap;src:url("../assets/fonts/fraunces-latin-600.woff2") format("woff2")}
-:root{--bg:#F5F8F9;--surface:#FFFFFF;--surface-2:#E9F0F2;--ink:#132430;--ink-muted:#48626D;--line:#D5E0E4;--primary:#0E5F76;--primary-ink:#F2FAFC;--primary-soft:#DEEDF2;--accent:#B25738;--good:#256B46;--alert:#A63A2B;--focus:#0E5F76}
+:root{--bg:#F5F8F9;--surface:#FFFFFF;--surface-2:#E9F0F2;--ink:#132430;--ink-muted:#3D535D;--line:#D5E0E4;--primary:#0E5F76;--primary-ink:#F2FAFC;--primary-soft:#DEEDF2;--accent:#B25738;--good:#256B46;--alert:#A63A2B;--focus:#0E5F76}
 [data-theme="dark"]{--bg:#0C161B;--surface:#13222A;--surface-2:#1B2F38;--ink:#E6EDF0;--ink-muted:#9EB4BD;--line:#2A3F49;--primary:#5FB8D2;--primary-ink:#0A161B;--primary-soft:#143441;--accent:#D69070;--good:#74C497;--alert:#E28D7C;--focus:#5FB8D2}
 *,*::before,*::after{box-sizing:border-box}
 html{color-scheme:light}
