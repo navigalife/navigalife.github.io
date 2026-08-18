@@ -366,7 +366,7 @@ const renderPage = ({
   ];
   const heroChips = [
     'Diabetic foot',
-    'Lymphedema',
+    'Lymphedema arms/legs',
     'Venous ulcers',
     'Varicose veins',
     'Filariasis & elephantiasis',
