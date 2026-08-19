@@ -532,6 +532,23 @@ const renderPage = ({
     ? renderChatbot({ wa: whatsapp, email: company.email, conditions: botConditions })
     : '';
 
+  // The severity-clip case note. Declared once so the desktop figure and the
+  // mobile "View the full case" popup render identical copy (the figure is
+  // hidden on phones; the popup carries it there). &#8377; is the rupee sign.
+  const conditionCase = {
+    kicker: 'The amputation we prevented',
+    quote: 'A top hospital had already referred this patient for a below-knee amputation. He recovered in 90 days instead, keeping his leg and sparing his family at least &#8377;7 lakh in surgery costs, and the anguish that goes with it.',
+    stats: ['Recovered in 90 days', '&#8377;7 lakh+ saved', 'Amputation avoided'],
+  };
+  const conditionCaseStats = conditionCase.stats.map((s) => `<li>${s}</li>`).join('');
+
+  // One source of truth for the severity clips: drives both the poster grid and the
+  // carousel slides inside the film lightbox, so their order and count never drift.
+  const films = [
+    { src: 'assets/conditions/severity-b.mp4', poster: 'assets/conditions/severity-b.jpg', dur: '0:06', cap: 'Referred for a below-knee amputation. Recovered in 90 days.', featured: true },
+    { src: 'assets/conditions/severity-a.mp4', poster: 'assets/conditions/severity-a.jpg', dur: '0:28', cap: 'Documented case, before therapy.' },
+  ];
+
   return `<!doctype html>
 <html lang="en" data-site-theme="${escapeHtml(themeId)}">
 <head>
@@ -700,19 +717,22 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
           <p>Every protocol starts with the same detailed case study. If your condition is not listed here, ask us. The case study decides what is possible.</p>
         </div>
         <div class="condition-films" data-reveal>
-          <p class="condition-films__lead">The reality we treat. Real, documented cases before therapy.</p>
+          <figure class="condition-case">
+            <figcaption class="condition-case__kicker">${conditionCase.kicker}</figcaption>
+            <blockquote class="condition-case__quote">${conditionCase.quote}</blockquote>
+            <ul class="condition-case__stats">${conditionCaseStats}</ul>
+          </figure>
           <ul class="condition-films__grid">
-            ${[
-              { src: 'assets/conditions/severity-a.mp4', poster: 'assets/conditions/severity-a.jpg', dur: '0:28' },
-              { src: 'assets/conditions/severity-b.mp4', poster: 'assets/conditions/severity-b.jpg', dur: '0:06' },
-            ].map((film, i) => `<li>
-              <button class="condition-film" type="button" data-film-src="${film.src}" aria-label="Play documented case footage ${i + 1}">
+            ${films.map((film, i) => `<li class="condition-film-item${film.featured ? ' is-featured' : ''}">
+              <button class="condition-film" type="button" data-film-src="${film.src}" aria-label="Play video ${i + 1}: ${film.cap}">
                 <span class="condition-film__frame">
+                  <span class="condition-film__fill" aria-hidden="true"><img src="${film.poster}" alt="" width="480" height="854" loading="lazy" decoding="async"></span>
                   <img class="condition-film__poster" src="${film.poster}" alt="" width="480" height="854" loading="lazy" decoding="async">
                   <span class="condition-film__play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
                   <span class="condition-film__dur">${film.dur}</span>
                 </span>
               </button>
+              <span class="condition-film__cap">${film.cap}${film.featured ? ` <button type="button" class="condition-film__more" data-case-open><span>View More</span>${icon('arrow')}</button>` : ''}</span>
             </li>`).join('')}
           </ul>
         </div>
@@ -734,9 +754,24 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
       </div>
       <dialog class="film-lightbox" data-film-lightbox aria-label="Documented case footage">
         <div class="film-lightbox__stage">
-          <video class="film-lightbox__video" data-film-video controls playsinline preload="none"></video>
+          <div class="film-lightbox__track" data-film-track>
+            ${films.map((film, i) => `<div class="film-lightbox__slide" data-film-slide>
+              <video class="film-lightbox__video" data-film-video data-film-src="${film.src}" poster="${film.poster}" playsinline preload="none" aria-label="Clip ${i + 1}: ${film.cap}"></video>
+            </div>`).join('')}
+          </div>
         </div>
+        <button type="button" class="film-lightbox__nav film-lightbox__nav--prev" data-film-prev aria-label="Previous clip">${icon('arrow')}</button>
+        <button type="button" class="film-lightbox__nav film-lightbox__nav--next" data-film-next aria-label="Next clip">${icon('arrow')}</button>
+        <p class="film-lightbox__counter" data-film-counter hidden></p>
         <button type="button" class="film-lightbox__close" data-film-close aria-label="Close">${icon('close')}</button>
+      </dialog>
+      <dialog class="case-lightbox" data-case-lightbox aria-label="${escapeHtml(conditionCase.kicker)}">
+        <div class="case-lightbox__card">
+          <p class="condition-case__kicker">${conditionCase.kicker}</p>
+          <blockquote class="condition-case__quote">${conditionCase.quote}</blockquote>
+          <ul class="condition-case__stats">${conditionCaseStats}</ul>
+        </div>
+        <button type="button" class="case-lightbox__close" data-case-close aria-label="Close">${icon('close')}</button>
       </dialog>
     </section>
 

@@ -502,16 +502,30 @@
   }
 })();
 
-// Condition-severity clips: a poster button opens the portrait video full-screen in
-// a <dialog>. The tap is the user gesture, so play() is permitted; the src is only
-// attached on open and torn down on close so the video bytes aren't fetched (or held
-// decoded) until asked for — the same lazy discipline as the voice lightbox above.
+// Condition-severity clips: tapping a poster opens a full-screen carousel of the
+// portrait videos in a <dialog>. Slides sit in a flex track that translates by
+// -index*100%; a finger-drag follows the track and snaps on release, and prev/next
+// arrows plus the arrow keys step between clips with an animated slide. Each clip's
+// bytes are only fetched once its slide is activated, and every src is torn down on
+// close — the same lazy discipline as the voice lightbox above.
 (() => {
   const lb = document.querySelector('[data-film-lightbox]');
-  const films = [...document.querySelectorAll('[data-film-src]')];
-  if (!lb || !films.length || typeof lb.showModal !== 'function') return;
-  const video = lb.querySelector('[data-film-video]');
+  const openers = [...document.querySelectorAll('.condition-film')];
+  const track = lb && lb.querySelector('[data-film-track]');
+  const slides = track ? [...track.querySelectorAll('[data-film-slide]')] : [];
+  if (!lb || !openers.length || !slides.length || typeof lb.showModal !== 'function') return;
+
+  const videos = slides.map((s) => s.querySelector('[data-film-video]'));
   const closeBtn = lb.querySelector('[data-film-close]');
+  const prevBtn = lb.querySelector('[data-film-prev]');
+  const nextBtn = lb.querySelector('[data-film-next]');
+  const counter = lb.querySelector('[data-film-counter]');
+  const n = slides.length;
+  const single = n < 2;
+  if (single) {
+    if (prevBtn) prevBtn.hidden = true;
+    if (nextBtn) nextBtn.hidden = true;
+  }
 
   let lockedY = 0;
   const lockPage = () => {
@@ -536,24 +550,158 @@
     window.scrollTo({ top: lockedY, left: 0, behavior: 'instant' });
   };
 
-  films.forEach((btn) => btn.addEventListener('click', () => {
-    video.src = btn.dataset.filmSrc;
+  const EASE = 'transform .34s cubic-bezier(.22,.61,.36,1)';
+  let current = 0;
+
+  // Slide width == viewport width, so a live px drag offset adds cleanly to the
+  // per-slide 100% steps — the track follows the finger 1:1.
+  const place = (dx, animate) => {
+    track.style.transition = animate ? EASE : 'none';
+    track.style.transform = `translate3d(calc(${-current * 100}% + ${dx}px),0,0)`;
+  };
+  const play = (v) => {
+    const p = v.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  };
+  // Make slide i active: fetch its clip the first time, give it the native controls,
+  // and play it; pause every other clip (their posters keep showing during a drag).
+  const activate = (i) => {
+    videos.forEach((v, k) => {
+      if (k === i) {
+        if (!v.getAttribute('src')) v.src = v.dataset.filmSrc;
+        v.setAttribute('controls', '');
+        play(v);
+      } else {
+        v.removeAttribute('controls');
+        v.pause();
+      }
+    });
+  };
+  const updateArrows = () => {
+    if (prevBtn) prevBtn.disabled = current === 0;
+    if (nextBtn) nextBtn.disabled = current === n - 1;
+  };
+  // Move to clip i, clamped to the ends (no wrap) so the slide direction always
+  // matches the arrow pressed. `animate` off = an instant jump (used on open).
+  const goTo = (i, animate = true) => {
+    current = Math.max(0, Math.min(n - 1, i));
+    place(0, animate);
+    activate(current);
+    if (counter) { counter.textContent = `${current + 1} / ${n}`; counter.hidden = single; }
+    updateArrows();
+  };
+  const openAt = (i) => {
     if (!lb.open) { lb.showModal(); lockPage(); }
-    const played = video.play();
-    if (played && typeof played.catch === 'function') played.catch(() => {});
-  }));
+    goTo(i, false);
+  };
+
+  openers.forEach((btn, i) => btn.addEventListener('click', () => openAt(i)));
   closeBtn?.addEventListener('click', () => lb.close());
-  // Click on the backdrop (anything but the video or the close control) closes it.
+  prevBtn?.addEventListener('click', () => goTo(current - 1));
+  nextBtn?.addEventListener('click', () => goTo(current + 1));
+  // Tap on the backdrop (anything but a video or a control) closes it.
   lb.addEventListener('click', (event) => {
-    if (event.target.closest('.film-lightbox__video, .film-lightbox__close')) return;
+    if (event.target.closest('.film-lightbox__video, .film-lightbox__nav, .film-lightbox__close')) return;
     lb.close();
   });
+  lb.addEventListener('keydown', (event) => {
+    if (single) return;
+    if (event.key === 'ArrowRight') { event.preventDefault(); goTo(current + 1); }
+    else if (event.key === 'ArrowLeft') { event.preventDefault(); goTo(current - 1); }
+  });
+
+  // Finger-drag the track. Two guards keep it from fighting the native controls:
+  // ignore gestures that start on the active video's bottom control strip (the
+  // scrubber), and ones where vertical motion dominates (a scroll intent). The
+  // axis is decided once, on the first meaningful movement, then held.
+  let sx = 0, sy = 0, dragging = false, decided = false, horizontal = false;
+  lb.addEventListener('touchstart', (event) => {
+    if (single || event.touches.length !== 1) { dragging = false; return; }
+    const t = event.touches[0];
+    const r = videos[current].getBoundingClientRect();
+    const controlZone = Math.min(Math.max(r.height * 0.15, 48), 90);
+    if (t.clientY > r.bottom - controlZone && t.clientX > r.left && t.clientX < r.right) { dragging = false; return; }
+    sx = t.clientX; sy = t.clientY; dragging = true; decided = false; horizontal = false;
+  }, { passive: true });
+  lb.addEventListener('touchmove', (event) => {
+    if (!dragging || event.touches.length !== 1) return;
+    const t = event.touches[0];
+    let dx = t.clientX - sx;
+    const dy = t.clientY - sy;
+    if (!decided) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      decided = true;
+      horizontal = Math.abs(dx) > Math.abs(dy);
+    }
+    if (!horizontal) { dragging = false; place(0, true); return; }
+    // Rubber-band past the first/last clip so it reads as an edge, not a stall.
+    if ((current === 0 && dx > 0) || (current === n - 1 && dx < 0)) dx *= 0.35;
+    place(dx, false);
+  }, { passive: true });
+  const endDrag = (event) => {
+    if (!dragging) return;
+    dragging = false;
+    if (!horizontal) return;
+    const t = event.changedTouches[0];
+    const dx = t.clientX - sx;
+    const threshold = Math.min((lb.clientWidth || window.innerWidth) * 0.2, 80);
+    if (Math.abs(dx) > threshold) goTo(current + (dx < 0 ? 1 : -1));
+    else place(0, true); // not far enough — settle back onto the current clip
+  };
+  lb.addEventListener('touchend', endDrag, { passive: true });
+  lb.addEventListener('touchcancel', endDrag, { passive: true });
+
+  // Free every clip's bytes on close and reset the track for the next open.
   lb.addEventListener('close', () => {
     unlockPage();
-    video.pause();
-    video.removeAttribute('src');
-    video.load();
+    videos.forEach((v) => { v.pause(); v.removeAttribute('controls'); v.removeAttribute('src'); v.load(); });
+    current = 0;
+    place(0, false);
+    if (counter) counter.hidden = true;
   });
+})();
+
+// Mobile "View full case" popup: the desktop case note (the .condition-case
+// figure) is hidden on phones, so a button under the featured clip opens the same
+// copy in a <dialog>. Same lazy/lock discipline as the lightboxes above.
+(() => {
+  const lb = document.querySelector('[data-case-lightbox]');
+  const openers = [...document.querySelectorAll('[data-case-open]')];
+  if (!lb || !openers.length || typeof lb.showModal !== 'function') return;
+  const closeBtn = lb.querySelector('[data-case-close]');
+
+  let lockedY = 0;
+  const lockPage = () => {
+    lockedY = window.scrollY || window.pageYOffset || 0;
+    const sbw = window.innerWidth - document.documentElement.clientWidth;
+    const b = document.body;
+    b.style.position = 'fixed';
+    b.style.top = `-${lockedY}px`;
+    b.style.left = '0';
+    b.style.right = '0';
+    b.style.width = '100%';
+    if (sbw > 0) b.style.paddingRight = `${sbw}px`;
+  };
+  const unlockPage = () => {
+    const b = document.body;
+    b.style.position = '';
+    b.style.top = '';
+    b.style.left = '';
+    b.style.right = '';
+    b.style.width = '';
+    b.style.paddingRight = '';
+    window.scrollTo({ top: lockedY, left: 0, behavior: 'instant' });
+  };
+
+  openers.forEach((btn) => btn.addEventListener('click', () => {
+    if (!lb.open) { lb.showModal(); lockPage(); }
+  }));
+  closeBtn?.addEventListener('click', () => lb.close());
+  lb.addEventListener('click', (event) => {
+    if (event.target.closest('.case-lightbox__card, .case-lightbox__close')) return;
+    lb.close();
+  });
+  lb.addEventListener('close', unlockPage);
 })();
 
 // MediVasc Assistant — the conversational lead form at bottom-right. Walks the visitor
