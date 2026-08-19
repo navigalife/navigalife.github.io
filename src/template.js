@@ -368,9 +368,8 @@ const renderPage = ({
     'Diabetic foot',
     'Lymphedema arms/legs',
     'Venous ulcers',
-    'Varicose veins',
     'Filariasis & elephantiasis',
-    'DVT prevention',
+    'Varicose veins',
     'Bedridden & elderly care',
   ];
   // The four conditions the chatbot offers as quick-reply chips (owner-curated).
@@ -700,6 +699,23 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
           </div>
           <p>Every protocol starts with the same detailed case study. If your condition is not listed here, ask us. The case study decides what is possible.</p>
         </div>
+        <div class="condition-films" data-reveal>
+          <p class="condition-films__lead">The reality we treat. Real, documented cases before therapy.</p>
+          <ul class="condition-films__grid">
+            ${[
+              { src: 'assets/conditions/severity-a.mp4', poster: 'assets/conditions/severity-a.jpg', dur: '0:28' },
+              { src: 'assets/conditions/severity-b.mp4', poster: 'assets/conditions/severity-b.jpg', dur: '0:06' },
+            ].map((film, i) => `<li>
+              <button class="condition-film" type="button" data-film-src="${film.src}" aria-label="Play documented case footage ${i + 1}">
+                <span class="condition-film__frame">
+                  <img class="condition-film__poster" src="${film.poster}" alt="" width="480" height="854" loading="lazy" decoding="async">
+                  <span class="condition-film__play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+                  <span class="condition-film__dur">${film.dur}</span>
+                </span>
+              </button>
+            </li>`).join('')}
+          </ul>
+        </div>
         <div class="condition-tracks">
           ${tracks
             .map((track) => ({
@@ -716,6 +732,12 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
             .join('')}
         </div>
       </div>
+      <dialog class="film-lightbox" data-film-lightbox aria-label="Documented case footage">
+        <div class="film-lightbox__stage">
+          <video class="film-lightbox__video" data-film-video controls playsinline preload="none"></video>
+        </div>
+        <button type="button" class="film-lightbox__close" data-film-close aria-label="Close">${icon('close')}</button>
+      </dialog>
     </section>
 
     ${eligibilitySection}

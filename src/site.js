@@ -32,11 +32,41 @@
   const navScrim = document.querySelector('[data-nav-scrim]');
   const menuClose = document.querySelector('[data-menu-close]');
 
+  // iOS Safari ignores html{overflow:hidden} for TOUCH scrolling, so the CSS-only
+  // lock let drags on the drawer chain through to the page behind. Pin the body with
+  // position:fixed (the same technique the lightboxes use) — the one reliable lock on
+  // iOS. Restore the exact scroll offset on close. Chrome was already fine; this
+  // doesn't change what it renders.
+  let menuLockedY = 0;
+  const lockPageForMenu = () => {
+    menuLockedY = window.scrollY || window.pageYOffset || 0;
+    const sbw = window.innerWidth - document.documentElement.clientWidth;
+    const b = document.body;
+    b.style.position = 'fixed';
+    b.style.top = `-${menuLockedY}px`;
+    b.style.left = '0';
+    b.style.right = '0';
+    b.style.width = '100%';
+    if (sbw > 0) b.style.paddingRight = `${sbw}px`;
+  };
+  const unlockPageForMenu = () => {
+    const b = document.body;
+    b.style.position = '';
+    b.style.top = '';
+    b.style.left = '';
+    b.style.right = '';
+    b.style.width = '';
+    b.style.paddingRight = '';
+    window.scrollTo({ top: menuLockedY, left: 0, behavior: 'instant' });
+  };
+
   const setMenu = (open) => {
     navigation?.classList.toggle('is-open', open);
     navScrim?.classList.toggle('is-open', open);
     menuToggle?.setAttribute('aria-expanded', String(open));
-    root.classList.toggle('nav-open', open); // locks page scroll behind the drawer
+    root.classList.toggle('nav-open', open); // belt-and-suspenders lock for non-iOS
+    if (open) lockPageForMenu();
+    else unlockPageForMenu();
   };
   const closeMenu = () => setMenu(false);
 
@@ -470,6 +500,60 @@
     // Drop the (large) screenshot once closed so it isn't held decoded in memory.
     lightbox.addEventListener('close', () => { unlockPage(); imgEl.removeAttribute('src'); });
   }
+})();
+
+// Condition-severity clips: a poster button opens the portrait video full-screen in
+// a <dialog>. The tap is the user gesture, so play() is permitted; the src is only
+// attached on open and torn down on close so the video bytes aren't fetched (or held
+// decoded) until asked for — the same lazy discipline as the voice lightbox above.
+(() => {
+  const lb = document.querySelector('[data-film-lightbox]');
+  const films = [...document.querySelectorAll('[data-film-src]')];
+  if (!lb || !films.length || typeof lb.showModal !== 'function') return;
+  const video = lb.querySelector('[data-film-video]');
+  const closeBtn = lb.querySelector('[data-film-close]');
+
+  let lockedY = 0;
+  const lockPage = () => {
+    lockedY = window.scrollY || window.pageYOffset || 0;
+    const sbw = window.innerWidth - document.documentElement.clientWidth;
+    const b = document.body;
+    b.style.position = 'fixed';
+    b.style.top = `-${lockedY}px`;
+    b.style.left = '0';
+    b.style.right = '0';
+    b.style.width = '100%';
+    if (sbw > 0) b.style.paddingRight = `${sbw}px`;
+  };
+  const unlockPage = () => {
+    const b = document.body;
+    b.style.position = '';
+    b.style.top = '';
+    b.style.left = '';
+    b.style.right = '';
+    b.style.width = '';
+    b.style.paddingRight = '';
+    window.scrollTo({ top: lockedY, left: 0, behavior: 'instant' });
+  };
+
+  films.forEach((btn) => btn.addEventListener('click', () => {
+    video.src = btn.dataset.filmSrc;
+    if (!lb.open) { lb.showModal(); lockPage(); }
+    const played = video.play();
+    if (played && typeof played.catch === 'function') played.catch(() => {});
+  }));
+  closeBtn?.addEventListener('click', () => lb.close());
+  // Click on the backdrop (anything but the video or the close control) closes it.
+  lb.addEventListener('click', (event) => {
+    if (event.target.closest('.film-lightbox__video, .film-lightbox__close')) return;
+    lb.close();
+  });
+  lb.addEventListener('close', () => {
+    unlockPage();
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+  });
 })();
 
 // MediVasc Assistant — the conversational lead form at bottom-right. Walks the visitor

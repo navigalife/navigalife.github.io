@@ -159,6 +159,21 @@ const copyFonts = async () => {
   await fs.cp(source, destination, { recursive: true });
 };
 
+// Condition-severity clips (normalized 9:16 H.264 + watermarked posters) are
+// copied verbatim — they're pre-processed offline by tools/video/, not by sharp,
+// and served straight from assets/conditions/. No-op if the directory is absent.
+const copyConditionMedia = async () => {
+  const source = path.join(ROOT, 'assets', 'conditions');
+  const destination = path.join(DIST, 'assets', 'conditions');
+  try {
+    await fs.access(source);
+  } catch {
+    return;
+  }
+  await fs.mkdir(destination, { recursive: true });
+  await fs.cp(source, destination, { recursive: true });
+};
+
 const themeCss = (theme) => {
   const declarations = (tokens) =>
     Object.entries(tokens).map(([key, value]) => `  ${key}: ${value};`).join('\n');
@@ -444,6 +459,7 @@ const build = async () => {
     fs.writeFile(path.join(DIST, 'llms.txt'), llmsTxt(company, visibleProtocols)),
     fs.writeFile(path.join(DIST, '.nojekyll'), ''),
     copyFonts(),
+    copyConditionMedia(),
     copyAdmin(),
     copyStrategy(),
   ]);

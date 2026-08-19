@@ -169,6 +169,20 @@ html:not(.js) .recoveries__more{display:none}
 .condition-track:last-child .condition-list{grid-template-columns:1fr}
 .condition-list li{display:flex;min-height:48px;align-items:center;gap:12px;border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent);font-size:1.0625rem;font-weight:500}
 .condition-list .icon{color:var(--good)}
+.condition-films{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:center;gap:clamp(24px,4vw,64px);margin:0 0 clamp(30px,4.5vw,48px)}
+.condition-films__lead{margin:0;max-width:38ch;color:var(--ink-muted);font-size:1.0625rem;line-height:1.6}
+.condition-films__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(12px,2.4vw,20px);max-width:440px;margin:0;padding:0;list-style:none;justify-self:end}
+.condition-film{display:block;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.condition-film__frame{position:relative;display:block;aspect-ratio:9/16;border-radius:16px;overflow:hidden;background:color-mix(in srgb,var(--ink) 8%,transparent);box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 8%,transparent),0 20px 46px -24px color-mix(in srgb,var(--ink) 40%,transparent);transition:transform 220ms ease,box-shadow 220ms ease}
+.condition-film__poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.condition-film__play{position:absolute;left:50%;top:50%;display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:color-mix(in srgb,#0b1f2a 42%,transparent);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);color:#fff;box-shadow:inset 0 0 0 1px rgb(255 255 255/.35);transform:translate(-50%,-50%);transition:transform 200ms ease,background 200ms ease}
+.condition-film__play svg{width:24px;height:24px;margin-left:2px}
+.condition-film__dur{position:absolute;right:8px;bottom:8px;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,#0b1f2a 58%,transparent);color:#fff;font-size:.6875rem;font-weight:600;font-variant-numeric:tabular-nums}
+.condition-film__cap{display:block;margin-top:10px;color:var(--ink-muted);font-size:.8125rem;letter-spacing:.01em}
+.condition-film:hover .condition-film__frame,.condition-film:focus-visible .condition-film__frame{transform:translateY(-3px);box-shadow:0 2px 4px color-mix(in srgb,var(--ink) 9%,transparent),0 28px 60px -26px color-mix(in srgb,var(--ink) 48%,transparent)}
+.condition-film:hover .condition-film__play,.condition-film:focus-visible .condition-film__play{background:var(--primary);transform:translate(-50%,-50%) scale(1.08)}
+.condition-film:focus-visible{outline:none}
+.condition-film:focus-visible .condition-film__frame{outline:2px solid var(--primary);outline-offset:3px}
 
 /* Eligibility notice — the one section that says no. It borrows the page's own
    vocabulary: the stock .kicker (no colour overrides — every kicker on the site
@@ -265,7 +279,7 @@ html:not(.js) .recoveries__more{display:none}
      z above the chatbot (120); body-level so the viewport is its containing box. */
   .nav-scrim{display:block;position:fixed;inset:0;z-index:150;background:color-mix(in srgb,#0b1f2a 52%,transparent);opacity:0;visibility:hidden;transition:opacity 300ms ease,visibility 0s linear 300ms}
   .nav-scrim.is-open{opacity:1;visibility:visible;transition:opacity 300ms ease}
-  .nav-drawer{display:flex;position:fixed;inset:0 0 0 auto;z-index:160;flex-direction:column;align-items:stretch;width:min(84vw,360px);max-width:100%;background:var(--surface);box-shadow:-30px 0 70px -30px color-mix(in srgb,#0b1f2a 60%,transparent);transform:translateX(100%);transition:transform 360ms cubic-bezier(.22,1,.36,1);overflow-y:auto;overscroll-behavior:contain}
+  .nav-drawer{display:flex;position:fixed;top:0;right:0;bottom:auto;left:auto;height:100dvh;z-index:160;flex-direction:column;align-items:stretch;width:min(84vw,360px);max-width:100%;background:var(--surface);box-shadow:-30px 0 70px -30px color-mix(in srgb,#0b1f2a 60%,transparent);transform:translateX(100%);transition:transform 360ms cubic-bezier(.22,1,.36,1);overflow-y:auto;overscroll-behavior:contain}
   .nav-drawer.is-open{transform:translateX(0)}
   .nav-drawer__head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px 14px 22px;border-bottom:1px solid color-mix(in srgb,var(--line) 78%,transparent)}
   .nav-drawer__brand{display:inline-flex;align-items:center}
@@ -603,6 +617,15 @@ html:not(.js) .solution-carousel__arrow,html:not(.js) .solution-carousel__meta,h
 .voice-lightbox__nav--prev .icon{transform:rotate(180deg)}
 .voice-lightbox__nav--next{right:max(12px,env(safe-area-inset-right,0px))}
 .voice-lightbox__counter{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom,0px));margin:0;padding:5px 14px;border-radius:999px;background:color-mix(in srgb,#0b1f2a 60%,transparent);color:#fff;font-size:.8125rem;font-weight:600;font-variant-numeric:tabular-nums;transform:translateX(-50%)}
+.film-lightbox{position:fixed;inset:0;width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;background:transparent;place-items:center;overflow:hidden}
+.film-lightbox:not([open]){display:none}
+.film-lightbox[open]{display:grid}
+.film-lightbox::backdrop{background:color-mix(in srgb,#05141c 88%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.film-lightbox__stage{display:grid;place-items:center;padding:clamp(12px,4vw,40px)}
+.film-lightbox__video{max-width:min(94vw,480px);max-height:88dvh;width:auto;height:auto;border-radius:14px;background:#000;box-shadow:0 40px 90px -20px rgb(0 0 0/.7)}
+.film-lightbox__close{position:fixed;top:max(16px,env(safe-area-inset-top,0px));right:16px;display:grid;place-items:center;width:46px;height:46px;padding:0;border:0;border-radius:50%;background:color-mix(in srgb,#0b1f2a 60%,transparent);color:#fff;cursor:pointer;box-shadow:inset 0 0 0 1px rgb(255 255 255/.25)}
+.film-lightbox__close:hover{background:color-mix(in srgb,#0b1f2a 78%,transparent)}
+.film-lightbox__close .icon{width:20px;height:20px}
 
 @media (max-width:1000px){
   .solution-grid{grid-template-columns:1fr;gap:clamp(28px,6vw,40px)}
