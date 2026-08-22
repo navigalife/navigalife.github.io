@@ -546,7 +546,7 @@ const renderPage = ({
   // carousel slides inside the film lightbox, so their order and count never drift.
   const films = [
     { src: 'assets/conditions/severity-b.mp4', poster: 'assets/conditions/severity-b.jpg', dur: '0:06', cap: 'Referred for a below-knee amputation. Recovered in 90 days.', featured: true },
-    { src: 'assets/conditions/severity-a.mp4', poster: 'assets/conditions/severity-a.jpg', dur: '0:28', cap: 'Documented case, before therapy.' },
+    { src: 'assets/conditions/severity-a.mp4', poster: 'assets/conditions/severity-a.jpg', dur: '0:28', cap: 'Documented case of Elephantiasis' },
   ];
 
   return `<!doctype html>
