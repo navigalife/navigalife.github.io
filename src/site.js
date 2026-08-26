@@ -420,6 +420,8 @@
 
     let raf = 0;
     track.addEventListener('scroll', () => {
+      // First scroll of any kind retires the one-time "Swipe" cue (CSS fades it).
+      carousel.classList.add('is-scrolled');
       if (raf) return;
       raf = requestAnimationFrame(() => {
         raf = 0;

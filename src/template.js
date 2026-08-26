@@ -143,6 +143,15 @@ const renderQuoteStory = (testimonial, index) => `
     <figcaption>${patientLabel(testimonial) ? `<strong>${escapeHtml(patientLabel(testimonial))}</strong>` : ''}<span>${escapeHtml(testimonial.location)}</span><span>${escapeHtml(testimonial.condition)}</span></figcaption>
   </figure>`;
 
+// Reassurance line shown in both contact prompts (the #act panel and the #contact
+// block bracketing #about): no fee is charged to review a case or during follow-up.
+// `variant` = 'on-dark' restyles it for the dark #act panel.
+const freeConsultNote = (variant = '') => `
+        <p class="free-consult${variant ? ` free-consult--${variant}` : ''}">
+          <span class="free-consult__icon" aria-hidden="true">${icon('shield')}</span>
+          <span class="free-consult__text"><strong>No consultation charges</strong>At any stage of the case study or follow-ups</span>
+        </p>`;
+
 // One carousel slide — the same evidence frame the recoveries use (4:5, blurred
 // cover fill behind a contained photo), minus the stage caption.
 const solutionSlide = (item, imageMap, condition, index, total) => `
@@ -170,6 +179,7 @@ const solutionCarousel = (items, imageMap, condition) => `
           </ul>
           <button type="button" class="solution-carousel__arrow solution-carousel__arrow--prev" data-carousel-prev aria-label="Previous photograph">${icon('arrow')}</button>
           <button type="button" class="solution-carousel__arrow solution-carousel__arrow--next" data-carousel-next aria-label="Next photograph">${icon('arrow')}</button>
+          <span class="solution-carousel__hint" data-carousel-hint aria-hidden="true">${icon('arrow')}<span>Swipe</span>${icon('arrow')}</span>
         </div>
         <div class="solution-carousel__meta">
           <span class="solution-carousel__bar" aria-hidden="true"><span data-carousel-progress></span></span>
@@ -784,6 +794,7 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
             <div>
               <h2>If amputation has been advised, talk to us <em>today</em></h2>
               <p>The recovery shown above began after a vascular surgeon had already referred the patient for below-knee amputation. The earlier therapy starts, the shorter it is and the more of the limb it protects. One message is enough to begin.</p>
+              ${freeConsultNote('on-dark')}
             </div>
             <div class="act__actions">
               <a class="button button--inverse" href="${cta.href}"${ctaAttrs}>${cta.icon} ${cta.label}</a>
@@ -810,6 +821,7 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
         <div class="contact__intro" data-reveal>
           <h2>Start with <em>your case</em></h2>
           <p>Tell us the condition, how long it has persisted, and what treatment has been tried. We will study the case and tell you honestly what a protocol can do.</p>
+          ${freeConsultNote()}
         </div>
         <div class="contact__details" data-reveal style="--reveal-order:1">
           ${company.phone ? `<a class="contact-row" href="tel:${telephone}">${icon('call')}<span><small>Phone</small>Call us</span></a>` : ''}
@@ -829,7 +841,7 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
     </div>
     <div class="container footer__bottom">
       <p>Results may vary depending on the history, cause and onset of the disease.</p>
-      <p>© ${new Date().getFullYear()} ${escapeHtml(company.legalName)}</p>
+      <p>© ${escapeHtml(company.legalName)}. All rights reserved.</p>
     </div>
   </footer>
 
