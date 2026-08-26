@@ -260,7 +260,13 @@ const renderJsonLd = ({ company, config, siteUrl }) => {
     // Only publish a phone number when one is on record — no dangling "+".
     ...(company.phone ? { telephone: phoneHref(company.phone) } : {}),
     ...(company.email ? { email: `mailto:${company.email}` } : {}),
-    address: { '@type': 'PostalAddress', streetAddress: company.address, addressCountry: 'IN' },
+    address: company.addressParts
+      ? { '@type': 'PostalAddress', ...company.addressParts }
+      : { '@type': 'PostalAddress', streetAddress: company.address, addressCountry: 'IN' },
+    ...(company.geo
+      ? { geo: { '@type': 'GeoCoordinates', latitude: company.geo.latitude, longitude: company.geo.longitude } }
+      : {}),
+    ...(company.mapsUrl ? { hasMap: company.mapsUrl } : {}),
     areaServed: ['New Delhi', 'Delhi NCR', 'India'],
     medicalSpecialty: 'Vascular and lymphatic care',
     knowsAbout: KNOWS_ABOUT,

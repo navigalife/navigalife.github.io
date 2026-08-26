@@ -7,12 +7,20 @@
   "whatsapp": "8130981199",
   "email": "contact@medivasc.in",
   "address": "New Delhi, India",
-  "mapsUrl": "https://www.google.com/maps/search/?api=1&query=MediVasc+New+Delhi",
+  "addressParts": {
+    "streetAddress": "2nd Floor, Park View Plaza, 216, 32, Ajmal Khan Rd, Park Area, Karol Bagh",
+    "addressLocality": "New Delhi",
+    "addressRegion": "Delhi",
+    "postalCode": "110005",
+    "addressCountry": "IN"
+  },
+  "geo": { "latitude": 28.6529368, "longitude": 77.1945089 },
+  "mapsUrl": "https://www.google.com/maps?cid=11902980396050022742",
   "hours": "",
   "social": {
-    "linkedin": "",
-    "instagram": "",
-    "facebook": ""
+    "linkedin": "https://www.linkedin.com/company/medivasc-in",
+    "instagram": "https://www.instagram.com/medivasc.in",
+    "facebook": "https://www.facebook.com/profile.php?id=61593334165102"
   },
   "founded": "2025",
   "gstDisplay": false
