@@ -49,7 +49,7 @@
   },
   {
     "id": "varicose-veins",
-    "condition": "Varicose veins and spider veins",
+    "condition": "Managing & preventing varicose veins and spider veins",
     "audience": "disease",
     "summary": "Primary varicose and spider veins turn prominent when neglected, leading to skin issues and venous ulcers. Early, guided care prevents the long treatment that chronic stages demand.",
     "engagement": [
@@ -144,22 +144,6 @@
     "draft": false
   },
   {
-    "id": "dvt-vte-prevention",
-    "condition": "DVT and VTE prevention",
-    "audience": "disease",
-    "summary": "Prevention protocols for deep vein thrombosis and venous thromboembolism, designed alongside the existing medical plan rather than in place of it.",
-    "engagement": [
-      "Detailed case study of the condition, history, and current treatment",
-      "Customized, affordable protocol designed around the individual case",
-      "Guided therapy with expert supervision, at home wherever possible",
-      "Regular follow-ups until the desired result is achieved"
-    ],
-    "durationNote": "Customized case to case",
-    "deviceIds": [],
-    "visible": true,
-    "draft": false
-  },
-  {
     "id": "chronic-venous-insufficiency",
     "condition": "Chronic venous insufficiency",
     "audience": "disease",
@@ -176,10 +160,26 @@
     "draft": false
   },
   {
-    "id": "cellulitis-hyperkeratosis",
-    "condition": "Cellulitis and hyperkeratosis",
+    "id": "dvt-vte-prevention",
+    "condition": "Prevention of Hyperkeratosis",
     "audience": "disease",
-    "summary": "Chronic cellulitis and hyperkeratosis have benefited from our approach much sooner than expected, treated as part of a complete limb-care protocol.",
+    "summary": "Prevention protocols for  Hyperkeratosis designed alongside the existing medical plan rather than in place of it.",
+    "engagement": [
+      "Detailed case study of the condition, history, and current treatment",
+      "Customized, affordable protocol designed around the individual case",
+      "Guided therapy with expert supervision, at home wherever possible",
+      "Regular follow-ups until the desired result is achieved"
+    ],
+    "durationNote": "Customized case to case",
+    "deviceIds": [],
+    "visible": true,
+    "draft": false
+  },
+  {
+    "id": "cellulitis-hyperkeratosis",
+    "condition": "Prevention of Cellulitis",
+    "audience": "disease",
+    "summary": "Prevention of cellulitis has achieved from our approach much sooner than expected, treated as part of a complete limb-care protocol.",
     "engagement": [
       "Detailed case study of the condition, history, and current treatment",
       "Customized, affordable protocol designed around the individual case",
