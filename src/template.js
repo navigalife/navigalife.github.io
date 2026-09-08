@@ -652,7 +652,7 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
             <a class="button" href="#recoveries">See the recoveries ${icon('arrowDown')}</a>
             <a class="button button--outline" href="${cta.href}"${ctaAttrs}>${cta.icon} ${cta.label}</a>
           </div>
-          <ul class="chip-list hero__chips" aria-label="Conditions we treat">
+          <ul class="chip-list hero__chips" aria-label="Conditions we support">
             ${heroChips.map((chip) => `<li>${escapeHtml(chip)}</li>`).join('')}
           </ul>
         </div>
@@ -714,7 +714,7 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
           <li data-reveal style="--reveal-order:0"><span>01</span><div><h3>Detailed case study</h3><p>We begin with your individual case: the condition, its history, current treatment, and reports. No two protocols are the same because no two cases are.</p></div></li>
           <li data-reveal style="--reveal-order:1"><span>02</span><div><h3>A customized, affordable solution</h3><p>Where required, we customize the medical device modalities for your therapy, designed around your case, your home, and your budget.</p></div></li>
           <li data-reveal style="--reveal-order:2"><span>03</span><div><h3>Therapy at home, under our guidance</h3><p>You take the therapy at home, guided by us, without any break: no travel, no waiting rooms, no dependence on anyone to get you there.</p></div></li>
-          <li data-reveal style="--reveal-order:3"><span>04</span><div><h3>Follow-ups until the result</h3><p>We stay in touch at predefined regular intervals, monitor progress, take your feedback, and change the modalities if required, until the desired result is achieved.</p></div></li>
+          <li data-reveal style="--reveal-order:3"><span>04</span><div><h3>Follow-ups</h3><p>We follow up at planned intervals to check the progress and adjust the plan.</p></div></li>
         </ol>
         <aside class="motto" data-reveal>
           <p class="motto__line">A solution is not a solution unless it is <em>affordable</em></p>
@@ -728,7 +728,7 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
         <div class="section-heading" data-reveal>
           <div>
             <p class="kicker">Protocols available</p>
-            <h2>Conditions we treat</h2>
+            <h2>Conditions we support</h2>
           </div>
           <p>Every protocol starts with the same detailed case study. If your condition is not listed here, ask us. The case study decides what is possible.</p>
         </div>
@@ -791,6 +791,33 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
       </dialog>
     </section>
 
+    <section class="section watch" id="watch">
+      <div class="container">
+        <div class="section-heading" data-reveal>
+          <div>
+            <p class="kicker">Vulnerability</p>
+            <h2>Symptoms to <em>watch out for</em></h2>
+          </div>
+          <p>These are the signs that a wound, a limb, or the circulation needs attention. If any of them apply to you or someone you care for, have it assessed without waiting.</p>
+        </div>
+        <ul class="watch-list" data-reveal>
+          <li>Insulin-dependent diabetic foot</li>
+          <li>Non-healing wounds</li>
+          <li>Oozing wounds / blisters</li>
+          <li>Dark red / black spots on lower limbs</li>
+          <li>Varicose veins, venous ulcers</li>
+          <li>Congenital lymphedema</li>
+          <li>Oncology surgeries / radiation therapies</li>
+          <li>CKD – those on dialysis</li>
+          <li>CVI – breathlessness</li>
+          <li>Lumbar / sacral surgeries</li>
+        </ul>
+        <aside class="watch-note" data-reveal>
+          <p>Prevention is better than <em>cure</em></p>
+        </aside>
+      </div>
+    </section>
+
     ${eligibilitySection}
 
     <section class="section act" id="act">
@@ -799,7 +826,7 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
           <div class="act__layout">
             <div>
               <h2>If amputation has been advised, talk to us <em>today</em></h2>
-              <p>The recovery shown above began after a vascular surgeon had already referred the patient for below-knee amputation. The earlier therapy starts, the shorter it is and the more of the limb it protects. One message is enough to begin.</p>
+              <p>The recovery shown above began after a vascular surgeon had already referred the patient for below-knee amputation. Early assessment and appropriate care improve the chance of limb preservation. One message is enough to begin.</p>
               ${freeConsultNote('on-dark')}
             </div>
             <div class="act__actions">
@@ -846,7 +873,7 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
       <nav aria-label="Footer navigation"><a href="#recoveries">Recoveries</a><a href="#approach">Approach</a><a href="#conditions">Conditions</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
     </div>
     <div class="container footer__bottom">
-      <p>Results may vary depending on the history, cause and onset of the disease.</p>
+      <p>Recovery time varies for every patient depending on cause &amp; duration of the condition, comorbidities and the patient’s participation in treatment &amp; follow-ups. Recovery timeline may vary from our stated estimates.</p>
       <p>© ${escapeHtml(company.legalName)}. All rights reserved.</p>
     </div>
   </footer>

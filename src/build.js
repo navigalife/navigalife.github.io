@@ -361,7 +361,7 @@ const llmsTxt = (company, protocols) => `# ${company.name}
 
 ${company.name} is a team of medical engineering professionals in ${company.address}, designing customized, affordable protocols for vascular and lymphatic disorders — with documented photographic recoveries and guided follow-up until the desired result. Amputation is not the only way out.
 
-## Conditions we treat
+## Conditions we support
 
 ${protocols.map((p) => `- ${p.condition}: ${p.summary}`).join('\n')}
 
