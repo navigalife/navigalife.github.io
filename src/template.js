@@ -801,7 +801,7 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
           <p>These are the signs that a wound, a limb, or the circulation needs attention. If any of them apply to you or someone you care for, have it assessed without waiting.</p>
         </div>
         <ul class="watch-list" data-reveal>
-          <li>Insulin-dependent diabetic foot</li>
+          <li>Insulin-dependence / Diabetic foot</li>
           <li>Non-healing wounds</li>
           <li>Oozing wounds / blisters</li>
           <li>Dark red / black spots on lower limbs</li>
