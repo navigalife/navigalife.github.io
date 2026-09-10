@@ -52,6 +52,11 @@ export class GhApi {
     try {
       response = await fetch(`${API_ROOT}${path}`, {
         ...options,
+        // GitHub serves ref/content GETs with `cache-control: max-age=60`; the
+        // browser HTTP cache would otherwise let the optimistic-concurrency
+        // check (getRef before publish) read a stale HEAD and spuriously throw
+        // "Branch changed" for up to a minute after any push. Always hit the network.
+        cache: 'no-store',
         headers: {
           Accept: 'application/vnd.github+json',
           Authorization: `Bearer ${this.token}`,
