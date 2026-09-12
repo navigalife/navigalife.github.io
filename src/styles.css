@@ -169,7 +169,10 @@ html:not(.js) .recoveries__more{display:none}
 .condition-track:last-child .condition-list{grid-template-columns:1fr}
 .condition-list li{display:flex;min-height:48px;align-items:center;gap:12px;border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent);font-size:1.0625rem;font-weight:500}
 .condition-list .icon{color:var(--good)}
-.watch-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 44px;margin:0 0 clamp(52px,8vw,88px);padding:0;list-style:none}
+.watch__panel{position:relative;overflow:hidden;padding:clamp(30px,4.5vw,58px) clamp(24px,4vw,60px);border-radius:32px;background:color-mix(in srgb,var(--accent) 6%,var(--surface));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 24%,var(--line)),0 30px 72px -44px color-mix(in srgb,var(--ink) 46%,transparent)}
+.watch__panel::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(34rem 22rem at 94% -20%,color-mix(in srgb,var(--accent) 13%,transparent),transparent 60%)}
+.watch__panel>*{position:relative;z-index:1}
+.watch-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 44px;margin:0 0 clamp(40px,6vw,60px);padding:0;list-style:none}
 .watch-list li{display:flex;min-height:54px;align-items:center;gap:15px;border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent);color:var(--ink);font-size:1.0625rem;font-weight:500;line-height:1.35}
 .watch-list li::before{content:"";flex:none;width:9px;height:9px;border-radius:2px;transform:rotate(45deg);background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 14%,transparent)}
 .watch-note{margin:0;text-align:center}
@@ -390,6 +393,7 @@ html:not(.js) .recoveries__more{display:none}
   .pathway>li>span::after{display:none}
   .pathway>li>div{padding-top:8px}
   .condition-list{grid-template-columns:1fr}
+  .watch__panel{padding:26px 20px;border-radius:24px}
   .watch-list{grid-template-columns:1fr}
   .quote-story-grid{columns:1}
   .about__layout,.contact__layout{grid-template-columns:1fr;gap:40px}

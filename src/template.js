@@ -793,28 +793,30 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
 
     <section class="section watch" id="watch">
       <div class="container">
-        <div class="section-heading" data-reveal>
-          <div>
-            <p class="kicker">Vulnerability</p>
-            <h2>Symptoms to <em>watch out for</em></h2>
+        <div class="watch__panel" data-reveal>
+          <div class="section-heading">
+            <div>
+              <p class="kicker">Symptoms</p>
+              <h2>Vulnerability — <em>signs to watch out for</em></h2>
+            </div>
+            <p>These are the signs that a wound, a limb, or the circulation needs attention. If any of them apply to you or someone you care for, have it assessed without waiting.</p>
           </div>
-          <p>These are the signs that a wound, a limb, or the circulation needs attention. If any of them apply to you or someone you care for, have it assessed without waiting.</p>
+          <ul class="watch-list">
+            <li>Insulin-dependence / Diabetic foot</li>
+            <li>Non-healing wounds</li>
+            <li>Oozing wounds / blisters</li>
+            <li>Dark red / black spots on lower limbs</li>
+            <li>Varicose veins, venous ulcers</li>
+            <li>Congenital lymphedema</li>
+            <li>Oncology surgeries / radiation therapies</li>
+            <li>CKD – those on dialysis</li>
+            <li>CVI – breathlessness</li>
+            <li>Lumbar / sacral surgeries</li>
+          </ul>
+          <aside class="watch-note">
+            <p>Prevention is better than <em>cure</em></p>
+          </aside>
         </div>
-        <ul class="watch-list" data-reveal>
-          <li>Insulin-dependence / Diabetic foot</li>
-          <li>Non-healing wounds</li>
-          <li>Oozing wounds / blisters</li>
-          <li>Dark red / black spots on lower limbs</li>
-          <li>Varicose veins, venous ulcers</li>
-          <li>Congenital lymphedema</li>
-          <li>Oncology surgeries / radiation therapies</li>
-          <li>CKD – those on dialysis</li>
-          <li>CVI – breathlessness</li>
-          <li>Lumbar / sacral surgeries</li>
-        </ul>
-        <aside class="watch-note" data-reveal>
-          <p>Prevention is better than <em>cure</em></p>
-        </aside>
       </div>
     </section>
 
