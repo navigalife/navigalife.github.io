@@ -728,7 +728,7 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
         <div class="section-heading" data-reveal>
           <div>
             <p class="kicker">Protocols available</p>
-            <h2>Conditions we support</h2>
+            <h2>Conditions we <em>support</em></h2>
           </div>
           <p>Every protocol starts with the same detailed case study. If your condition is not listed here, ask us. The case study decides what is possible.</p>
         </div>
