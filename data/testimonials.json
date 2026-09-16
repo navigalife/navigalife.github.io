@@ -149,5 +149,26 @@
         "stage": "After therapy"
       }
     ]
+  },
+  {
+    "id": "story-008",
+    "featured": false,
+    "name": "",
+    "age": "",
+    "location": "Jammu, India",
+    "condition": "Untreated Elephantiasis for decades",
+    "duration": "Signs of recovery in 25 days",
+    "remark": "Compromised vascularity of right leg and patient was referred below knee amputation.\nUpon checking with the patient’s family after 25 days of using our therapy, patient’s son replied “now she is feeling more comfortable and able to walk upto 300 – 400 meters in one stretch”. Please see sideways screenshot of conversation.",
+    "quote": "",
+    "images": [
+      {
+        "src": "assets/testimonials/story-008-before.webp",
+        "stage": "Before therapy"
+      },
+      {
+        "src": "assets/testimonials/story-008-after.webp",
+        "stage": "After therapy"
+      }
+    ]
   }
 ]
