@@ -170,5 +170,68 @@
         "stage": "After therapy"
       }
     ]
+  },
+  {
+    "id": "story-009",
+    "featured": false,
+    "name": "",
+    "age": "",
+    "location": "Vijayawada AP,  India",
+    "condition": "Hysterectomy  led to immobility and deformity of limbs",
+    "duration": "Remarkable  improvement in 40 days of therapy",
+    "remark": "A decade ago, hysterectomy, due to negligence and ignorance to address the symptoms, along with osteoarthritis, led to immobility and limb deformity. However, over a period of 40 days of therapy, patient showed remarkable improvement, overcoming life threatening sepsis, thereby avoiding an otherwise inevitable amputation.",
+    "quote": "",
+    "images": [
+      {
+        "src": "assets/testimonials/story-009-before.webp",
+        "stage": "Before therapy"
+      },
+      {
+        "src": "assets/testimonials/story-009-after.webp",
+        "stage": "After therapy"
+      }
+    ]
+  },
+  {
+    "id": "story-010",
+    "featured": false,
+    "name": "",
+    "age": "",
+    "location": "India",
+    "condition": "Varicose Veins followed by venous ulcers",
+    "duration": "Signs of recovery in 40 days",
+    "remark": "Visible results seen in the image with around 35-40 days of therapy.",
+    "quote": "",
+    "images": [
+      {
+        "src": "assets/testimonials/story-010-before.webp",
+        "stage": "Before therapy"
+      },
+      {
+        "src": "assets/testimonials/story-010-after.webp",
+        "stage": "After therapy"
+      }
+    ]
+  },
+  {
+    "id": "story-011",
+    "featured": false,
+    "name": "",
+    "age": "",
+    "location": "India",
+    "condition": "Prominent  varicose veins prevalent for several years",
+    "duration": "Notable improvement in 30 days of therapy",
+    "remark": "Significant positive change visible in 30 days of therapy. Patient was advised to  continue therapy for another 60 days to achieve optimum vascularity",
+    "quote": "",
+    "images": [
+      {
+        "src": "assets/testimonials/story-011-before.webp",
+        "stage": "Before therapy"
+      },
+      {
+        "src": "assets/testimonials/story-011-after.webp",
+        "stage": "After therapy"
+      }
+    ]
   }
 ]
