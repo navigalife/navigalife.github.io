@@ -233,5 +233,26 @@
         "stage": "After therapy"
       }
     ]
+  },
+  {
+    "id": "story-012",
+    "featured": false,
+    "name": "",
+    "age": "48 F",
+    "location": "India",
+    "condition": "Unexplained leg swelling with oozing wounds",
+    "duration": "Unbelievable recovery in 25 days",
+    "remark": "Patient reported sudden onset of swelling 15 years ago. No history of any oncology or vascular surgery or processes.  Patient shuttling from hospitals to hospitals but no respite & culminated similar to elephantiasis with around 36 inches thigh circumference, oozing wounds and chronic mobility issues.  However we took up the case study on 1st September 2026 by customizing a unique therapy protocol, the patient showed unbelievable recovery in just 25 days which was beyond our expectations too. Therapy is on with regular follow ups & progress being monitored & reviewed.",
+    "quote": "",
+    "images": [
+      {
+        "src": "assets/testimonials/story-012-before.webp",
+        "stage": "Before therapy"
+      },
+      {
+        "src": "assets/testimonials/story-012-after.webp",
+        "stage": "After therapy"
+      }
+    ]
   }
 ]
