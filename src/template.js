@@ -6,6 +6,16 @@ const escapeHtml = (value = '') =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
 
+// Brand glyphs for the footer social row — filled, so they read as logos
+// rather than another stroked UI icon. Keys match data/company.json `social`.
+const socialIcons = {
+  x: { label: 'X', svg: '<path d="M18.9 1.2h3.7l-8 9.2L24 22.8h-7.4l-5.8-7.6-6.6 7.6H.5l8.6-9.8L0 1.2h7.6l5.2 6.9Zm-1.3 19.5h2L6.5 3.2H4.3Z"/>' },
+  linkedin: { label: 'LinkedIn', svg: '<path d="M20.4 20.5h-3.5v-5.6c0-1.3 0-3-1.9-3s-2.1 1.4-2.1 2.9v5.7H9.4V9h3.4v1.6h.1c.5-.9 1.6-1.9 3.4-1.9 3.6 0 4.3 2.4 4.3 5.5v6.3ZM5.3 7.4a2.1 2.1 0 1 1 0-4.1 2.1 2.1 0 0 1 0 4.1Zm1.8 13.1H3.6V9h3.5v11.5ZM22.2 0H1.8C.8 0 0 .8 0 1.7v20.6c0 .9.8 1.7 1.8 1.7h20.4c1 0 1.8-.8 1.8-1.7V1.7C24 .8 23.2 0 22.2 0Z"/>' },
+  instagram: { label: 'Instagram', svg: '<rect x="2.6" y="2.6" width="18.8" height="18.8" rx="5.4" fill="none" stroke="currentColor" stroke-width="2.1"/><circle cx="12" cy="12" r="4.3" fill="none" stroke="currentColor" stroke-width="2.1"/><circle cx="17.5" cy="6.5" r="1.3"/>' },
+  facebook: { label: 'Facebook', svg: '<path d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0 0 24 12Z"/>' },
+  youtube: { label: 'YouTube', svg: '<path fill-rule="evenodd" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8ZM9.6 15.6V8.4l6.2 3.6-6.2 3.6Z"/>' },
+};
+
 const icon = (name) => {
   if (name === 'whatsapp') {
     // Official WhatsApp glyph is a filled path, not a stroke; the old stroked
@@ -538,6 +548,12 @@ const renderPage = ({
   // 54px desktop render, base for the 64px phone render — swapped by breakpoint in
   // CSS (.lockup__size--sm hidden on desktop, --lg hidden ≤760px).
   const tmImg = (mark) => lockupImgs(mark, 'lazy');
+  const footerSocial = (() => {
+    const links = Object.entries(socialIcons)
+      .filter(([key]) => company.social?.[key])
+      .map(([key, { label, svg }]) => `<a href="${escapeHtml(company.social[key])}" target="_blank" rel="me noopener noreferrer" aria-label="MediVasc on ${label}"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">${svg}</svg></a>`);
+    return links.length ? `<ul class="footer-social" aria-label="MediVasc on social media">${links.map((link) => `<li>${link}</li>`).join('')}</ul>` : '';
+  })();
   const footerLockup = () => `<span class="lockup" aria-hidden="true">
     <span class="lockup__size lockup__size--lg">${tmImg(markPathsTmLg)}</span>
     <span class="lockup__size lockup__size--sm">${tmImg(markPathsTm)}</span>
@@ -873,6 +889,7 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
       <span class="footer-brand">${footerLockup()}<span class="sr-only">MediVasc™</span></span>
       <p>${escapeHtml(company.tagline)}</p>
       <nav aria-label="Footer navigation"><a href="#recoveries">Recoveries</a><a href="#approach">Approach</a><a href="#conditions">Conditions</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
+      ${footerSocial}
     </div>
     <div class="container footer__bottom">
       <p>Recovery time varies for every patient depending on cause &amp; duration of the condition, comorbidities and the patient’s participation in treatment &amp; follow-ups. Recovery timeline may vary from our stated estimates.</p>

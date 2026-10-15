@@ -10,9 +10,11 @@
   "mapsUrl": "https://www.google.com/maps?cid=11902980396050022742",
   "hours": "",
   "social": {
+    "x": "https://x.com/MediVasc",
     "linkedin": "https://www.linkedin.com/company/medivasc-in",
     "instagram": "https://www.instagram.com/medivasc.in",
-    "facebook": "https://www.facebook.com/profile.php?id=61593334165102"
+    "facebook": "https://www.facebook.com/profile.php?id=61593334165102",
+    "youtube": "https://www.youtube.com/@MediVasc"
   },
   "founded": "2025",
   "gstDisplay": false

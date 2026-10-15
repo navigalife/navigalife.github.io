@@ -622,7 +622,7 @@ const renderCompany = () => {
     '<label class="field--full">Address<input name="address" value="' + h(company.address) + '"></label>' +
     '<label class="field--full">Google Maps URL<input name="mapsUrl" type="url" value="' + h(company.mapsUrl) + '"></label>' +
     '<label>Founded<input name="founded" value="' + h(company.founded) + '"></label>' +
-    '<div class="field-group"><div class="field-group__heading"><div><h2>Social profiles</h2><p>Leave unused channels blank.</p></div></div><div class="editor-grid"><label>LinkedIn<input name="linkedin" type="url" value="' + h(company.social.linkedin) + '"></label><label>Instagram<input name="instagram" type="url" value="' + h(company.social.instagram) + '"></label><label>Facebook<input name="facebook" type="url" value="' + h(company.social.facebook) + '"></label></div></div>' +
+    '<div class="field-group"><div class="field-group__heading"><div><h2>Social profiles</h2><p>Leave unused channels blank.</p></div></div><div class="editor-grid"><label>X (Twitter)<input name="x" type="url" value="' + h(company.social.x) + '"></label><label>LinkedIn<input name="linkedin" type="url" value="' + h(company.social.linkedin) + '"></label><label>Instagram<input name="instagram" type="url" value="' + h(company.social.instagram) + '"></label><label>Facebook<input name="facebook" type="url" value="' + h(company.social.facebook) + '"></label><label>YouTube<input name="youtube" type="url" value="' + h(company.social.youtube) + '"></label></div></div>' +
     '<div class="field-group"><label class="checkbox-row"><input name="gstDisplay" type="checkbox" ' + (company.gstDisplay ? 'checked' : '') + '><span>Show GST registration detail publicly</span></label></div>' +
     '</div><div class="form-actions"><button class="button button--primary" type="button" data-action="save-company">Save company draft</button></div></form></section>';
 };
@@ -1095,9 +1095,11 @@ const saveCompany = (form) => {
     mapsUrl: String(data.get('mapsUrl') || '').trim(),
     hours: String(data.get('hours') || '').trim(),
     social: {
+      x: String(data.get('x') || '').trim(),
       linkedin: String(data.get('linkedin') || '').trim(),
       instagram: String(data.get('instagram') || '').trim(),
       facebook: String(data.get('facebook') || '').trim(),
+      youtube: String(data.get('youtube') || '').trim(),
     },
     founded: String(data.get('founded') || '').trim(),
     gstDisplay: data.has('gstDisplay'),
