@@ -1,0 +1,21 @@
+# MediVasc traffic collector. Deploy from this directory: `npx wrangler deploy`.
+# Schema: `npx wrangler d1 execute medivasc-traffic --remote --file schema.sql`.
+name = "medivasc-api"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+preview_urls = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "medivasc-traffic"
+database_id = "6d32cd06-015e-43be-a4f0-972b432f786f"
+
+# Per-IP ping ceiling (the IP is only the limiter key; it is never stored).
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 60
+  period = 60

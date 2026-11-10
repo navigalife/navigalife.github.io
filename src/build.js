@@ -320,7 +320,7 @@ const copyAdmin = async () => {
     // Appearance renderer for people whose browser still held the old app.js.
     // The version is a content hash of the bundle, so it only changes when the
     // code changes and otherwise leaves the browser cache intact.
-    const bundle = ['app.js', 'gh-api.js', 'image-tools.js', 'vault.js', 'styles.css'];
+    const bundle = ['app.js', 'gh-api.js', 'image-tools.js', 'vault.js', 'traffic.js', 'styles.css'];
     const hash = crypto.createHash('sha256');
     for (const file of bundle) hash.update(await fs.readFile(path.join(source, file)));
     const v = hash.digest('hex').slice(0, 8);
@@ -334,7 +334,7 @@ const copyAdmin = async () => {
       .replace('href="styles.css"', `href="styles.css?v=${v}"`));
     // app.js imports its siblings by relative path; version those too.
     await rewrite('app.js', (js) => js
-      .replace(/(['"])(\.\/(?:gh-api|image-tools|vault)\.js)\1/g, `$1$2?v=${v}$1`));
+      .replace(/(['"])(\.\/(?:gh-api|image-tools|vault|traffic)\.js)\1/g, `$1$2?v=${v}$1`));
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }

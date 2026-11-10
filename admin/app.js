@@ -1,6 +1,7 @@
 import { ApiError, AuthError, BranchConflictError, GhApi } from './gh-api.js';
 import { blobToBase64, cropEvidenceImage, redactImage, resizeFeedbackImage, resizeProductImage } from './image-tools.js';
 import { createVault, forgetVault, unlockVault, vaultExists } from './vault.js';
+import { mountTraffic, STAFF_KEY } from './traffic.js';
 
 const OWNER = 'navigalife';
 const REPO = 'navigalife.github.io';
@@ -264,6 +265,7 @@ const connect = async (token, branch, { busyButton, onAuthFailure }) => {
     state.branch = branch;
     localStorage.setItem(BRANCH_KEY, branch);
     sessionStorage.setItem(TOKEN_SESSION_KEY, token);
+    localStorage.setItem(STAFF_KEY, '1');
     showApp();
     if (!canResumeDraft) await loadRepository();
     else render();
@@ -687,8 +689,10 @@ const render = () => {
   else if (state.activeTab === 'solutions') html = renderSolutionsList();
   else if (state.activeTab === 'voices') html = renderVoices();
   else if (state.activeTab === 'company') html = renderCompany();
+  else if (state.activeTab === 'traffic') html = '<div id="traffic-root"></div>';
   else html = renderAppearance();
   editorRoot.innerHTML = html;
+  if (!state.editor && state.activeTab === 'traffic') mountTraffic(editorRoot.querySelector('#traffic-root'), sessionToken());
   applyThemeTokens();
 };
 

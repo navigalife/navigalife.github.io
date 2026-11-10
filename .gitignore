@@ -34,3 +34,7 @@ assets/campaign/fonts/
 assets/campaign-combined/*
 !assets/campaign-combined/whatsapp.mjs
 !assets/campaign-combined/README.md
+
+# Traffic worker: local-only dev vars (ALLOW_LOCAL opens localhost + skips stats auth) and wrangler state
+traffic/.dev.vars
+traffic/.wrangler/

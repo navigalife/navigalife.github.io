@@ -207,3 +207,169 @@ input::placeholder,textarea::placeholder{color:var(--ink-muted)}
 @media(max-width:980px){.app-header{grid-template-columns:auto 1fr}.header-actions{grid-column:1/-1;padding-bottom:12px}.app-body{grid-template-columns:1fr}.tab-nav{position:static;display:flex;padding:18px 0;overflow:auto}.tab-nav button{width:auto;white-space:nowrap}#admin-main{padding:24px 0 64px;border-left:0;border-top:1px solid var(--line)}.list-head{display:none}.list-row{grid-template-columns:1fr auto}.list-row .row-meta,.list-row .status-badges{grid-column:1}.row-actions{grid-column:2;grid-row:1/3}.editor-grid{grid-template-columns:1fr}.field--full,.field-group,.prompt-card{grid-column:1}.image-list{grid-template-columns:repeat(2,minmax(0,1fr))}.stage-slots{grid-template-columns:1fr}}
 @media(max-width:640px){.auth-shell{padding:16px}.auth-card{padding:24px}.app-header{padding:12px 20px}.header-context{justify-self:end}.header-actions{overflow:auto}.app-body{width:calc(100% - 32px)}.section-toolbar{align-items:start;flex-direction:column}.editor-grid{gap:16px}.field-group{padding:16px}.repeat-row{grid-template-columns:1fr 1fr}.repeat-row .checkbox-row{grid-column:1}.image-list,.theme-grid,.crop-actions{grid-template-columns:1fr}.unsaved-bar{justify-content:space-between;gap:12px}.list-row{padding:14px}.row-actions{flex-wrap:wrap;max-width:92px}.prompt-card pre{font-size:.7rem}}
 @media(prefers-reduced-motion:no-preference){.button,.row-action,.theme-option{transition:background-color 180ms ease,border-color 180ms ease,transform 180ms ease}.button:hover,.theme-option:hover{transform:translateY(-1px)}}
+/* ---- Traffic tab (admin/traffic.js) ----------------------------------------
+   Read-only dashboard. Every data mark is one hue (--primary); sources are told
+   apart by their glyph and label, never by colour. Numbers are tabular so
+   columns line up. Phone (<=640) is the owner's main reader: KPIs fold to
+   1 + 2, source tiles become a ranked list (nine tiles 2-up leave an orphan and
+   squeeze the labels), ranked-list bars drop under the name, places stack. */
+.visually-hidden{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);border:0;white-space:nowrap}
+.tr{--tr-gutter:2.75rem;--tr-track:color-mix(in srgb,var(--ink) 8%,transparent);display:grid;gap:16px;min-width:0}
+.tr>.section-toolbar{margin-bottom:8px}
+.tr>.notice{margin-bottom:0}
+.tr .empty-state p{max-width:52ch;margin:0 auto}
+.tr-loading{padding:72px 24px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink-muted);text-align:center}
+.tr-controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px}
+.tr-seg{display:inline-flex;padding:3px;border-radius:10px;background:var(--surface-2)}
+.tr-seg button{min-height:38px;padding:0 14px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--ink-muted);font-size:.875rem;font-weight:600;white-space:nowrap;cursor:pointer}
+.tr-seg button:hover{color:var(--ink)}
+.tr-seg button[aria-pressed="true"]{border-color:var(--line);background:var(--surface);color:var(--ink)}
+.tr-chip{display:inline-flex;min-height:44px;align-items:center;gap:8px;padding:0 12px 0 14px;border:1px solid color-mix(in srgb,var(--primary) 40%,var(--line));border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:.875rem;font-weight:600;cursor:pointer}
+.tr-chip span[aria-hidden]{font-size:1.15rem;font-weight:400;line-height:1}
+.tr-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:hidden;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.tr-kpi{display:grid;min-width:0;align-content:start;gap:4px;padding:18px 20px 17px}
+.tr-kpi+.tr-kpi{border-left:1px solid var(--line)}
+.tr-kpi__label{color:var(--ink-muted);font-size:.8125rem;font-weight:600}
+.tr-kpi strong{font-size:2.25rem;font-weight:600;line-height:1.1;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+.tr-delta{color:var(--ink-muted);font-size:.8125rem;font-variant-numeric:tabular-nums;text-wrap:balance}
+.tr-card{min-width:0;padding:20px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.tr-card__head{margin-bottom:16px}
+.tr-card__head h2{margin:0;font-size:1.05rem;line-height:1.3}
+.tr-card__head h2 small{color:var(--ink-muted);font-size:.875rem;font-weight:500}
+.tr-card__head p{max-width:72ch;margin:3px 0 0;color:var(--ink-muted);font-size:.8125rem}
+/* Source tiles: a 3 x 3 board on desktop and tablet. */
+.tr-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tr-tile{position:relative;display:grid;min-width:0;align-content:start;gap:8px;padding:14px 16px 13px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);text-align:left;cursor:pointer}
+.tr-tile:hover{border-color:color-mix(in srgb,var(--ink-muted) 45%,var(--line))}
+.tr-tile[aria-pressed="true"]{border-color:var(--primary);background:var(--primary-soft)}
+.tr-tile__top{display:flex;min-width:0;align-items:center;gap:9px}
+.tr-tile__icon{display:block;flex:none;width:18px;height:18px;color:var(--ink-muted)}
+.tr-tile__icon svg{display:block;width:100%;height:100%}
+.tr-tile[aria-pressed="true"] .tr-tile__icon{color:var(--primary)}
+.tr-tile__name{overflow:hidden;font-size:.875rem;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.tr-tile__value{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.tr-tile__value strong{font-size:1.5rem;font-weight:600;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.tr-tile__value span{color:var(--ink-muted);font-size:.8125rem;font-weight:600;font-variant-numeric:tabular-nums}
+.tr-tile__bar,.tr-rank__bar{display:block;overflow:hidden;height:4px;border-radius:2px;background:var(--tr-track)}
+.tr-tile__bar span,.tr-rank__bar span{display:block;height:100%;border-radius:inherit;background:var(--primary)}
+.tr-tile__foot{color:var(--ink-muted);font-size:.78rem;font-variant-numeric:tabular-nums}
+.tr-tile--zero .tr-tile__name,.tr-tile--zero .tr-tile__value strong{color:var(--ink-muted)}
+.tr-tile--zero .tr-tile__icon{opacity:.6}
+/* Capped to the first two tile columns so a short host list does not stretch its bars across the card. */
+.tr-tiles+.tr-sub{max-width:calc(200% / 3 - 3.34px);margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+.tr-sub{min-width:0}
+.tr-sub h3{margin:0 0 8px;font-size:.875rem;font-weight:600}
+.tr-sub h3 small{color:var(--ink-muted);font-size:inherit;font-weight:400}
+/* Ranked lists: name | bar | visits | enquiries. Fixed number columns keep the
+   head aligned with every row. */
+.tr-rank__head,.tr-rank__row{display:grid;grid-template-columns:minmax(0,1fr) minmax(40px,.8fr) 3.5rem 4.75rem;align-items:center;column-gap:12px}
+.tr-rank__head{padding-bottom:6px;border-bottom:1px solid var(--line);color:var(--ink-muted);font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.tr-rank__head span:nth-child(n+3),.tr-rank__num{text-align:right}
+.tr-rank{margin:0;padding:0;list-style:none}
+.tr-rank__row{min-height:40px;padding:7px 0;font-size:.875rem}
+.tr-rank__row+.tr-rank__row{border-top:1px solid var(--line)}
+.tr-rank__name{min-width:0;overflow:hidden;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
+.tr-rank__name small{margin-left:6px;color:var(--ink-muted);font-size:.75rem;font-weight:400}
+.tr-rank__bar{height:6px;border-radius:3px}
+.tr-rank__num{font-weight:600;font-variant-numeric:tabular-nums}
+.tr-rank__num--muted{color:var(--ink-muted);font-weight:500}
+.tr-more{min-height:40px;margin:4px 0 0 -14px;color:var(--primary);font-size:.875rem}
+.tr-empty-line{margin:0;padding:6px 0;color:var(--ink-muted);font-size:.875rem}
+/* States | cities side by side; "Outside India" (when present) sits under states. */
+.tr-places{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 40px}
+/* Trend: columns on recessive gridlines. y labels sit in a left gutter, the
+   tooltip floats above the plot so it never hides the column it describes. */
+.tr-chart{position:relative;height:220px;margin:12px 0 0}
+.tr-chart__grid span{position:absolute;right:0;left:var(--tr-gutter);height:0;border-top:1px solid var(--line)}
+.tr-chart__grid span:nth-child(1){top:0}
+.tr-chart__grid span:nth-child(2){top:50%}
+.tr-chart__grid span:nth-child(3){top:100%;border-color:color-mix(in srgb,var(--ink-muted) 35%,var(--line))}
+.tr-chart__grid em{position:absolute;right:100%;padding-right:8px;color:var(--ink-muted);font-size:.6875rem;font-style:normal;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;transform:translateY(-50%)}
+.tr-chart__cols{position:absolute;inset:0 0 0 var(--tr-gutter);display:flex;gap:2px}
+.tr-chart:is([data-count="46"],[data-count="47"],[data-count="48"],[data-count="49"],[data-count^="5"],[data-count^="6"],[data-count^="7"],[data-count^="8"],[data-count^="9"],[data-count^="10"]):not([data-count="5"],[data-count="6"],[data-count="7"],[data-count="8"],[data-count="9"],[data-count="10"]) .tr-chart__cols{gap:1px}
+.tr-col{display:flex;flex:1 1 0;min-width:0;align-items:flex-end;justify-content:center;margin:0;padding:0;border:0;border-radius:3px 3px 0 0;background:transparent;cursor:pointer}
+.tr-col:hover,.tr-col:focus-visible{background:color-mix(in srgb,var(--primary) 9%,transparent)}
+.tr-col:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+/* Touch: a tapped column keeps focus (and its tooltip), so mark it the same way hover does. */
+@media(hover:none){.tr-col:focus{background:color-mix(in srgb,var(--primary) 9%,transparent)}.tr-col:focus .tr-col__bar{background:color-mix(in srgb,var(--primary) 78%,var(--ink))}}
+.tr-col__bar{display:block;width:100%;max-width:56px;border-radius:3px 3px 0 0;background:var(--primary)}
+.tr-col:hover .tr-col__bar,.tr-col:focus-visible .tr-col__bar{background:color-mix(in srgb,var(--primary) 78%,var(--ink))}
+.tr-tip{position:absolute;z-index:2;bottom:calc(100% + 8px);left:0;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);box-shadow:0 10px 28px color-mix(in srgb,var(--ink) 16%,transparent);color:var(--ink-muted);font-size:.8125rem;line-height:1.35;font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none;transform:translateX(-50%)}
+.tr-tip strong{display:block;margin-bottom:2px;color:var(--ink);font-weight:600}
+.tr-tip span:first-of-type{color:var(--ink);font-weight:600}
+.tr-tip span+span::before{content:" · "}
+.tr-chart__axis{display:flex;justify-content:space-between;gap:8px;margin:10px 0 0 var(--tr-gutter);color:var(--ink-muted);font-size:.75rem;font-variant-numeric:tabular-nums}
+.tr-table{margin-top:10px}
+.tr-table summary{display:inline-flex;min-height:44px;align-items:center;gap:8px;color:var(--primary);font-size:.875rem;font-weight:600;list-style:none;cursor:pointer}
+.tr-table summary::-webkit-details-marker{display:none}
+.tr-table summary::after{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg)}
+.tr-table[open] summary::after{transform:translateY(1px) rotate(-135deg)}
+.tr-table table{width:100%;margin-top:4px;border-collapse:collapse;font-size:.8125rem;font-variant-numeric:tabular-nums}
+.tr-table th{padding:0 0 6px;border-bottom:1px solid var(--line);color:var(--ink-muted);font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-align:left;text-transform:uppercase}
+.tr-table td{padding:7px 0;border-top:1px solid var(--line)}
+.tr-table :is(th,td):not(:first-child){width:7rem;text-align:right}
+/* Tag links: two columns on desktop, one below 980; on phones the URL gets its
+   own full-width line under the label and Copy button so it never wraps. */
+.tr-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:32px;margin:0;padding:0;list-style:none}
+.tr-links li{display:flex;min-width:0;align-items:center;justify-content:space-between;gap:16px;padding:10px 0;border-top:1px solid var(--line)}
+.tr-links li:nth-child(-n+2){border-top:0}
+.tr-links li>span{min-width:0}
+.tr-links small{display:block;color:var(--ink-muted);font-size:.75rem;font-weight:600}
+.tr-links code{display:block;color:var(--ink);font-family:inherit;font-size:.875rem;overflow-wrap:anywhere}
+.tr-links .button{flex:none}
+.tr-device{display:flex;flex-wrap:wrap;align-items:center;gap:0 6px;margin:0;color:var(--ink-muted);font-size:.8125rem}
+.tr-device .button--text{min-height:44px;padding:0;color:var(--primary);font-size:.8125rem}
+@media(max-width:980px){
+  .tr-places{column-gap:28px}
+  .tr-links{grid-template-columns:1fr}
+  .tr-links li:nth-child(2){border-top:1px solid var(--line)}
+}
+@media(max-width:640px){
+  .tr{--tr-gutter:2.25rem;gap:12px}
+  /* Refresh moves up beside the title instead of taking its own row. */
+  .tr>.section-toolbar{position:relative;margin-bottom:4px}
+  .tr>.section-toolbar>.button{position:absolute;top:-5px;right:0}
+  .tr-controls{gap:10px}
+  .tr-seg{display:flex;width:100%}
+  .tr-seg button{flex:1 1 0;padding:0 6px}
+  .tr-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tr-kpi{padding:14px 16px 13px}
+  .tr-kpi:first-child{grid-column:1/-1}
+  .tr-kpi+.tr-kpi{border-top:1px solid var(--line);border-left:0}
+  .tr-kpi:nth-child(3){border-left:1px solid var(--line)}
+  .tr-kpi strong{font-size:1.5rem}
+  .tr-kpi:first-child strong{font-size:2rem}
+  .tr-delta{font-size:.75rem}
+  .tr-card{padding:16px}
+  /* Source tiles become one ranked list: icon | name + enquiries | visits + share, bar under. */
+  .tr-tiles+.tr-sub{max-width:none}
+  .tr-tiles{grid-template-columns:1fr;gap:0;overflow:hidden;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+  .tr-tile{grid-template-columns:18px minmax(0,1fr) auto;grid-template-areas:"icon name num" ". foot pct" ". bar bar";align-items:center;gap:1px 10px;padding:10px 14px 11px;border:0;border-radius:0;line-height:1.3}
+  .tr-tile+.tr-tile{border-top:1px solid var(--line)}
+  .tr-tile:hover{border-color:var(--line)}
+  .tr-tile[aria-pressed="true"]::before{content:"";position:absolute;top:0;bottom:0;left:0;width:3px;background:var(--primary)}
+  .tr-tile:focus-visible{outline-offset:-3px}
+  .tr-tile__top,.tr-tile__value{display:contents}
+  .tr-tile__icon{grid-area:icon}
+  .tr-tile__name{grid-area:name;font-size:.9375rem}
+  .tr-tile__value strong{grid-area:num;font-size:1.125rem;text-align:right}
+  .tr-tile__value span{grid-area:pct;font-size:.75rem;text-align:right}
+  .tr-tile__foot{grid-area:foot;font-size:.75rem}
+  .tr-tile__bar{grid-area:bar;margin-top:6px;height:3px}
+  /* Ranked lists: the bar moves under the name; numbers centre on both lines. */
+  .tr-rank__head,.tr-rank__row{grid-template-columns:minmax(0,1fr) 3.25rem 4.75rem;grid-template-areas:"name visits enq" "bar visits enq";column-gap:10px}
+  .tr-rank__head{grid-template-areas:none}
+  .tr-rank__head span:nth-child(2){display:none}
+  .tr-rank__row{padding:8px 0}
+  .tr-rank__name{grid-area:name}
+  .tr-rank__bar{grid-area:bar;height:4px;margin-top:6px}
+  .tr-rank__num{grid-area:visits}
+  .tr-rank__num--muted{grid-area:enq}
+  .tr-places{grid-template-columns:1fr;gap:24px}
+  .tr-chart{height:168px}
+  .tr-links li{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"label copy" "url url";gap:0 12px;padding:6px 0 10px}
+  .tr-links li>span{display:contents}
+  .tr-links small{grid-area:label;align-self:end;padding-bottom:2px}
+  .tr-links code{grid-area:url;font-size:.8125rem}
+  .tr-links .button{grid-area:copy}
+}

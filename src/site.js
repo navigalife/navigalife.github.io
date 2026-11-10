@@ -1127,3 +1127,42 @@
     if (overImage(event)) event.preventDefault();
   });
 })();
+
+// Traffic counting (traffic/worker.js classifies + tallies; the admin's Traffic tab
+// reads it). One ping per visit (per tab session) and one per enquiry tap. Sends
+// only the utm_source tag and the referring host; no cookie, no identifier. Counts
+// only on the live domain, never on devices that have unlocked the admin
+// ('medivasc-staff'), and on localhost only when 'medivasc-traffic-dev' names a
+// local worker URL.
+(() => {
+  try {
+    const host = location.hostname;
+    const live = host === 'medivasc.in' || host === 'www.medivasc.in';
+    const endpoint = live ? 'https://medivasc-api.puranjai1210.workers.dev/p' : localStorage.getItem('medivasc-traffic-dev');
+    if (!endpoint || localStorage.getItem('medivasc-staff')) return;
+    const send = (kind, signal) => {
+      const body = JSON.stringify({ k: kind, u: signal.u, r: signal.r });
+      let queued = false;
+      try { queued = navigator.sendBeacon(endpoint, new Blob([body], { type: 'text/plain' })); } catch (error) { queued = false; }
+      if (!queued) fetch(endpoint, { method: 'POST', body, keepalive: true, mode: 'no-cors' }).catch(() => {});
+    };
+    let signal = null;
+    try { signal = JSON.parse(sessionStorage.getItem('medivasc-source')); } catch (error) { signal = null; }
+    if (!signal) {
+      let referrer = '';
+      try { referrer = new URL(document.referrer).hostname; } catch (error) { referrer = ''; }
+      if (referrer === host) referrer = '';
+      signal = { u: (new URLSearchParams(location.search).get('utm_source') || '').slice(0, 40), r: referrer.slice(0, 80) };
+      try { sessionStorage.setItem('medivasc-source', JSON.stringify(signal)); } catch (error) { /* private mode: may recount on reload */ }
+      send('v', signal);
+    }
+    document.addEventListener('click', (event) => {
+      const link = event.target instanceof Element && event.target.closest('a[href]');
+      if (!link) return;
+      const href = link.getAttribute('href') || '';
+      if (/^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com)\//i.test(href)) send('w', signal);
+      else if (/^tel:/i.test(href)) send('c', signal);
+      else if (/^mailto:/i.test(href)) send('e', signal);
+    }, true);
+  } catch (error) { /* counting must never break the page */ }
+})();
