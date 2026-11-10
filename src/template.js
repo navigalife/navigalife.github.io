@@ -168,10 +168,10 @@ const solutionSlide = (item, imageMap, condition, index, total) => `
         <li class="solution-slide">
           <div class="evidence">
             <div class="evidence__image">
-              <div class="evidence__fill" aria-hidden="true">${image(item.src, imageMap, { alt: '', sizes: '(max-width:1000px) 92vw, 45vw', width: item.width, height: item.height })}</div>
+              <div class="evidence__fill" aria-hidden="true">${image(item.src, imageMap, { alt: '', sizes: '(max-width:1000px) 92vw, 380px', width: item.width, height: item.height })}</div>
               ${image(item.src, imageMap, {
                 alt: `${condition}: photograph ${index + 1} of ${total}`,
-                sizes: '(max-width:1000px) 92vw, 45vw',
+                sizes: '(max-width:1000px) 92vw, 380px',
                 width: item.width,
                 height: item.height,
               })}
@@ -212,6 +212,55 @@ const renderSolutionCard = (card, imageMap, index) => {
       </div>
       <a class="button solution-card__cta" href="${card.cta.href}"${card.cta.external ? ' target="_blank" rel="noreferrer"' : ''}>${card.cta.icon} ${escapeHtml(card.cta.label)}</a>
     </article>`;
+};
+
+// Patients currently in therapy (#treatment, directly below #solutions). A static
+// owner-supplied set like #watch — no admin field, no data file. One entry per
+// patient, photos in display order; build.js imports this list to build the
+// responsive variants, and the section renders nothing when it is empty. When a
+// patient's after photographs arrive they belong in #recoveries, not here.
+const TREATMENT_PATIENTS = [
+  { location: 'Maharashtra', photos: ['assets/treatment/treatment-01.webp', 'assets/treatment/treatment-02.webp'] },
+  { location: 'Gurugram, Haryana', photos: ['assets/treatment/treatment-03.webp'] },
+  { location: 'Visakhapatnam, Andhra Pradesh', photos: ['assets/treatment/treatment-04.webp', 'assets/treatment/treatment-05.webp'] },
+];
+
+// One in-therapy photograph — the recoveries' evidence frame (4:5, blurred cover
+// fill behind a contained photo) with an "In therapy" stage pill (accent dot).
+const treatmentFrame = (src, imageMap, alt) => {
+  const sizes = '(max-width: 760px) 44vw, (max-width: 1000px) 16vw, 210px';
+  return `
+          <figure class="evidence" data-stage="during">
+            <div class="evidence__image">
+              <div class="evidence__fill" aria-hidden="true">${image(src, imageMap, { alt: '', sizes })}</div>
+              ${image(src, imageMap, { alt, sizes })}
+            </div>
+            <figcaption class="evidence__stage">In therapy</figcaption>
+          </figure>`;
+};
+
+// One card per patient. --n (photo count) drives the card's share of the row so
+// every photograph in the row renders at the same width (see styles.css).
+const renderTreatmentGroup = (patient, imageMap, index) => {
+  const count = patient.photos.length;
+  const number = String(index + 1).padStart(2, '0');
+  return `
+      <article class="treatment-group${count === 1 ? ' treatment-group--single' : ''}" data-reveal style="--n:${count};--reveal-order:${index}" aria-label="Patient ${index + 1}, ${escapeHtml(patient.location)}">
+        <div class="treatment-group__photos">${patient.photos
+          .map((src, photoIndex) =>
+            treatmentFrame(
+              src,
+              imageMap,
+              `In-therapy photograph${count > 1 ? ` ${photoIndex + 1} of ${count}` : ''}: MediVasc patient from ${patient.location}`,
+            ),
+          )
+          .join('')}
+        </div>
+        <div class="treatment-group__caption">
+          <span class="treatment-group__label">Patient ${number}</span>
+          <h3 class="treatment-group__place">${icon('map')}<span>${escapeHtml(patient.location)}</span></h3>
+        </div>
+      </article>`;
 };
 
 // A patient-message screenshot slide in the voices carousel — one row, natural
@@ -451,6 +500,23 @@ const renderPage = ({
         </div>
         <div class="solution-grid">
           ${solutionCards.map((card, index) => renderSolutionCard(card, imageMap, index)).join('')}
+        </div>
+      </div>
+    </section>`
+    : '';
+  const treatmentPatients = TREATMENT_PATIENTS.filter((patient) => patient.photos.length);
+  const treatmentSection = treatmentPatients.length
+    ? `<section class="section treatment" id="treatment">
+      <div class="container">
+        <div class="section-heading" data-reveal>
+          <div>
+            <p class="kicker">In therapy now</p>
+            <h2>Patients <em>undergoing treatment</em></h2>
+          </div>
+          <p>Current MediVasc patients, photographed during their therapy. Their progress is ongoing, and we’ll add their after photographs as they recover.</p>
+        </div>
+        <div class="treatment-row">
+          ${treatmentPatients.map((patient, index) => renderTreatmentGroup(patient, imageMap, index)).join('')}
         </div>
       </div>
     </section>`
@@ -715,6 +781,8 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
 
     ${solutionsSection}
 
+    ${treatmentSection}
+
     ${voicesSection}
 
     <section class="section approach" id="approach">
@@ -905,4 +973,4 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
 </html>`;
 };
 
-module.exports = { renderPage };
+module.exports = { renderPage, TREATMENT_PATIENTS };

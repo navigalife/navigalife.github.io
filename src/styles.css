@@ -579,7 +579,7 @@ img{-webkit-user-drag:none;-webkit-user-select:none;user-select:none;-webkit-tou
    Condition solutions + patient voices (post #recoveries)
    Two carousel cards in one row, then a one-row carousel of message screenshots.
    ============================================================================ */
-.solutions,.voices{border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.solutions,.treatment,.voices{border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
 
 .solution-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(24px,3vw,40px)}
 .solution-card{display:flex;flex-direction:column;min-width:0;padding:clamp(14px,1.8vw,20px);padding-bottom:clamp(24px,2.6vw,32px);border-radius:24px;background:color-mix(in srgb,var(--surface) 66%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 68%,transparent),0 30px 66px -40px color-mix(in srgb,var(--ink) 46%,transparent)}
@@ -637,6 +637,53 @@ html:not(.js) .solution-carousel__arrow,html:not(.js) .solution-carousel__meta,h
 }
 @keyframes swipe-hint{0%,100%{transform:translateX(-50%)}30%{transform:translateX(-72%)}70%{transform:translateX(-28%)}}
 @media (prefers-reduced-motion:reduce){.solution-carousel__hint{animation:none!important}}
+/* Desktop: each condition card turns into one full-width row — the photo carousel
+   in a fixed column on the left, title/copy/CTA beside it. A full-width stacked
+   photo measured 560px wide (3x a 187px recovery pair-story photo, 1.4x the 392px
+   featured journey); at 360px it sits just under the journey's scale, roughly the
+   width of one recovery card's before/after pair. ≤1000px keeps the stacked card
+   (this block only adds properties, so nothing leaks below the breakpoint). */
+@media (min-width:1001px){
+  .solution-grid{grid-template-columns:minmax(0,1fr);gap:clamp(24px,2.6vw,32px)}
+  .solution-card{display:grid;grid-template-columns:clamp(300px,28vw,360px) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;column-gap:clamp(36px,4vw,56px);padding:20px clamp(28px,3vw,44px) 20px 20px}
+  .solution-carousel{grid-column:1;grid-row:1/-1;align-self:start}
+  .solution-card__title{grid-column:2;grid-row:1;margin:0;padding:14px 0 0}
+  .solution-card__body{grid-column:2;grid-row:2;padding:18px 0 0}
+  .solution-card__p{max-width:64ch}
+  .solution-card__cta{grid-column:2;grid-row:3;justify-self:start;margin:6px 0 4px}
+}
+
+/* Patients undergoing treatment (#treatment) — one card per patient, every photo
+   at the recoveries' pair-story scale (~200px on desktop). Cards share the row by
+   photo count: flex-basis is a card's fixed part (padding + inner gaps) and
+   flex-grow its photo count, so the leftover width is split per photograph and a
+   2-1-2 split renders five equal frames that fill the container edge to edge. */
+.treatment-row{--tg-pad:clamp(12px,1.6vw,22px);--tg-gap:10px;display:flex;gap:clamp(18px,3.6vw,44px);align-items:stretch}
+.treatment-group{flex:var(--n) 1 calc(2 * var(--tg-pad) + (var(--n) - 1) * var(--tg-gap));display:flex;flex-direction:column;min-width:0;padding:var(--tg-pad);border-radius:22px;background:color-mix(in srgb,var(--surface) 66%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 68%,transparent),0 30px 66px -40px color-mix(in srgb,var(--ink) 46%,transparent)}
+.treatment-group__photos{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:var(--tg-gap)}
+.treatment-group .evidence__image{box-shadow:0 16px 40px -18px color-mix(in srgb,var(--ink) 30%,transparent)}
+.treatment-group__caption{display:flex;flex-direction:column;gap:3px;padding:16px 6px 2px}
+.treatment-group__label{color:var(--accent);font-size:.75rem;font-weight:600;letter-spacing:.12em;line-height:1.5;text-transform:uppercase}
+.treatment-group__place{display:flex;align-items:flex-start;gap:6px;margin:0;font-size:1.0625rem;font-weight:600;line-height:1.35;letter-spacing:-.01em}
+.treatment-group__place .icon{width:17px;height:17px;margin-top:2px;color:var(--primary)}
+@media (max-width:1000px){
+  .treatment-group .evidence__stage{left:8px;bottom:8px;padding:3px 10px;font-size:.625rem}
+}
+/* Phones: one swipeable row (the solution carousels' touch pattern). Every photo
+   keeps the same width (--ph), so a card is sized by its photo count and the
+   2-1-2 split never leaves an empty half-card; the row bleeds to the screen edge
+   and the next card peeks in as the swipe cue. */
+@media (max-width:760px){
+  .treatment-row{--tg-pad:10px;--tg-gap:8px;--ph:min(38vw,170px);gap:12px;margin-inline:calc(50% - 50vw);padding:4px calc(50vw - 50%) 28px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .treatment-row::-webkit-scrollbar{display:none}
+  .treatment-group{flex:0 0 auto;width:calc(var(--n) * var(--ph) + (var(--n) - 1) * var(--tg-gap) + 2 * var(--tg-pad));border-radius:18px;scroll-snap-align:center}
+  .treatment-group .evidence__image{border-radius:12px}
+  .treatment-group__caption{padding:12px 4px 2px}
+  .treatment-group__label{font-size:.6875rem}
+  .treatment-group__place{font-size:.9375rem}
+  .treatment-group__place .icon{width:15px;height:15px;margin-top:2px}
+}
+
 /* "No consultation charges" reassurance (in #act above #about, and #contact below). */
 .free-consult{display:inline-flex;align-items:center;gap:13px;max-width:100%;margin-top:24px;padding:12px 20px 12px 14px;border-radius:16px;background:color-mix(in srgb,var(--primary) 7%,var(--surface));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 24%,transparent)}
 .free-consult__icon{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:11px;background:color-mix(in srgb,var(--primary) 14%,transparent);color:var(--primary)}

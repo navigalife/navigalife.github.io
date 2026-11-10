@@ -3,7 +3,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const sharp = require('sharp');
 
-const { renderPage } = require('./template');
+const { renderPage, TREATMENT_PATIENTS } = require('./template');
 
 const ROOT = path.resolve(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
@@ -403,15 +403,20 @@ const build = async () => {
 
   const solutionSrcs = solutionsData.flatMap((card) => (card.images || []).map((image) => image.src));
   const feedbackSrcs = feedbackData.map((item) => item.src);
-  const [imageMap, brand, solutions, feedback] = await Promise.all([
+  // In-therapy photographs (#treatment): a static list owned by the template, not
+  // a data file, but built through the same variant pipeline as every gallery.
+  const treatmentSrcs = TREATMENT_PATIENTS.flatMap((patient) => patient.photos);
+  const [imageMap, brand, solutions, feedback, treatment] = await Promise.all([
     buildImageMap(testimonials),
     copyBrandAssets(),
     // Condition carousels: crisp up to ~600px card width (1024 covers hi-dpi).
     buildGallery(solutionSrcs, [320, 640, 1024]),
     // Patient messages: 1600 so the lightbox stays readable on large screens.
     buildGallery(feedbackSrcs, [320, 640, 1024, 1600]),
+    // In-therapy photos render at recovery pair-story scale (~200px), same widths.
+    buildGallery(treatmentSrcs, [320, 640]),
   ]);
-  Object.assign(imageMap, solutions.map, feedback.map);
+  Object.assign(imageMap, solutions.map, feedback.map, treatment.map);
   // Resolve each card's manifest image list to processed items (order preserved),
   // dropping hidden cards and any left with no usable photographs.
   const solutionCards = solutionsData
