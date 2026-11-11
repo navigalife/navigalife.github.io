@@ -36,7 +36,8 @@ const view = { range: '30', source: null, data: null, fetchedAt: 0, error: '', l
 const esc = (value = '') => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const num = (value) => new Intl.NumberFormat('en-IN').format(value);
 const pct = (part, whole) => (whole ? Math.round((part / whole) * 1000) / 10 : 0);
-const pctLabel = (part, whole) => { const p = pct(part, whole); return (p > 0 && p < 1 ? '<1' : Math.round(p)) + '%'; };
+// Never shows 0% for a non-zero part or 100% for less than the whole.
+const pctLabel = (part, whole) => { const p = pct(part, whole); return (p > 0 && p < 1 ? '<1' : p >= 99.5 && part < whole ? '>99' : Math.round(p)) + '%'; };
 const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const spanDays = (from, to) => Math.round((Date.parse(to + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z')) / 86400000) + 1;
 const dateLabel = (iso, opts = { day: 'numeric', month: 'short', year: 'numeric' }) => new Intl.DateTimeFormat('en-IN', { timeZone: 'UTC', ...opts }).format(new Date(iso + 'T00:00:00Z'));
@@ -135,7 +136,7 @@ const renderBody = () => {
   const visits = sum(scoped, (r) => r[1] === 'v');
   const taps = { w: sum(scoped, (r) => r[1] === 'w'), c: sum(scoped, (r) => r[1] === 'c'), e: sum(scoped, (r) => r[1] === 'e') };
   const enquiries = taps.w + taps.c + taps.e;
-  const mobile = sum(scoped, (r) => r[1] === 'v' && r[4] !== 'desktop');
+  const mobile = sum(scoped, (r) => r[1] === 'v' && r[4] === 'mobile');
 
   // Change vs the previous period of equal length, only once that period is fully counted.
   let delta = '';
@@ -151,13 +152,15 @@ const renderBody = () => {
   const scopeName = view.source ? SOURCE_BY_ID[view.source].label : '';
   const kpis = '<div class="tr-kpis">' +
     '<div class="tr-kpi"><span class="tr-kpi__label">Visits' + (scopeName ? ' from ' + esc(scopeName) : '') + '</span><strong>' + num(visits) + '</strong>' + (delta || '<span class="tr-delta">' + (visits ? pctLabel(mobile, visits) + ' on phones' : '&nbsp;') + '</span>') + '</div>' +
-    '<div class="tr-kpi"><span class="tr-kpi__label">Enquiry taps</span><strong>' + num(enquiries) + '</strong><span class="tr-delta">WhatsApp ' + num(taps.w) + ' · Call ' + num(taps.c) + ' · Email ' + num(taps.e) + '</span></div>' +
-    '<div class="tr-kpi"><span class="tr-kpi__label">Visits that enquired</span><strong>' + (visits ? pctLabel(enquiries, visits) : '–') + '</strong><span class="tr-delta">Taps on WhatsApp, call, or email</span></div>' +
+    '<div class="tr-kpi"><span class="tr-kpi__label">Enquiries</span><strong>' + num(enquiries) + '</strong><span class="tr-delta">WhatsApp ' + num(taps.w) + ' · Call ' + num(taps.c) + ' · Email ' + num(taps.e) + '</span></div>' +
+    '<div class="tr-kpi"><span class="tr-kpi__label">Visits that enquired</span><strong>' + (visits ? pctLabel(enquiries, visits) : '–') + '</strong><span class="tr-delta">Tapped WhatsApp, call, or email</span></div>' +
     '</div>';
 
   const bySource = groupBy(inPeriod, (r) => r[2]);
   const totalVisits = sum(inPeriod, (r) => r[1] === 'v');
   const order = SOURCES.map((s) => s.id);
+  // Each share is rounded on its own, so equal counts always show equal percents;
+  // the tiles can therefore add up to 99–101% (4/1/1 of 6 reads 67 + 17 + 17).
   const tiles = SOURCES.map((s) => bySource.find((g) => g.key === s.id) || { key: s.id, visits: 0, enquiries: 0 })
     .sort((a, b) => b.visits - a.visits || order.indexOf(a.key) - order.indexOf(b.key))
     .map((g) => {

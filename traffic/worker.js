@@ -1,7 +1,7 @@
 // MediVasc traffic collector: Cloudflare Worker + D1.
 //
-// POST /p  (from the public site, src/site.js) — one ping per visit and per
-//          enquiry tap. Classified into a source bucket HERE, so the rules can
+// POST /p  (from the public site, src/site.js) — one ping per visit and one for
+//          its first enquiry tap (w/c/e = the channel tapped first). Classified into a source bucket HERE, so the rules can
 //          change without a site deploy, then folded into a per-day tally. No
 //          IP, cookie, or per-visitor row is ever stored: only counts keyed by
 //          (IST day, kind, source, device, country, region, city).

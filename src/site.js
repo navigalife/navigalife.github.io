@@ -1129,7 +1129,7 @@
 })();
 
 // Traffic counting (traffic/worker.js classifies + tallies; the admin's Traffic tab
-// reads it). One ping per visit (per tab session) and one per enquiry tap. Sends
+// reads it). One ping per visit (per tab session) and one for its first enquiry tap. Sends
 // only the utm_source tag and the referring host; no cookie, no identifier. Counts
 // only on the live domain, never on devices that have unlocked the admin
 // ('medivasc-staff'), and on localhost only when 'medivasc-traffic-dev' names a
@@ -1156,13 +1156,21 @@
       try { sessionStorage.setItem('medivasc-source', JSON.stringify(signal)); } catch (error) { /* private mode: may recount on reload */ }
       send('v', signal);
     }
+    // One enquiry per visit: only the first contact tap of the tab session is sent, so
+    // the Traffic tab's "visits that enquired" is a true share (a second WhatsApp tap,
+    // or WhatsApp then Call, must not count the same visitor twice or exceed 100%).
+    let enquired = false;
+    try { enquired = sessionStorage.getItem('medivasc-enquired') === '1'; } catch (error) { enquired = false; }
     document.addEventListener('click', (event) => {
+      if (enquired) return;
       const link = event.target instanceof Element && event.target.closest('a[href]');
       if (!link) return;
       const href = link.getAttribute('href') || '';
-      if (/^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com)\//i.test(href)) send('w', signal);
-      else if (/^tel:/i.test(href)) send('c', signal);
-      else if (/^mailto:/i.test(href)) send('e', signal);
+      const kind = /^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com)\//i.test(href) ? 'w' : /^tel:/i.test(href) ? 'c' : /^mailto:/i.test(href) ? 'e' : '';
+      if (!kind) return;
+      enquired = true;
+      try { sessionStorage.setItem('medivasc-enquired', '1'); } catch (error) { /* private mode: in-page flag still holds */ }
+      send(kind, signal);
     }, true);
   } catch (error) { /* counting must never break the page */ }
 })();
