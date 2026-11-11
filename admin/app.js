@@ -1,7 +1,7 @@
 import { ApiError, AuthError, BranchConflictError, GhApi } from './gh-api.js';
 import { blobToBase64, cropEvidenceImage, redactImage, resizeFeedbackImage, resizeProductImage } from './image-tools.js';
 import { createVault, forgetVault, unlockVault, vaultExists } from './vault.js';
-import { mountTraffic, STAFF_KEY } from './traffic.js';
+import { apiBase, mountTraffic, STAFF_KEY } from './traffic.js';
 
 const OWNER = 'navigalife';
 const REPO = 'navigalife.github.io';
@@ -211,6 +211,19 @@ publishStatus.addEventListener('focusin', stopStatusTimer);
 publishStatus.addEventListener('focusout', rearmStatusTimer);
 
 const sessionToken = () => sessionStorage.getItem(TOKEN_SESSION_KEY) || '';
+
+// Background removal for recovery photos (traffic/worker.js POST /cutout).
+const CUTOUT_ERRORS = { 401: 'Background cleaning needs a token that can publish.', 413: 'Photo too large to clean.', 429: 'Monthly background-cleaning allowance used up.' };
+const requestCutout = async (blob) => {
+  let response;
+  try {
+    response = await fetch(apiBase() + '/cutout', { method: 'POST', headers: { Authorization: 'Bearer ' + sessionToken(), 'Content-Type': blob.type }, body: blob, cache: 'no-store' });
+  } catch {
+    throw new Error('Background cleaning is unreachable.');
+  }
+  if (!response.ok) throw new Error(CUTOUT_ERRORS[response.status] || 'Background cleaning failed.');
+  return response.blob();
+};
 
 const showAuth = (message = '') => {
   authView.hidden = false;
@@ -943,7 +956,7 @@ const uploadStagePhoto = async (stageKey, file) => {
   const duplicate = state.draft.testimonials.some((item, index) => item.id === testimonial.id && index !== state.editor.index);
   if (duplicate) throw new Error('That story id is already in use. Choose a unique id before uploading photographs.');
   const stage = STAGES.find((candidate) => candidate.key === stageKey);
-  const blob = await cropEvidenceImage(file, stage.key);
+  const blob = await cropEvidenceImage(file, stage.key, { cutout: requestCutout });
   if (!blob) return;
   const existing = imageForStage(testimonial, stage.key);
   if (existing) unstageOrDeleteAsset(existing.src);

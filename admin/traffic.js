@@ -5,7 +5,7 @@
  * GitHub, so whoever can publish the site can read its traffic).
  */
 const LIVE_API = 'https://medivasc-api.puranjai1210.workers.dev';
-const apiBase = () => (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+export const apiBase = () => (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)
   ? localStorage.getItem('medivasc-traffic-api') || 'http://127.0.0.1:8787'
   : LIVE_API);
 // Set on every unlocked device (app.js) so the site's tracker skips staff visits.

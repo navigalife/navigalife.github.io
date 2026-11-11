@@ -1,4 +1,4 @@
-# MediVasc traffic collector. Deploy from this directory: `npx wrangler deploy`.
+# MediVasc API (traffic collector + admin background removal). Deploy from this directory: `npx wrangler deploy`.
 # Schema: `npx wrangler d1 execute medivasc-traffic --remote --file schema.sql`.
 name = "medivasc-api"
 main = "worker.js"
@@ -19,3 +19,7 @@ namespace_id = "1001"
   [ratelimits.simple]
   limit = 60
   period = 60
+
+# Background removal for the admin's recovery photos (POST /cutout).
+[images]
+binding = "IMAGES"

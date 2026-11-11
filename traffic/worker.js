@@ -9,6 +9,10 @@
 //          date range. Auth = the admin's own GitHub token: whoever can publish
 //          the site can read its traffic. The token is checked against GitHub
 //          and never stored (only a hash, in memory, for a few minutes).
+// POST /cutout (from the admin's recovery-photo crop dialog, admin/image-tools.js)
+//          — background removal via the Cloudflare Images binding
+//          (segment: foreground). Same token auth as /s. The photo is processed
+//          in memory and returned as an RGBA PNG; nothing is stored.
 
 const SITE_ORIGINS = new Set(['https://medivasc.in', 'https://www.medivasc.in']);
 const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
@@ -83,7 +87,7 @@ const clip = (value, max) => String(value || '').slice(0, max);
 const allowedAdminOrigin = (origin, env) => SITE_ORIGINS.has(origin) || (env.ALLOW_LOCAL === '1' && LOCAL_ORIGIN.test(origin));
 
 const cors = (origin, env) => (allowedAdminOrigin(origin, env)
-  ? { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Headers': 'Authorization', 'Access-Control-Allow-Methods': 'GET', 'Access-Control-Max-Age': '86400', Vary: 'Origin' }
+  ? { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Allow-Methods': 'GET, POST', 'Access-Control-Max-Age': '86400', Vary: 'Origin' }
   : { Vary: 'Origin' });
 
 const json = (body, status, headers) => new Response(JSON.stringify(body), {
@@ -149,13 +153,45 @@ async function canPublish(token) {
   return ok;
 }
 
-async function stats(request, env, url) {
+// Admin-only routes: allowed origin + a token that can publish the site.
+async function adminGate(request, env) {
   const origin = request.headers.get('Origin') || '';
   const headers = cors(origin, env);
-  if (!allowedAdminOrigin(origin, env)) return json({ error: 'origin' }, 403, headers);
+  if (!allowedAdminOrigin(origin, env)) return { headers, denied: json({ error: 'origin' }, 403, headers) };
   const token = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
   const authorised = env.ALLOW_LOCAL === '1' || (token && (await canPublish(token)));
-  if (!authorised) return json({ error: 'unauthorised' }, 401, headers);
+  return { headers, denied: authorised ? null : json({ error: 'unauthorised' }, 401, headers) };
+}
+
+const CUTOUT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const CUTOUT_MAX_BYTES = 15 * 1024 * 1024; // the binding's own input cap is 20 MB
+
+async function cutout(request, env) {
+  const { headers, denied } = await adminGate(request, env);
+  if (denied) return denied;
+  const type = (request.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase();
+  if (!CUTOUT_TYPES.has(type)) return json({ error: 'type' }, 415, headers);
+  const body = await request.arrayBuffer();
+  if (!body.byteLength || body.byteLength > CUTOUT_MAX_BYTES) return json({ error: 'size' }, 413, headers);
+  try {
+    // No `quality` on PNG output: that switches to palette PNG8 and loses the soft alpha.
+    const result = await env.IMAGES.input(new Blob([body]).stream())
+      .transform({ segment: 'foreground' })
+      .output({ format: 'image/png' });
+    return new Response(result.response().body, {
+      status: 200,
+      headers: { 'Content-Type': 'image/png', 'Cache-Control': 'no-store', ...headers },
+    });
+  } catch (error) {
+    // 9422 = the Free plan's monthly transformation allowance is used up.
+    const limit = /9422/.test(String(error && error.message));
+    return json({ error: limit ? 'limit' : 'cutout' }, limit ? 429 : 502, headers);
+  }
+}
+
+async function stats(request, env, url) {
+  const { headers, denied } = await adminGate(request, env);
+  if (denied) return denied;
   const day = /^\d{4}-\d{2}-\d{2}$/;
   const to = day.test(url.searchParams.get('to') || '') ? url.searchParams.get('to') : istDay();
   const from = day.test(url.searchParams.get('from') || '') ? url.searchParams.get('from') : '2000-01-01';
@@ -177,6 +213,10 @@ export default {
     if (url.pathname === '/s') {
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(request.headers.get('Origin') || '', env) });
       if (request.method === 'GET') return stats(request, env, url);
+    }
+    if (url.pathname === '/cutout') {
+      if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(request.headers.get('Origin') || '', env) });
+      if (request.method === 'POST') return cutout(request, env);
     }
     return new Response('Not found', { status: 404 });
   },
