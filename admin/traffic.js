@@ -15,13 +15,14 @@ const glyph = (body, filled = true) => '<svg viewBox="0 0 24 24" aria-hidden="tr
 const SOURCES = [
   { id: 'youtube', label: 'YouTube', icon: glyph('<path fill-rule="evenodd" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8ZM9.6 15.6V8.4l6.2 3.6-6.2 3.6Z"/>') },
   { id: 'google', label: 'Google search', icon: glyph('<path d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.4Z"/><path d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22Z"/><path d="M6.4 14a6 6 0 0 1 0-3.9V7.4H3.1a10 10 0 0 0 0 9.1L6.4 14Z"/><path d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.4l3.3 2.6C7.2 7.7 9.4 6 12 6Z"/>') },
+  { id: 'ai', label: 'AI assistants', hint: 'ChatGPT, Gemini, Perplexity…', refs: true, icon: glyph('<path d="M12 3c.8 5 3.9 8.2 9 9-5.1.8-8.2 4-9 9-.8-5-3.9-8.2-9-9 5.1-.8 8.2-4 9-9Z"/>', false) },
   { id: 'facebook', label: 'Facebook', icon: glyph('<path d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0 0 24 12Z"/>') },
   { id: 'instagram', label: 'Instagram', icon: glyph('<rect x="2.6" y="2.6" width="18.8" height="18.8" rx="5.4" fill="none" stroke="currentColor" stroke-width="2.1"/><circle cx="12" cy="12" r="4.3" fill="none" stroke="currentColor" stroke-width="2.1"/><circle cx="17.5" cy="6.5" r="1.3"/>') },
   { id: 'linkedin', label: 'LinkedIn', icon: glyph('<path d="M20.4 20.5h-3.5v-5.6c0-1.3 0-3-1.9-3s-2.1 1.4-2.1 2.9v5.7H9.4V9h3.4v1.6h.1c.5-.9 1.6-1.9 3.4-1.9 3.6 0 4.3 2.4 4.3 5.5v6.3ZM5.3 7.4a2.1 2.1 0 1 1 0-4.1 2.1 2.1 0 0 1 0 4.1Zm1.8 13.1H3.6V9h3.5v11.5ZM22.2 0H1.8C.8 0 0 .8 0 1.7v20.6c0 .9.8 1.7 1.8 1.7h20.4c1 0 1.8-.8 1.8-1.7V1.7C24 .8 23.2 0 22.2 0Z"/>') },
   { id: 'x', label: 'X', icon: glyph('<path d="M18.9 1.2h3.7l-8 9.2L24 22.8h-7.4l-5.8-7.6-6.6 7.6H.5l8.6-9.8L0 1.2h7.6l5.2 6.9Zm-1.3 19.5h2L6.5 3.2H4.3Z"/>') },
   { id: 'whatsapp', label: 'WhatsApp', icon: glyph('<path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/>') },
   { id: 'direct', label: 'Direct', hint: 'Typed, bookmarked, or the app hid it', icon: glyph('<path d="M5 12h14M13 6l6 6-6 6"/>', false) },
-  { id: 'other', label: 'Other sites', icon: glyph('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/>', false) },
+  { id: 'other', label: 'Other sites', refs: true, icon: glyph('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/>', false) },
 ];
 const SOURCE_BY_ID = Object.fromEntries(SOURCES.map((source) => [source.id, source]));
 const RANGES = [{ id: '7', label: '7 days', days: 7 }, { id: '30', label: '30 days', days: 30 }, { id: '90', label: '90 days', days: 90 }, { id: 'all', label: 'All time', days: 0 }];
@@ -168,9 +169,12 @@ const renderBody = () => {
         '<span class="tr-tile__bar" aria-hidden="true"><span style="width:' + (g.visits ? Math.max(share, 1.5) : 0) + '%"></span></span>' +
         '<span class="tr-tile__foot">' + (s.hint && !g.enquiries ? esc(s.hint) : num(g.enquiries) + ' enquir' + (g.enquiries === 1 ? 'y' : 'ies')) + '</span></button>';
     }).join('');
+  // Sources marked `refs` keep a name per row (the other site or tag, the AI assistant).
+  // That breakdown sits under the tiles for the selected source, or for "other" when none is.
+  const listed = view.source ? (SOURCE_BY_ID[view.source].refs ? view.source : '') : (bySource.some((g) => g.key === 'other' && g.visits) ? 'other' : '');
   const sourcesCard = '<div class="tr-card"><div class="tr-card__head"><h2>Where visitors come from</h2><p>Tap a source to see its trend and locations.</p></div><div class="tr-tiles">' + tiles + '</div>' +
-    (view.source === 'other' || (!view.source && bySource.some((g) => g.key === 'other' && g.visits))
-      ? '<div class="tr-sub"><h3>Other sites</h3>' + rankedList(groupBy(inPeriod.filter((r) => r[2] === 'other'), (r) => r[3] || 'Unknown'), (g) => esc(g.key), { limit: 6, expanded: true, action: '', emptyText: 'None in this period.' }) + '</div>'
+    (listed
+      ? '<div class="tr-sub"><h3>' + esc(SOURCE_BY_ID[listed].label) + '</h3>' + rankedList(groupBy(inPeriod.filter((r) => r[2] === listed), (r) => r[3] || 'Unknown'), (g) => esc(g.key), { limit: 6, expanded: true, action: '', emptyText: 'None in this period.' }) + '</div>'
       : '') + '</div>';
 
   const india = scoped.filter((r) => r[5] === 'IN');

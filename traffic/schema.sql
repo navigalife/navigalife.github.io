@@ -1,6 +1,7 @@
 -- One row per (IST day, kind, source, ref, device, country, region, city); n = count.
 -- kind: v = visit, w = WhatsApp tap, c = call tap, e = email tap.
--- ref is only set for source = 'other' (the referring host, or "tag: <utm_source>").
+-- ref is set only for source = 'other' (the referring host, or "tag: <utm_source>")
+-- and source = 'ai' (the assistant's name, e.g. "ChatGPT"); '' everywhere else.
 CREATE TABLE IF NOT EXISTS daily (
   day TEXT NOT NULL,
   kind TEXT NOT NULL,

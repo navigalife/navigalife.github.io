@@ -25,6 +25,27 @@ const UTM = {
   x: 'x', twitter: 'x', whatsapp: 'whatsapp', wa: 'whatsapp',
 };
 
+// AI assistants share one bucket, "ai"; the assistant's name is kept as ref so
+// the admin can say which one sent the visit. Hosts are matched exactly (after
+// "www."), and before HOSTS, whose google pattern would take gemini.google.com.
+// Android package names (android-app:// referrers) are the ones whose Google
+// Play page was checked on 2026-11-10. Copilot's is left out: no id we tried
+// (com.microsoft.copilot, com.microsoft.copilot.android) has a Play page.
+const AI_TAGS = {
+  'chatgpt.com': 'ChatGPT', chatgpt: 'ChatGPT', openai: 'ChatGPT', perplexity: 'Perplexity', 'perplexity.ai': 'Perplexity',
+  gemini: 'Gemini', claude: 'Claude', 'claude.ai': 'Claude', copilot: 'Copilot', grok: 'Grok', deepseek: 'DeepSeek', 'meta.ai': 'Meta AI',
+};
+const AI_HOSTS = {
+  'chatgpt.com': 'ChatGPT', 'chat.openai.com': 'ChatGPT', 'com.openai.chatgpt': 'ChatGPT',
+  'perplexity.ai': 'Perplexity', 'ai.perplexity.app.android': 'Perplexity',
+  'gemini.google.com': 'Gemini', 'bard.google.com': 'Gemini', 'com.google.android.apps.bard': 'Gemini',
+  'claude.ai': 'Claude', 'com.anthropic.claude': 'Claude',
+  'copilot.microsoft.com': 'Copilot', 'copilot.cloud.microsoft': 'Copilot',
+  'meta.ai': 'Meta AI', 'com.facebook.stella': 'Meta AI',
+  'grok.com': 'Grok', 'ai.x.grok': 'Grok',
+  'chat.deepseek.com': 'DeepSeek', 'com.deepseek.chat': 'DeepSeek',
+};
+
 // Referrer host -> bucket. android-app:// referrers arrive as the package name.
 const HOSTS = [
   ['google', /(^|\.)google\.[a-z.]{2,7}$|^com\.google\.android\.googlequicksearchbox$/],
@@ -38,7 +59,10 @@ const HOSTS = [
 
 export const classify = (utm, ref, ua) => {
   const tag = String(utm || '').trim().toLowerCase().slice(0, 40);
-  if (tag) return Object.hasOwn(UTM, tag) ? [UTM[tag], ''] : ['other', 'tag: ' + tag]; // hasOwn: 'constructor' etc. are not buckets
+  if (tag) { // hasOwn: 'constructor' etc. are not buckets
+    if (Object.hasOwn(UTM, tag)) return [UTM[tag], ''];
+    return Object.hasOwn(AI_TAGS, tag) ? ['ai', AI_TAGS[tag]] : ['other', 'tag: ' + tag];
+  }
   // In-app browsers often send no referrer, but they name themselves in the UA.
   if (/Instagram/i.test(ua)) return ['instagram', ''];
   if (/FBAN|FBAV|FB_IAB|FBIOS|FB4A|MessengerForiOS/.test(ua)) return ['facebook', ''];
@@ -47,6 +71,7 @@ export const classify = (utm, ref, ua) => {
   const host = String(ref || '').trim().toLowerCase().replace(/^www\./, '').slice(0, 80);
   if (!host || host === 'medivasc.in') return ['direct', ''];
   if (/^mail\.google\./.test(host)) return ['other', host];
+  if (Object.hasOwn(AI_HOSTS, host)) return ['ai', AI_HOSTS[host]];
   for (const [bucket, pattern] of HOSTS) if (pattern.test(host)) return [bucket, ''];
   return ['other', host];
 };

@@ -211,8 +211,8 @@ input::placeholder,textarea::placeholder{color:var(--ink-muted)}
    Read-only dashboard. Every data mark is one hue (--primary); sources are told
    apart by their glyph and label, never by colour. Numbers are tabular so
    columns line up. Phone (<=640) is the owner's main reader: KPIs fold to
-   1 + 2, source tiles become a ranked list (nine tiles 2-up leave an orphan and
-   squeeze the labels), ranked-list bars drop under the name, places stack. */
+   1 + 2, source tiles become a ranked list (ten tiles 2-up is five rows and
+   squeezes the labels), ranked-list bars drop under the name, places stack. */
 .visually-hidden{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);border:0;white-space:nowrap}
 .tr{--tr-gutter:2.75rem;--tr-track:color-mix(in srgb,var(--ink) 8%,transparent);display:grid;gap:16px;min-width:0}
 .tr>.section-toolbar{margin-bottom:8px}
@@ -238,7 +238,9 @@ input::placeholder,textarea::placeholder{color:var(--ink-muted)}
 .tr-card__head h2 small{color:var(--ink-muted);font-size:.875rem;font-weight:500}
 .tr-card__head p{max-width:72ch;margin:3px 0 0;color:var(--ink-muted);font-size:.8125rem}
 /* Source tiles: a 3 x 3 board on desktop and tablet. */
-.tr-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+/* Ten tiles: 2 x 5 on wide screens, 5 x 2 below; never 3-up, which strands one. */
+.tr-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:1400px){.tr-tiles{grid-template-columns:repeat(5,minmax(0,1fr))}}
 .tr-tile{position:relative;display:grid;min-width:0;align-content:start;gap:8px;padding:14px 16px 13px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);text-align:left;cursor:pointer}
 .tr-tile:hover{border-color:color-mix(in srgb,var(--ink-muted) 45%,var(--line))}
 .tr-tile[aria-pressed="true"]{border-color:var(--primary);background:var(--primary-soft)}
@@ -255,8 +257,9 @@ input::placeholder,textarea::placeholder{color:var(--ink-muted)}
 .tr-tile__foot{color:var(--ink-muted);font-size:.78rem;font-variant-numeric:tabular-nums}
 .tr-tile--zero .tr-tile__name,.tr-tile--zero .tr-tile__value strong{color:var(--ink-muted)}
 .tr-tile--zero .tr-tile__icon{opacity:.6}
-/* Capped to the first two tile columns so a short host list does not stretch its bars across the card. */
-.tr-tiles+.tr-sub{max-width:calc(200% / 3 - 3.34px);margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+.tr-tiles+.tr-sub{margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+/* Wide: capped to the first three of five tile columns so a short list does not stretch its bars. */
+@media (min-width:1400px){.tr-tiles+.tr-sub{max-width:calc(60% - 4px)}}
 .tr-sub{min-width:0}
 .tr-sub h3{margin:0 0 8px;font-size:.875rem;font-weight:600}
 .tr-sub h3 small{color:var(--ink-muted);font-size:inherit;font-weight:400}
