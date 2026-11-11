@@ -49,7 +49,7 @@ const state = {
   dirty: new Set(),
   assetChanges: new Map(),
   assetPreviews: new Map(),
-  activeTab: 'testimonials',
+  activeTab: 'traffic',
   editor: null,
   loaded: false,
   publishing: false,
