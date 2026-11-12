@@ -167,3 +167,24 @@ tokens only (`var(--bg)`, `--surface`, `--ink`, `--muted`, `--line`, `--primary`
 `cubic-bezier(.22,1,.36,1)`, reduced-motion respected, AGENTS.md "Design authority"
 ban list binding. Iterate and self-critique on rendered screenshots (1440 and 390,
 light and dark) before you report.
+
+## Cross-lane pins (added before spawn)
+- `ctx.absImg(src)` → absolute `https://medivasc.in/assets/…` URL of the largest variant
+  (W1 provides; W3 uses it for JSON-LD, OG, RSS, image sitemap).
+- `MV_BLOG_DATA=/some/dir` overrides `data/blog/` (W1 provides, for fixtures).
+- Blog JS = hashed `blog.js` = `src/blog/reader.js` (W2b) + `src/blog/landing.js` (W2a)
+  concatenated by W1; each file is its own guarded IIFE that no-ops on pages without its
+  elements.
+- Lead-in: `renderBlocks` puts `data-first` on the first `paragraph`/`lead` block's `<p>`;
+  the post page sets `data-leadin="dropcap|smallcaps|boldwords|none"` on the article body
+  wrapper `.post-body` and styles `[data-first]` from that (W2b CSS).
+- Citations: number = index in `post.references` + 1. A cite run renders
+  `<sup class="cite"><a href="#ref-<id>" id="cite-<id>-<k>">N</a></sup>` (k = 1-based
+  occurrence). The references list (W2b) renders `<li id="ref-<id>">` with a back-link to
+  `#cite-<id>-1`. Unknown ids render nothing.
+- YouTube: `renderBlocks` outputs a no-JS facade `<a class="yt" href="https://www.youtube.com/watch?v=ID" data-yt="ID">` (thumbnail `https://i.ytimg.com/vi/ID/hqdefault.jpg`);
+  `reader.js` upgrades it on click to a `youtube-nocookie.com` iframe.
+- Body width classes from blocks: `.b-column` (68ch), `.b-wide` (~ 1000px), `.b-full`
+  (viewport-bleed). Floats `.b-left`/`.b-right` + `.b-size-S|M|L`. The post page
+  (W2b) must let `.b-wide`/`.b-full` break out of the 68ch column (and out from under the
+  rail — e.g. full-bleed spans the viewport; wide spans article+rail).
