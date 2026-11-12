@@ -28,6 +28,14 @@ auto-deploys) and **you/the advisor** (code from a local clone). Your clone goes
   `git pull --rebase origin main` → `node src/build.js` (revalidate merged
   content) → `git push`. A rejected push means the owner published; rebase and
   retry. `pull --rebase` needs a clean tree, so **commit before you rebase.**
+- **`main` takes linear history only.** The server-side ruleset is
+  `required_linear_history` + `non_fast_forward` + `deletion`, so a push that
+  carries a merge commit is rejected. To ship a long branch that has merges in it:
+  merge `origin/main` into the branch → `npm run build` green → make one commit with
+  the branch's exact tree on top of `origin/main` and fast-forward to it:
+  `sha=$(git commit-tree HEAD^{tree} -p origin/main -m '<summary>')` →
+  `git push origin $sha:main`. Keep the branch locally for its history.
+  Precedent: admin full control, `0f30bd3` (2026-11-12).
 - **Codex never pushes `main` at all** (work on `codex/<spec>-<slug>`); this block
   is chiefly for advisor/design pushes. Full rationale: **Lesson 19** in `docs/LESSONS.md`.
 - A `pre-push` guard hook is wired in this clone (`core.hooksPath=tools/hooks`) and
@@ -123,10 +131,19 @@ sequence is encoded — use it instead of hand-running git:
 
 `src/build.js validate()` is the backstop: a violating content state fails
 `npm run build`, so the deploy job (`needs: build`) never runs and GitHub Pages
-keeps serving the last good deploy. The admin (`admin/app.js`) enforces the same
-rules client-side (spec 004) so the owner is stopped at edit time, not at a
-failed publish. Both must hold — when you touch either validator, keep them in
-sync (see Lesson 13).
+keeps serving the last good deploy. The admin enforces the same rules at edit
+time, so the owner is stopped before a failed publish. Two kinds of rules:
+
+- **Shared by construction — `admin/content-rules.js`.** The rules for
+  `data/content.json`, `treatment.json`, `films.json`, and the SEO, hero,
+  eligibility and company fields live in this ONE classic-script file. The build
+  `require()`s it and the admin `import`s it, so those rules cannot drift. Add a
+  new content rule there, not in `build.js` or `app.js`.
+- **Still written twice — keep in lockstep by hand (Lesson 13).** The testimonial
+  invariants below live in both `src/build.js` and `admin/app.js`. Separately,
+  `src/site.js` ships standalone, so it carries a verbatim copy of content-rules
+  `wholeWordMatch`. The build fails if the two copies differ (`5e4de3b`), so
+  change both in the same commit.
 
 - **Exactly one featured testimonial** — not zero (the hero's right column
   empties and the lead recovery story drops), not more than one. The admin
@@ -138,6 +155,27 @@ sync (see Lesson 13).
   evidence of change; 2 = Before + After (During optional), 3 = all stages.
 - **Protocol tracks with no visible items are skipped** (`src/template.js`), not
   rendered as a section heading over an empty list.
+
+## Public copy is data (since admin full control, 2026-11-12)
+
+- **Every piece of visible site copy lives in `data/*.json` and is owner-editable in
+  the admin.** Section copy is on the Page tab (`data/content.json`). The patients in
+  `#treatment` are on In therapy (`data/treatment.json`; the old static
+  `TREATMENT_PATIENTS` in `template.js` is gone), and films are on Videos
+  (`data/films.json`). SEO is Appearance → "Search listing"; the structured address,
+  map pin, founded date and languages are on Company (JSON-LD and llms.txt are
+  generated from both, never hand-written). `src/template.js` holds markup,
+  plus screen-reader and no-JS chrome only. Old notes that say a section is "static
+  template/CSS, no admin field" predate this and are false. **Never hardcode new
+  copy in the template**: add the field to `data/` + `content-rules.js` + the
+  admin editor in the same change (Lesson 27).
+- **Local admin harness: `admin/__harness.html`** (gitignored, so it exists only in
+  the advisor's clone). It drives the real admin against local `data/` with a mocked
+  GitHub API, so nothing touches the live repo. Serve the **repo root**:
+  `python3 -m http.server <port> --bind 127.0.0.1`, then open
+  `/admin/__harness.html`. Its header lists the test hooks (`__published`,
+  `__reconstruct()`, `__cutoutFail` …). A local `npm run build` copies it into
+  `dist/admin/` (CI never has it), so **never deploy a local `dist/`**.
 
 ## Design authority
 
@@ -178,7 +216,7 @@ Durable lessons the advisor folds in after each review. Read the relevant body i
 - **10. `build.js` criticalCss is a manual mirror of `styles.css`** — resync header/hero/reveal changes in the SAME commit or first paint diverges (FOUC).
 - **11. The brand lockup is the owner's image, not a rebuild** — header/footer use `assets/brand/logo-{ink,paper}.png`; never recompose from mark + typeset text.
 - **12. Public label renames have admin copy references** — grep `admin/` for the old label whenever a public UI concept is renamed.
-- **13. Admin and build hold the same content invariants — keep them in lockstep** — tighten one validator, mirror it in the other in the same change.
+- **13. Admin and build hold the same content invariants — keep them in lockstep** — most rules now share one file (`admin/content-rules.js`); the hand-mirrored remainder (testimonials, site.js `wholeWordMatch`) is listed under §Content invariants.
 - **14. CI run registration + runner assignment lag by minutes** — `pollActions` uses ~4-min discovery / ~20-min completion windows; Node-20 warnings are cosmetic.
 - **15. Custom-domain contract** — domain lives ONLY in Settings→Pages (Actions ignores CNAME); `SITE_URL` is the single canonical source; the repo name is load-bearing; the www SAN folds in only when www→`<user>.github.io` and the domain is re-saved.
 - **16. criticalCss is above-the-fold ONLY** — below-the-fold section styles live only in `styles.css`; don't duplicate them into criticalCss.
@@ -192,3 +230,4 @@ Durable lessons the advisor folds in after each review. Read the relevant body i
 - **24. Generated raster assets must verify their own layout** — a render script has no failure mode short of a crash; give it measured text, declared safe areas and a non-zero exit, or don't route it to the executor.
 - **25. Docs that quote measured pixels go stale silently** — paste the verifier's own passing-check output into the README rather than retyping a measurement; name a gitignored input's regeneration recipe ABOVE the build command.
 - **26. `!` is inert under an ignored `dir/`** — to keep a source file inside a derived directory, fence `dir/*` and negate under that; check any "derived" directory for the tooling that derives it before ignoring it.
+- **27. Public copy is data — never hardcode it in the template** — a static string is one the owner can't edit; add the field to `data/` + `content-rules.js` + the admin editor together (see §Public copy is data).

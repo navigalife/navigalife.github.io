@@ -83,6 +83,11 @@ STOP block in `AGENTS.md`, not a lesson here.
     invariants). Whenever you tighten one validator, mirror it in the other in
     the same change, and remember the split: pure validation logic is cleanly
     executor-work even though the admin is otherwise advisor-implemented.
+    *Update 2026-11-12 (admin full control):* most rules now live in ONE file,
+    `admin/content-rules.js`, which the build `require()`s and the admin `import`s,
+    so they are lockstep by construction. The hand-mirrored remainder (testimonial
+    invariants; `src/site.js`'s verbatim `wholeWordMatch`, which the build compares)
+    is listed in AGENTS.md §Content invariants.
 14. **CI run registration and hosted-runner assignment lag by minutes; publish
     polling must tolerate it.** `admin/app.js pollActions` uses a ~4-min run
     discovery window and ~20-min completion window and distinguishes queued
@@ -287,3 +292,20 @@ STOP block in `AGENTS.md`, not a lesson here.
       **contents** (`dir/*`) and negate under that.
     - Before ignoring a directory as "derived", check it for the thing that *derives*
       it. Output directories accumulate their own tooling.
+
+## From admin full control (advisor-implemented, shipped & live 2026-11-12, main `0f30bd3`)
+
+27. **Public copy is data — never hardcode it in the template.**
+    - The owner asked for "every piece of site content editable from the admin"
+      because sections kept shipping as static template/CSS strings: `#watch`, the
+      `#act` lines, the `TREATMENT_PATIENTS` list, films. Each one was a string only
+      a code change could fix. All of it now lives in `data/content.json`,
+      `treatment.json` and `films.json` behind the Page, In therapy and Videos tabs.
+      JSON-LD and llms.txt are generated from Company + Appearance data.
+    - A new visible string therefore means three edits in one change: the `data/`
+      field, its rule in `admin/content-rules.js`, and its admin editor. Only
+      screen-reader and no-JS chrome (skip link, sr-only labels, `<noscript>`)
+      stays in `src/template.js`.
+    - Parity was proven by building the old `main` and the new tree side by side and
+      diffing the HTML with hashes normalized. Every visible change was listed for the
+      owner before ship, and each one was either kept or reverted on the owner's call.
