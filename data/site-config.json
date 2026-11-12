@@ -13,6 +13,25 @@
   "seo": {
     "title": "MediVasc | Prevention of Foot and Leg Amputation",
     "description": "MediVasc designs customized, affordable protocols for lymphedema, venous ulcers, diabetic foot, DVT, filariasis, and bedridden or elderly patients, with documented recoveries and follow-up until the desired result.",
-    "googleVerification": ""
+    "googleVerification": "",
+    "knowsAbout": [
+      "Lymphedema",
+      "Post-mastectomy lymphedema",
+      "Venous ulcers",
+      "Varicose veins",
+      "Chronic venous insufficiency",
+      "Diabetic foot",
+      "Deep vein thrombosis",
+      "Filariasis",
+      "Elephantiasis",
+      "Peripheral arterial disease",
+      "Prevention of leg and foot amputation"
+    ],
+    "areaServed": [
+      "New Delhi",
+      "Delhi NCR",
+      "India"
+    ],
+    "imageAlt": "MediVasc: prevention of foot and leg amputation"
   }
 }

@@ -1,9 +1,12 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
+const { statSync } = require('node:fs');
 const path = require('node:path');
 const sharp = require('sharp');
 
-const { renderPage, TREATMENT_PATIENTS } = require('./template');
+const { renderPage, phoneHref } = require('./template');
+// The content rules the admin runs too — one file, so the two cannot drift.
+const rules = require('../admin/content-rules.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
@@ -180,7 +183,93 @@ const themeCss = (theme) => {
   return `:root {\n${declarations(theme.light)}\n}\n[data-theme="dark"] {\n${declarations(theme.dark)}\n}\n`;
 };
 
-const validate = ({ products, protocols, testimonials, themes, config, solutions, feedback }) => {
+// Owner-editable copy and lists (content/treatment/films, site-config seo/hero/
+// eligibility, company location):
+// every problem at once, grouped by file, worded for the owner — the same
+// messages the admin shows before it lets a publish through.
+const validateContentRules = ({ company, config, content, treatment, films }) => {
+  const groups = [
+    ['data/content.json', rules.validateContent(content)],
+    ['data/treatment.json', rules.validateTreatment(treatment)],
+    ['data/films.json', rules.validateFilms(films)],
+    ['data/site-config.json (seo)', rules.validateSeo(config.seo)],
+    ['data/site-config.json (hero)', rules.validateHero(config)],
+    // Eligibility notice: heading and text both or neither (Page tab).
+    ['data/site-config.json (eligibility)', rules.validateEligibility(config)],
+    // Names, address, phone and WhatsApp, then the JSON-LD location fields.
+    ['data/company.json', [...rules.validateCompany(company), ...rules.validateCompanyLocation(company)]],
+  ].filter(([, messages]) => messages.length);
+  if (!groups.length) return;
+  const count = groups.reduce((total, [, messages]) => total + messages.length, 0);
+  const error = new Error(
+    [
+      `Site content has ${count} problem${count === 1 ? '' : 's'} — fix ${count === 1 ? 'it' : 'them'} and build again:`,
+      ...groups.map(([file, messages]) => `\n${file}\n${messages.map((message) => `  - ${message}`).join('\n')}`),
+    ].join('\n'),
+  );
+  error.ownerFacing = true; // printed as-is: the message is the whole story
+  throw error;
+};
+
+// Every media file the data files point at must be on disk, or the site ships a
+// broken tile (videos are copied, not processed, so nothing else would notice).
+// All missing files at once, grouped by file, in the owner's words.
+const validateAssets = ({ testimonials, solutions, feedback, treatment, films }) => {
+  const missing = (src) => {
+    try {
+      return !statSync(path.join(ROOT, src)).isFile();
+    } catch {
+      return true;
+    }
+  };
+  const list = (value) => (Array.isArray(value) ? value : []);
+  const text = (value) => typeof value === 'string' && value !== '';
+  const groups = [
+    ['data/films.json', list(films).flatMap((film, i) => [
+      [film && film.src, `Videos: video ${i + 1}'s clip`],
+      [film && film.poster, `Videos: video ${i + 1}'s poster`],
+    ])],
+    ['data/treatment.json', list(treatment).flatMap((patient, i) => list(patient && patient.photos).map((photo, j) => [
+      photo, `In therapy: patient ${i + 1}, photo ${j + 1}`,
+    ]))],
+    ['data/testimonials.json', list(testimonials).flatMap((story, i) => list(story && story.images).map((image, j) => [
+      image && image.src, `Recoveries: story ${i + 1}, ${image && image.stage ? `the ${image.stage} photo` : `photo ${j + 1}`}`,
+    ]))],
+    ['data/solutions.json', list(solutions).flatMap((card) => list(card && card.images).map((image, j) => [
+      image && image.src, `Solutions: ${(card && (card.title || card.id)) || 'a card'}, photo ${j + 1}`,
+    ]))],
+    ['data/feedback.json', list(feedback).map((item, i) => [item && item.src, `Voices: screenshot ${i + 1}`])],
+  ]
+    .map(([file, refs]) => [file, refs.filter(([src]) => text(src) && missing(src)).map(([src, what]) => `${what} is missing (${src} is not in the site files). Upload it again or remove it.`)])
+    .filter(([, messages]) => messages.length);
+  if (!groups.length) return;
+  const count = groups.reduce((total, [, messages]) => total + messages.length, 0);
+  const error = new Error(
+    [
+      `${count} media file${count === 1 ? ' is' : 's are'} missing — the site would show ${count === 1 ? 'a broken tile' : 'broken tiles'}:`,
+      ...groups.map(([file, messages]) => `\n${file}\n${messages.map((message) => `  - ${message}`).join('\n')}`),
+    ].join('\n'),
+  );
+  error.ownerFacing = true;
+  throw error;
+};
+
+const validate = ({
+  company,
+  products,
+  protocols,
+  testimonials,
+  themes,
+  config,
+  solutions,
+  feedback,
+  content,
+  treatment,
+  films,
+}) => {
+  validateContentRules({ company, config, content, treatment, films });
+  validateAssets({ testimonials, solutions, feedback, treatment, films });
+
   const themeId = process.env.SITE_THEME || config.theme;
   const theme = themes.find((candidate) => candidate.id === themeId);
   if (!theme) throw new Error(`Unknown theme: ${themeId}`);
@@ -188,18 +277,6 @@ const validate = ({ products, protocols, testimonials, themes, config, solutions
   if (config.productsEnabled) {
     throw new Error(
       'productsEnabled=true requires restoring the product render path (archived in run 1 history).',
-    );
-  }
-
-  // The eligibility notice is optional (both fields blank = no section), but a
-  // heading with no body — or the reverse — is a half-configured section, not a
-  // way to hide it. The admin's Protocols tab enforces the same pair rule.
-  const eligibility = config.eligibility || {};
-  const eligibilityHeading = String(eligibility.heading || '').trim();
-  const eligibilityBody = String(eligibility.body || '').trim();
-  if (Boolean(eligibilityHeading) !== Boolean(eligibilityBody)) {
-    throw new Error(
-      'Eligibility notice needs both a heading and body text (or neither, to remove the section).',
     );
   }
 
@@ -320,7 +397,11 @@ const copyAdmin = async () => {
     // Appearance renderer for people whose browser still held the old app.js.
     // The version is a content hash of the bundle, so it only changes when the
     // code changes and otherwise leaves the browser cache intact.
-    const bundle = ['app.js', 'gh-api.js', 'image-tools.js', 'vault.js', 'traffic.js', 'styles.css'];
+    // The bundle is every shipped admin module (local __*.html harnesses are
+    // never deployed code) plus the stylesheet — derived, not listed, so a new
+    // module can't be forgotten and paired stale.
+    const modules = (await fs.readdir(source)).filter((file) => /^[a-z][a-z0-9-]*\.js$/.test(file)).sort();
+    const bundle = [...modules, 'styles.css'];
     const hash = crypto.createHash('sha256');
     for (const file of bundle) hash.update(await fs.readFile(path.join(source, file)));
     const v = hash.digest('hex').slice(0, 8);
@@ -332,9 +413,10 @@ const copyAdmin = async () => {
     await rewrite('index.html', (html) => html
       .replace('src="app.js"', `src="app.js?v=${v}"`)
       .replace('href="styles.css"', `href="styles.css?v=${v}"`));
-    // app.js imports its siblings by relative path; version those too.
-    await rewrite('app.js', (js) => js
-      .replace(/(['"])(\.\/(?:gh-api|image-tools|vault|traffic)\.js)\1/g, `$1$2?v=${v}$1`));
+    // Modules import their siblings by relative path ('./gh-api.js'); version
+    // every such import in every module, so one URL per file and none stale.
+    const sibling = new RegExp(`(['"])(\\./(?:${modules.map((m) => m.slice(0, -3)).join('|')})\\.js)\\1`, 'g');
+    for (const file of modules) await rewrite(file, (js) => js.replace(sibling, `$1$2?v=${v}$1`));
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }
@@ -353,43 +435,94 @@ const copyStrategy = async () => {
   }
 };
 
-// Plain-language site summary for AI assistants/crawlers (llms.txt). Low-cost,
-// generated from the same data as the page so it can never drift out of date.
-const llmsTxt = (company, protocols) => `# ${company.name}
-
-> ${company.tagline}
-
-${company.name} is a team of medical engineering professionals in ${company.address}, designing customized, affordable protocols for vascular and lymphatic disorders — with documented photographic recoveries and guided follow-up until the desired result. Amputation is not the only way out.
-
-## Conditions we support
-
-${protocols.map((p) => `- ${p.condition}: ${p.summary}`).join('\n')}
-
-## Contact
-
-- WhatsApp: +91 ${company.whatsapp}
-- Email: ${company.email}
-- Website: ${SITE_URL}
-- Location: ${company.address}; guided therapy at home wherever possible, patients across India
-- Languages: English, Hindi
-`;
+// Plain-language site summary for AI assistants/crawlers (llms.txt), built only
+// from the same data as the page so it can never drift from what the owner set
+// in the admin. A line whose value is blank is left out. Protocols list their
+// condition names only: the admin keeps summaries internal.
+const llmsTxt = ({ company, config, content, protocols }) => {
+  const clean = (value) => String(value ?? '').replace(/\s+/g, ' ').trim();
+  const sentence = (value) => {
+    const text = clean(value).replace(/^["“”'‘’]+|["“”'‘’]+$/g, '');
+    return text && !/[.!?]$/.test(text) ? `${text}.` : text;
+  };
+  // "+91 8130981199" for an Indian number however it was typed, else "+<digits>".
+  const phone = (number) => {
+    if (!clean(number).replace(/\D/g, '')) return '';
+    const href = phoneHref(number);
+    return /^\+91\d{10}$/.test(href) ? `+91 ${href.slice(3)}` : href;
+  };
+  const seo = config.seo || {};
+  const intro = [clean(seo.description), sentence(config.heroHeadline)].filter(Boolean).join(' ');
+  const about = String(company.about || '').split(/\n\s*\n/).map(clean).filter(Boolean);
+  const areas = (seo.areaServed || []).map(clean).filter(Boolean);
+  const languages = rules.languagesOf(company);
+  const contact = [
+    ['Phone', phone(company.phone)],
+    ['WhatsApp', phone(company.whatsapp)],
+    ['Email', clean(company.email)],
+    ['Website', SITE_URL],
+    ['Location', clean(company.address)],
+    ['Map', clean(company.mapsUrl)],
+    ['Areas served', areas.join(', ')],
+    ['Languages', languages.join(', ')],
+  ].filter(([, value]) => value);
+  const section = (heading, body) => (body ? `\n## ${clean(heading)}\n\n${body}\n` : '');
+  return [
+    `# ${clean(company.name)}\n`,
+    clean(company.tagline) ? `\n> ${clean(company.tagline)}\n` : '',
+    intro ? `\n${intro}\n` : '',
+    section(content.about?.heading || `About ${clean(company.name)}`, about.join('\n\n')),
+    section(content.conditions?.heading || 'Conditions', protocols.map((p) => `- ${clean(p.condition)}`).join('\n')),
+    section('Contact', contact.map(([label, value]) => `- ${label}: ${value}`).join('\n')),
+  ].join('');
+};
 
 const build = async () => {
-  const [company, products, protocols, testimonials, themes, config, solutionsData, feedbackData, baseCss, clientJs] =
-    await Promise.all([
-      readJson('data/company.json'),
-      readJson('data/products.json'),
-      readJson('data/protocols.json'),
-      readJson('data/testimonials.json'),
-      readJson('data/themes.json'),
-      readJson('data/site-config.json'),
-      readJson('data/solutions.json'),
-      readJson('data/feedback.json'),
-      fs.readFile(path.join(__dirname, 'styles.css'), 'utf8'),
-      fs.readFile(path.join(__dirname, 'site.js'), 'utf8'),
-    ]);
+  const [
+    company,
+    products,
+    protocols,
+    testimonials,
+    themes,
+    config,
+    solutionsData,
+    feedbackData,
+    content,
+    treatmentData,
+    filmsData,
+    baseCss,
+    clientJs,
+  ] = await Promise.all([
+    readJson('data/company.json'),
+    readJson('data/products.json'),
+    readJson('data/protocols.json'),
+    readJson('data/testimonials.json'),
+    readJson('data/themes.json'),
+    readJson('data/site-config.json'),
+    readJson('data/solutions.json'),
+    readJson('data/feedback.json'),
+    readJson('data/content.json'),
+    readJson('data/treatment.json'),
+    readJson('data/films.json'),
+    fs.readFile(path.join(__dirname, 'styles.css'), 'utf8'),
+    fs.readFile(path.join(__dirname, 'site.js'), 'utf8'),
+  ]);
+
+  // src/site.js ships standalone, so it carries its own copy of the admin's
+  // wholeWordMatch (the chatbot bolds exactly what accentMatches() accepts).
+  // Fail the build if the two copies ever drift apart.
+  const fnSource = (source, file) => {
+    const match = source.match(/^( *)const wholeWordMatch = \(text, word\) => \{\n[\s\S]*?^\1\};$/m);
+    if (!match) throw new Error(file + ': wholeWordMatch not found (the drift check looks for it).');
+    return match[0].split('\n').map((line) => line.trim()).join('\n');
+  };
+  const rulesSource = await fs.readFile(path.join(__dirname, '..', 'admin', 'content-rules.js'), 'utf8');
+  if (fnSource(clientJs, 'src/site.js') !== fnSource(rulesSource, 'admin/content-rules.js')) {
+    throw new Error('src/site.js wholeWordMatch differs from admin/content-rules.js wholeWordMatch: change both together.');
+  }
 
   const { theme, themeId, visibleProtocols } = validate({
+    company,
     products,
     protocols,
     testimonials,
@@ -397,15 +530,18 @@ const build = async () => {
     config,
     solutions: solutionsData,
     feedback: feedbackData,
+    content,
+    treatment: treatmentData,
+    films: filmsData,
   });
   await fs.rm(DIST, { recursive: true, force: true });
   await fs.mkdir(DIST, { recursive: true });
 
   const solutionSrcs = solutionsData.flatMap((card) => (card.images || []).map((image) => image.src));
   const feedbackSrcs = feedbackData.map((item) => item.src);
-  // In-therapy photographs (#treatment): a static list owned by the template, not
-  // a data file, but built through the same variant pipeline as every gallery.
-  const treatmentSrcs = TREATMENT_PATIENTS.flatMap((patient) => patient.photos);
+  // In-therapy photographs (#treatment, data/treatment.json): the same variant
+  // pipeline as every gallery.
+  const treatmentSrcs = treatmentData.flatMap((patient) => patient.photos);
   const [imageMap, brand, solutions, feedback, treatment] = await Promise.all([
     buildImageMap(testimonials),
     copyBrandAssets(),
@@ -440,6 +576,9 @@ const build = async () => {
     imageMap,
     solutions: solutionCards,
     feedbackImages,
+    content,
+    treatment: treatmentData,
+    films: filmsData,
     markPaths: brand.markPaths,
     markPathsTm: brand.markPathsTm,
     markPathsTmLg: brand.markPathsTmLg,
@@ -461,7 +600,7 @@ const build = async () => {
       path.join(DIST, 'sitemap.xml'),
       `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE_URL}</loc><lastmod>${new Date().toISOString().slice(0, 10)}</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url></urlset>\n`,
     ),
-    fs.writeFile(path.join(DIST, 'llms.txt'), llmsTxt(company, visibleProtocols)),
+    fs.writeFile(path.join(DIST, 'llms.txt'), llmsTxt({ company, config, content, protocols: visibleProtocols })),
     fs.writeFile(path.join(DIST, '.nojekyll'), ''),
     copyFonts(),
     copyConditionMedia(),
@@ -478,6 +617,6 @@ const build = async () => {
 };
 
 build().catch((error) => {
-  console.error(error);
+  console.error(error.ownerFacing ? error.message : error);
   process.exitCode = 1;
 });

@@ -45,23 +45,41 @@ const icon = (name) => {
 };
 
 // Curated glyphs the hero counter tiles may use; anything else falls back to
-// `pulse` so an unexpected admin value can never break the render.
-const STAT_ICONS = new Set(['pulse', 'clipboard', 'clock', 'heart', 'shield', 'users']);
+// `pulse` so an unexpected admin value can never break the render. The list
+// lives in admin/content-rules.js (the build's validator and the admin's icon
+// picker read the same one); each name needs a path in icon() above.
+const { STAT_ICONS: STAT_ICON_LIST, parseHours, languagesOf, alternateNameOf, readPhone, highlightWholeWord, stripHeadlineQuotes } = require('../admin/content-rules.js');
+const STAT_ICONS = new Set(STAT_ICON_LIST);
 
-// Wraps the first whole-word occurrence of `accentWord` in <em> (escaped text
-// in, HTML out). Degrades to plain text when the word is absent, so admin
-// edits to the headline can never break the render.
-const accentuate = (text, accentWord) => {
-  const safe = escapeHtml(text);
-  if (!accentWord) return safe;
-  const target = escapeHtml(accentWord).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return safe.replace(new RegExp(`\\b(${target})\\b`, 'i'), '<em>$1</em>');
+// Wraps the first whole-word occurrence of `accentWord` in <em> (raw text in,
+// escaped HTML out). Degrades to plain text when the word is absent, so admin
+// edits to the headline can never break the render. It is the content rules'
+// own highlightWholeWord — the test accentMatches() runs — so an accent the
+// admin accepts is one the page highlights.
+const accentuate = (text, accentWord) => highlightWholeWord(text, accentWord, 'em');
+
+// Optional copy (data/content.json — kickers, ledes, the case highlight, …): a
+// blank or whitespace-only value omits its element entirely, never an empty tag.
+const filled = (value) => typeof value === 'string' && value.trim() !== '';
+
+// The stock section header — kicker + accented heading, then the lede (or a
+// caller-supplied `side` block) in the right-hand column. Blank optional fields
+// drop out together with their line. `pad` is the indent of the opening tag.
+const sectionHeading = (copy, { pad = 8, reveal = true, side } = {}) => {
+  const i = ' '.repeat(pad);
+  const kicker = filled(copy.kicker) ? `\n${i}    <p class="kicker">${escapeHtml(copy.kicker)}</p>` : '';
+  const aside = side !== undefined ? side : filled(copy.lede) ? `<p>${escapeHtml(copy.lede)}</p>` : '';
+  return `<div class="section-heading"${reveal ? ' data-reveal' : ''}>
+${i}  <div>${kicker}
+${i}    <h2>${accentuate(copy.heading, copy.accent)}</h2>
+${i}  </div>${aside ? `\n${i}  ${aside}` : ''}
+${i}</div>`;
 };
 
-const phoneHref = (number) => {
-  const digits = String(number || '').replace(/\D/g, '');
-  return digits.length === 10 ? `+91${digits}` : `+${digits}`;
-};
+// "+<digits>" for tel:, wa.me and JSON-LD telephone, read by the one rule the
+// build validator and the Company tab use (content-rules.js readPhone), so a
+// number the build accepts is the number the site dials. Blank -> ''.
+const phoneHref = (number) => readPhone(number).number;
 
 const image = (source, imageMap, options = {}) => {
   const variants = imageMap[source];
@@ -155,11 +173,12 @@ const renderQuoteStory = (testimonial, index) => `
 
 // Reassurance line shown in both contact prompts (the #act panel and the #contact
 // block bracketing #about): no fee is charged to review a case or during follow-up.
-// `variant` = 'on-dark' restyles it for the dark #act panel.
-const freeConsultNote = (variant = '') => `
+// `variant` = 'on-dark' restyles it for the dark #act panel. Copy: content.consult
+// (the title is required, the supporting line optional).
+const freeConsultNote = (consult, variant = '') => `
         <p class="free-consult${variant ? ` free-consult--${variant}` : ''}">
           <span class="free-consult__icon" aria-hidden="true">${icon('shield')}</span>
-          <span class="free-consult__text"><strong>No consultation charges</strong>At any stage of the case study or follow-ups</span>
+          <span class="free-consult__text"><strong>${escapeHtml(consult.title)}</strong>${filled(consult.text) ? escapeHtml(consult.text) : ''}</span>
         </p>`;
 
 // One carousel slide — the same evidence frame the recoveries use (4:5, blurred
@@ -214,16 +233,11 @@ const renderSolutionCard = (card, imageMap, index) => {
     </article>`;
 };
 
-// Patients currently in therapy (#treatment, directly below #solutions). A static
-// owner-supplied set like #watch — no admin field, no data file. One entry per
-// patient, photos in display order; build.js imports this list to build the
-// responsive variants, and the section renders nothing when it is empty. When a
-// patient's after photographs arrive they belong in #recoveries, not here.
-const TREATMENT_PATIENTS = [
-  { location: 'Maharashtra', photos: ['assets/treatment/treatment-01.webp', 'assets/treatment/treatment-02.webp'] },
-  { location: 'Gurugram, Haryana', photos: ['assets/treatment/treatment-03.webp'] },
-  { location: 'Visakhapatnam, Andhra Pradesh', photos: ['assets/treatment/treatment-04.webp', 'assets/treatment/treatment-05.webp'] },
-];
+// Patients currently in therapy (#treatment, directly below #solutions) —
+// data/treatment.json, one entry per patient, photos in display order. build.js
+// builds the responsive variants from the same file, and the section renders
+// nothing when it is empty. When a patient's after photographs arrive they belong
+// in #recoveries, not here.
 
 // One in-therapy photograph — the recoveries' evidence frame (4:5, blurred cover
 // fill behind a contained photo) with an "In therapy" stage pill (accent dot).
@@ -243,9 +257,12 @@ const treatmentFrame = (src, imageMap, alt) => {
 // every photograph in the row renders at the same width (see styles.css).
 const renderTreatmentGroup = (patient, imageMap, index) => {
   const count = patient.photos.length;
-  const number = String(index + 1).padStart(2, '0');
+  // A blank label falls back to the numbered "Patient NN" (identity withheld).
+  const named = filled(patient.label);
+  const label = named ? patient.label : `Patient ${String(index + 1).padStart(2, '0')}`;
+  const name = named ? patient.label : `Patient ${index + 1}`;
   return `
-      <article class="treatment-group${count === 1 ? ' treatment-group--single' : ''}" data-reveal style="--n:${count};--reveal-order:${index}" aria-label="Patient ${index + 1}, ${escapeHtml(patient.location)}">
+      <article class="treatment-group${count === 1 ? ' treatment-group--single' : ''}" data-reveal style="--n:${count};--reveal-order:${index}" aria-label="${escapeHtml(name)}, ${escapeHtml(patient.location)}">
         <div class="treatment-group__photos">${patient.photos
           .map((src, photoIndex) =>
             treatmentFrame(
@@ -257,7 +274,7 @@ const renderTreatmentGroup = (patient, imageMap, index) => {
           .join('')}
         </div>
         <div class="treatment-group__caption">
-          <span class="treatment-group__label">Patient ${number}</span>
+          <span class="treatment-group__label">${escapeHtml(label)}</span>
           <h3 class="treatment-group__place">${icon('map')}<span>${escapeHtml(patient.location)}</span></h3>
         </div>
       </article>`;
@@ -283,36 +300,31 @@ const voiceCard = (item, imageMap, index, total) => {
       </li>`;
 };
 
-// The conditions MediVasc treats, published as schema.org `knowsAbout` so search
-// engines can associate the organisation with the searches patients actually run
-// (see docs/LESSONS.md — condition terms drive most of the site's intended reach).
-const KNOWS_ABOUT = [
-  'Lymphedema',
-  'Post-mastectomy lymphedema',
-  'Venous ulcers',
-  'Varicose veins',
-  'Chronic venous insufficiency',
-  'Diabetic foot',
-  'Deep vein thrombosis',
-  'Filariasis',
-  'Elephantiasis',
-  'Peripheral arterial disease',
-  'Prevention of leg and foot amputation',
-];
-
 const renderJsonLd = ({ company, config, siteUrl }) => {
   // Any social profiles the owner has filled in (data/company.json) become
   // `sameAs` links, which help Google connect the site to those profiles and
   // disambiguate our name from unrelated "MediVasc" businesses abroad.
   const sameAs = Object.values(company.social || {}).filter(Boolean);
   const orgId = `${siteUrl}#organization`;
+  const alternateName = alternateNameOf(config.seo);
+  const languages = languagesOf(company);
+  const founded = String(company.founded ?? '').trim();
+  const hours = parseHours(company.hours).specs.map((spec) => ({
+    '@type': 'OpeningHoursSpecification',
+    dayOfWeek: spec.days.map((day) => `https://schema.org/${day}`),
+    opens: spec.opens,
+    closes: spec.closes,
+  }));
+  // MedicalClinic = MedicalOrganization + LocalBusiness (a Place), so `geo`/`hasMap` below are valid on it.
   const organization = {
-    '@type': 'MedicalOrganization',
+    '@type': 'MedicalClinic',
     '@id': orgId,
     name: company.legalName,
-    // A clear India signal: our name collides with a French clinic, so we always
-    // present as "MediVasc India" in the machine-readable identity too.
-    alternateName: 'MediVasc India',
+    // A clear India signal: our name collides with a French clinic, so the
+    // machine-readable identity carries "MediVasc India" too. Owner-editable as
+    // seo.alternateName ("Also known as", Appearance tab); absent = that default,
+    // blank = omitted.
+    ...(alternateName ? { alternateName } : {}),
     url: siteUrl,
     logo: `${siteUrl}assets/brand/icon-512.png`,
     description: config?.seo?.description || company.tagline,
@@ -326,9 +338,20 @@ const renderJsonLd = ({ company, config, siteUrl }) => {
       ? { geo: { '@type': 'GeoCoordinates', latitude: company.geo.latitude, longitude: company.geo.longitude } }
       : {}),
     ...(company.mapsUrl ? { hasMap: company.mapsUrl } : {}),
-    areaServed: ['New Delhi', 'Delhi NCR', 'India'],
-    medicalSpecialty: 'Vascular and lymphatic care',
-    knowsAbout: KNOWS_ABOUT,
+    // company.founded (Company tab): published only as a four-digit year.
+    ...(/^\d{4}$/.test(founded) ? { foundingDate: founded } : {}),
+    // company.hours ("Support hours", admin Company tab) read by the shared
+    // parser; blank = no hours published. build.js validate() has already
+    // refused text it cannot read.
+    ...(hours.length ? { openingHoursSpecification: hours } : {}),
+    // seo.areaServed / seo.knowsAbout (data/site-config.json, admin SEO tab): where
+    // MediVasc serves and the conditions it treats, so search engines can associate
+    // the organisation with the searches patients actually run (docs/LESSONS.md).
+    areaServed: config.seo.areaServed,
+    // schema.org MedicalSpecialty members only (free text is not valid here):
+    // vascular care, and Podiatric for diabetic-foot / amputation prevention.
+    medicalSpecialty: ['https://schema.org/Cardiovascular', 'https://schema.org/Podiatric'],
+    knowsAbout: config.seo.knowsAbout,
     // WhatsApp is our primary contact channel — expose it as a contact point so
     // it can surface in rich results, not just as a link buried in the page.
     ...(company.whatsapp
@@ -337,7 +360,8 @@ const renderJsonLd = ({ company, config, siteUrl }) => {
             '@type': 'ContactPoint',
             telephone: phoneHref(company.whatsapp),
             contactType: 'customer service',
-            availableLanguage: ['English', 'Hindi'],
+            // company.languages ("Languages spoken"); absent = English, Hindi.
+            ...(languages.length ? { availableLanguage: languages } : {}),
           },
         }
       : {}),
@@ -368,22 +392,38 @@ const renderJsonLd = ({ company, config, siteUrl }) => {
 // viewport. The shell is server-rendered (no layout shift); site.js drives the
 // chat and, on completion, builds a wa.me deep-link with the case prefilled.
 // html.js-gated in CSS, so without JS the page's own contact routes take over.
-const renderChatbot = ({ wa, email, conditions }) => {
+// Copy: content.chat. The shell's strings render here; everything site.js says
+// in the conversation travels in the JSON config below, as plain text (site.js
+// escapes it and adds the <strong> itself — no markup ever comes from content).
+const renderChatbot = ({ wa, email, chat }) => {
   const xIcon =
     '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
   const chatIcon =
     '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.4a7.6 7.6 0 0 1-11 6.8L4.5 19.6l1.4-4.4A7.6 7.6 0 1 1 20 11.4Z"/><circle cx="8.5" cy="11.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="12" cy="11.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="15.5" cy="11.6" r="1.05" fill="currentColor" stroke="none"/></svg>';
   const sendIcon =
     '<svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.5 3.5c-.5-.2-1 .3-.85.82L4.4 11 14 12 4.4 13l-1.75 6.68c-.14.51.36 1 .85.82l17.2-7.55c.5-.22.5-.94 0-1.16L3.5 3.5Z"/></svg>';
-  const config = JSON.stringify({ wa: wa || '', email: email || '', conditions: conditions || [] }).replaceAll('<', '\\u003c');
+  const config = JSON.stringify({
+    wa: wa || '',
+    email: email || '',
+    conditions: chat.conditions,
+    greeting: chat.greeting,
+    greetingBold: chat.greetingBold,
+    questions: chat.questions.map(({ key, prompt, bold, placeholder }) => ({ key, prompt, bold, placeholder })),
+    done: chat.done,
+    welcomeBack: chat.welcomeBack,
+    restart: chat.restart,
+    messageOpening: chat.messageOpening,
+    messageClosing: chat.messageClosing,
+  }).replaceAll('<', '\\u003c');
+  const name = escapeHtml(chat.name);
   return `
   <div class="mvbot" data-mvbot data-mvbot-state="closed">
-    <div class="mvbot__panel" id="mvbot-panel" data-mvbot-panel role="dialog" aria-label="MediVasc Assistant" aria-modal="false" aria-hidden="true">
+    <div class="mvbot__panel" id="mvbot-panel" data-mvbot-panel role="dialog" aria-label="${name}" aria-modal="false" aria-hidden="true">
       <header class="mvbot__head">
         <span class="mvbot__avatar" aria-hidden="true"><img src="assets/brand/icon-192.png" alt="" width="42" height="42" loading="lazy" decoding="async"></span>
         <span class="mvbot__id">
-          <span class="mvbot__name">MediVasc Assistant</span>
-          <span class="mvbot__status"><span class="mvbot__status-dot" aria-hidden="true"></span>Online · replies personally</span>
+          <span class="mvbot__name">${name}</span>
+          <span class="mvbot__status"><span class="mvbot__status-dot" aria-hidden="true"></span>${escapeHtml(chat.status)}</span>
         </span>
         <button type="button" class="mvbot__close" data-mvbot-close aria-label="Close chat">${xIcon}</button>
       </header>
@@ -394,13 +434,13 @@ const renderChatbot = ({ wa, email, conditions }) => {
         <input class="mvbot__input" id="mvbot-input" data-mvbot-input type="text" name="mvbot-field" autocomplete="off" enterkeyhint="send" placeholder="Type here…">
         <button type="submit" class="mvbot__send" data-mvbot-send aria-label="Send" disabled>${sendIcon}</button>
       </form>
-      <p class="mvbot__legal">Opens WhatsApp with your details ready to send. A person replies. This isn’t medical advice.</p>
+      <p class="mvbot__legal">${escapeHtml(chat.legal)}</p>
     </div>
     <div class="mvbot__nudge" data-mvbot-nudge hidden>
       <button type="button" class="mvbot__nudge-x" data-mvbot-nudge-x aria-label="Dismiss">${xIcon}</button>
-      <strong>Have a case?</strong> Request a customized solution in ~30 seconds.
+      <strong>${escapeHtml(chat.nudgeLead)}</strong> ${escapeHtml(chat.nudgeBody)}
     </div>
-    <button type="button" class="mvbot__launcher" data-mvbot-toggle aria-expanded="false" aria-controls="mvbot-panel" aria-label="Chat with MediVasc Assistant">
+    <button type="button" class="mvbot__launcher" data-mvbot-toggle aria-expanded="false" aria-controls="mvbot-panel" aria-label="Chat with ${name}">
       <span class="mvbot__launcher-ico mvbot__launcher-ico--chat" aria-hidden="true">${chatIcon}</span>
       <span class="mvbot__launcher-ico mvbot__launcher-ico--close" aria-hidden="true">${xIcon}</span>
       <span class="mvbot__launcher-ping" aria-hidden="true"></span>
@@ -418,6 +458,9 @@ const renderPage = ({
   imageMap,
   solutions,
   feedbackImages,
+  content,
+  treatment,
+  films,
   markPaths,
   markPathsTm,
   markPathsTmLg,
@@ -436,24 +479,14 @@ const renderPage = ({
   // the first three and a "View more" toggle (site.js) animates the rest open.
   const collapsibleRecoveries = pairStories.length > 3;
   const tracks = [
-    { id: 'disease', label: 'Disease-specific protocols' },
-    { id: 'elderly', label: 'Bedridden and elderly care' },
+    { id: 'disease', label: content.conditions.trackDisease },
+    { id: 'elderly', label: content.conditions.trackElderly },
   ];
-  const heroChips = [
-    'Diabetic foot',
-    'Lymphedema arms/legs',
-    'Venous ulcers',
-    'Filariasis & elephantiasis',
-    'Varicose veins',
-    'Bedridden & elderly care',
-  ];
-  // The four conditions the chatbot offers as quick-reply chips (owner-curated).
-  // Kept separate from heroChips so the bot's tappable options stay short.
-  const botConditions = ['Diabetic foot', 'Lymphedema', 'Venous ulcers', 'Mastectomy'];
+  const heroChips = (content.hero.chips || []).filter(filled);
   const telephone = phoneHref(company.phone);
   const whatsapp = phoneHref(company.whatsapp).replace('+', '');
   const waPatient = company.whatsapp
-    ? `https://wa.me/${whatsapp}?text=${encodeURIComponent('I would like to discuss my case with MediVasc.')}`
+    ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(content.cta.message)}`
     : '';
   const mailHref = company.email ? `mailto:${escapeHtml(company.email)}` : '';
   // Primary call-to-action degrades gracefully: WhatsApp when a number is on
@@ -492,29 +525,20 @@ const renderPage = ({
   const solutionsSection = solutionCards.length
     ? `<section class="section solutions" id="solutions">
       <div class="container">
-        <div class="section-heading" data-reveal>
-          <div>
-            <p class="kicker">Real cases</p>
-            <h2>Complications <em>we manage</em></h2>
-          </div>
-        </div>
+        ${sectionHeading(content.solutions)}
         <div class="solution-grid">
           ${solutionCards.map((card, index) => renderSolutionCard(card, imageMap, index)).join('')}
         </div>
       </div>
     </section>`
     : '';
-  const treatmentPatients = TREATMENT_PATIENTS.filter((patient) => patient.photos.length);
+  const treatmentPatients = (Array.isArray(treatment) ? treatment : []).filter(
+    (patient) => Array.isArray(patient.photos) && patient.photos.length,
+  );
   const treatmentSection = treatmentPatients.length
     ? `<section class="section treatment" id="treatment">
       <div class="container">
-        <div class="section-heading" data-reveal>
-          <div>
-            <p class="kicker">In therapy now</p>
-            <h2>Patients <em>undergoing treatment</em></h2>
-          </div>
-          <p>Current MediVasc patients, photographed during their therapy. Their progress is ongoing, and we’ll add their after photographs as they recover.</p>
-        </div>
+        ${sectionHeading(content.treatment)}
         <div class="treatment-row">
           ${treatmentPatients.map((patient, index) => renderTreatmentGroup(patient, imageMap, index)).join('')}
         </div>
@@ -522,7 +546,7 @@ const renderPage = ({
     </section>`
     : '';
   // The one section that says no (data/site-config.json → eligibility, edited
-  // from the admin's Protocols tab). Heading and body are both owner-copy, so
+  // on the admin's Page tab). Heading and body are both owner-copy, so
   // the section renders only when both are filled and disappears cleanly when
   // they are cleared — the same graceful degrade as the solutions/voices rows.
   const eligibility = config.eligibility || {};
@@ -531,16 +555,15 @@ const renderPage = ({
   const eligibilitySection = eligibilityHeading && eligibilityBody
     ? `<section class="section eligibility" id="eligibility">
       <div class="container">
-        <div class="section-heading" data-reveal>
-          <div>
-            <p class="kicker">Eligibility</p>
-            <h2>${accentuate(eligibilityHeading, eligibility.accent)}</h2>
-          </div>
-          <div class="eligibility__body">${eligibilityBody
-            .split(/\n\n+/)
-            .map((paragraph) => `<p>${escapeHtml(paragraph.trim())}</p>`)
-            .join('')}</div>
-        </div>
+        ${sectionHeading(
+          { kicker: content.eligibility.kicker, heading: eligibilityHeading, accent: eligibility.accent },
+          {
+            side: `<div class="eligibility__body">${eligibilityBody
+              .split(/\n\n+/)
+              .map((paragraph) => `<p>${escapeHtml(paragraph.trim())}</p>`)
+              .join('')}</div>`,
+          },
+        )}
       </div>
     </section>`
     : '';
@@ -548,13 +571,7 @@ const renderPage = ({
   const voicesSection = voices.length
     ? `<section class="section voices" id="voices">
       <div class="container">
-        <div class="section-heading" data-reveal>
-          <div>
-            <p class="kicker">In their words</p>
-            <h2>What patients <em>say</em> about us</h2>
-          </div>
-          <p>Unedited messages from patients and their families, shared with their permission. Tap any note to read it in full.</p>
-        </div>
+        ${sectionHeading(content.voices)}
         <div class="voice-carousel" data-carousel role="group" aria-roledescription="carousel" aria-label="Patient messages">
           <div class="voice-carousel__viewport">
             <ul class="voices-rail" data-carousel-track data-voice-rail aria-label="Patient messages">
@@ -576,16 +593,12 @@ const renderPage = ({
       </dialog>
     </section>`
     : '';
-  // Single source for the primary nav — rendered inline in the header (desktop)
-  // and inside the mobile slide-in drawer (below); keep the two in sync via this.
-  const navItems = [
-    ['#recoveries', 'Recoveries'],
-    ['#approach', 'Our approach'],
-    ['#conditions', 'Conditions'],
-    ['#about', 'About'],
-    ['#contact', 'Contact'],
-  ];
-  const navLinksHtml = navItems.map(([href, label]) => `<a href="${href}">${label}</a>`).join('');
+  // Single source for the nav (content.nav): the targets are fixed by the content
+  // rules, the labels are owner copy — `label` inline in the header (desktop) and
+  // in the mobile slide-in drawer (below), `footerLabel` in the footer.
+  const navLink = (item, key) => `<a href="#${escapeHtml(item.target)}">${escapeHtml(item[key])}</a>`;
+  const navLinksHtml = content.nav.map((item) => navLink(item, 'label')).join('');
+  const footerNavHtml = content.nav.map((item) => navLink(item, 'footerLabel')).join('');
   const heroStats = Array.isArray(config.heroStats)
     ? config.heroStats.filter((stat) => stat && stat.value && stat.label)
     : [];
@@ -595,10 +608,11 @@ const renderPage = ({
     .join('');
   // The hero headline is wrapped in styled curly quotes below. The admin CMS is a
   // co-writer and the owner sometimes types their own quotes into the headline —
-  // strip any surrounding straight/curly quotes (and stray whitespace) here so the
-  // render always shows exactly one styled set, never a doubled "«…»".
-  const heroHeadlineText = String(config.heroHeadline || '')
-    .replace(/^[\s"“”'‘’]+|[\s"“”'‘’]+$/g, '');
+  // strip one pair that wraps the whole headline (content-rules
+  // stripHeadlineQuotes, the same strip the validator and the admin preview run)
+  // so the render shows exactly one styled set, never a doubled "«…»", while an
+  // inner quotation keeps its closing mark.
+  const heroHeadlineText = stripHeadlineQuotes(config.heroHeadline || '');
   // Every lockup variant carries its own measured intrinsic width/height (see
   // prepareMarkSized in build.js) — the aspect differs per variant and moved with
   // the Exotc350 wordmark, so a hard-coded 512x257 would cost a layout shift.
@@ -627,25 +641,60 @@ const renderPage = ({
   // The bot deep-links to WhatsApp when a number is on record, else composes an
   // email; if neither exists it is omitted (site.js no-ops on a missing config).
   const chatbot = whatsapp || company.email
-    ? renderChatbot({ wa: whatsapp, email: company.email, conditions: botConditions })
+    ? renderChatbot({ wa: whatsapp, email: company.email, chat: content.chat })
     : '';
 
-  // The severity-clip case note. Declared once so the desktop figure and the
-  // mobile "View the full case" popup render identical copy (the figure is
-  // hidden on phones; the popup carries it there). &#8377; is the rupee sign.
-  const conditionCase = {
-    kicker: 'The amputation we prevented',
-    quote: 'A top hospital had already referred this patient for a below-knee amputation. He recovered in 90 days instead, keeping his leg and sparing his family at least &#8377;7 lakh in surgery costs, and the anguish that goes with it.',
-    stats: ['Recovered in 90 days', '&#8377;7 lakh+ saved', 'Amputation avoided'],
-  };
-  const conditionCaseStats = conditionCase.stats.map((s) => `<li>${s}</li>`).join('');
+  // The severity-clip case note (content.conditions.case*). Declared once so the
+  // desktop figure and the mobile "View more" popup render identical copy (the
+  // figure is hidden on phones; the popup carries it there). It exists only when
+  // caseQuote is filled; the kicker and the stats are optional inside it.
+  const conditionsCopy = content.conditions;
+  const hasCase = filled(conditionsCopy.caseQuote);
+  const caseKicker = (tag) =>
+    filled(conditionsCopy.caseKicker)
+      ? `<${tag} class="condition-case__kicker">${escapeHtml(conditionsCopy.caseKicker)}</${tag}>`
+      : '';
+  const caseStats = (conditionsCopy.caseStats || []).filter(filled);
+  // Inner lines of the case note at a given indent: kicker, quote, stats.
+  const caseNoteLines = (pad, kickerTag) =>
+    [
+      caseKicker(kickerTag),
+      `<blockquote class="condition-case__quote">${escapeHtml(conditionsCopy.caseQuote)}</blockquote>`,
+      caseStats.length ? `<ul class="condition-case__stats">${caseStats.map((stat) => `<li>${escapeHtml(stat)}</li>`).join('')}</ul>` : '',
+    ]
+      .filter(Boolean)
+      .map((line) => `\n${' '.repeat(pad)}${line}`)
+      .join('');
 
-  // One source of truth for the severity clips: drives both the poster grid and the
-  // carousel slides inside the film lightbox, so their order and count never drift.
-  const films = [
-    { src: 'assets/conditions/severity-b.mp4', poster: 'assets/conditions/severity-b.jpg', dur: '0:06', cap: 'Referred for a below-knee amputation. Recovered in 90 days.', featured: true },
-    { src: 'assets/conditions/severity-a.mp4', poster: 'assets/conditions/severity-a.jpg', dur: '0:28', cap: 'Documented case of Elephantiasis' },
-  ];
+  // The severity clips (data/films.json): one list drives both the poster grid
+  // and the carousel slides inside the film lightbox, so their order and count
+  // never drift. The featured clip's caption carries the phones' "View more" into
+  // the case note, so that button (and the popup) exist only when there is a case.
+  const filmList = Array.isArray(films) ? films : [];
+  const caseOpener = hasCase && filmList.some((film) => film.featured === true);
+  // Without both halves the two-column case/clips grid collapses to one column;
+  // a case with no clip to open it stays visible on phones instead of hiding.
+  const conditionFilmsClass = [
+    'condition-films',
+    hasCase !== (filmList.length > 0) ? 'condition-films--solo' : '',
+    hasCase && !caseOpener ? 'condition-films--case-inline' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  // The line under the hero's three-up strip (content.hero.evidence*): bold lead,
+  // body, link label + arrow — each optional; all three blank drops the line.
+  const heroEvidenceText = [
+    filled(content.hero.evidenceLead) ? `<strong>${escapeHtml(content.hero.evidenceLead)}</strong>` : '',
+    filled(content.hero.evidenceBody) ? escapeHtml(content.hero.evidenceBody) : '',
+    filled(content.hero.evidenceLink) ? `${escapeHtml(content.hero.evidenceLink)} ${icon('arrow')}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  // Desktop pathway columns: one row for up to four steps, 3 + 2 / 3 + 3 for five
+  // or six (never a lone orphan on a second row). Four is the stylesheet default.
+  const pathwayCols = content.approach.steps.length > 4 ? 3 : content.approach.steps.length;
 
   return `<!doctype html>
 <html lang="en" data-site-theme="${escapeHtml(themeId)}">
@@ -673,12 +722,12 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
   <meta property="og:image" content="${siteUrl}${ogImage}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="MediVasc: prevention of foot and leg amputation">
+  <meta property="og:image:alt" content="${escapeHtml(config.seo.imageAlt)}">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(config.seo.title)}">
   <meta name="twitter:description" content="${escapeHtml(config.seo.description)}">
   <meta name="twitter:image" content="${siteUrl}${ogImage}">
-  <meta name="twitter:image:alt" content="MediVasc: prevention of foot and leg amputation">
+  <meta name="twitter:image:alt" content="${escapeHtml(config.seo.imageAlt)}">
   <link rel="canonical" href="${siteUrl}">
   <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="assets/brand/favicon-32.png" sizes="32x32">
@@ -728,15 +777,15 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
     <section class="hero" id="top">
       <div class="container hero__layout">
         <div class="hero__copy" data-reveal>
-          <h1><span class="hero__lead">Prevention of foot and leg amputation</span>“${accentuate(heroHeadlineText, config.heroAccent)}”</h1>
+          <h1><span class="hero__lead">${escapeHtml(content.hero.lead)}</span>“${accentuate(heroHeadlineText, config.heroAccent)}”</h1>
           <p>${escapeHtml(config.heroSub)}</p>
           <div class="hero__actions">
-            <a class="button" href="#recoveries">See the recoveries ${icon('arrowDown')}</a>
+            <a class="button" href="#recoveries">${escapeHtml(content.hero.recoveriesButton)} ${icon('arrowDown')}</a>
             <a class="button button--outline" href="${cta.href}"${ctaAttrs}>${cta.icon} ${cta.label}</a>
-          </div>
+          </div>${heroChips.length ? `
           <ul class="chip-list hero__chips" aria-label="Conditions we support">
             ${heroChips.map((chip) => `<li>${escapeHtml(chip)}</li>`).join('')}
-          </ul>
+          </ul>` : ''}
         </div>
         ${featured ? `
         <a class="hero__evidence" href="#recoveries" data-reveal style="--reveal-order:1" aria-label="See documented recoveries">
@@ -744,8 +793,8 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
             ${featured.images
               .map((entry) => evidenceFrame(entry, featured, imageMap, { sizes: '(max-width: 720px) 30vw, 13vw', eager: true }))
               .join('')}
-          </div>
-          <p><strong>A documented MediVasc recovery.</strong> Below-knee amputation was advised. Therapy prevented it. See the full story ${icon('arrow')}</p>
+          </div>${heroEvidenceText ? `
+          <p>${heroEvidenceText}</p>` : ''}
         </a>` : ''}
       </div>
       ${heroStats.length ? `
@@ -765,13 +814,7 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
 
     <section class="section recoveries" id="recoveries">
       <div class="container">
-        <div class="section-heading" data-reveal>
-          <div>
-            <p class="kicker">Documented recoveries</p>
-            <h2>Recoveries you can <em>see</em></h2>
-          </div>
-          <p>Every story below is a real MediVasc case, shown exactly as photographed: before, during, and after therapy. We never generate or edit outcome images. Names are withheld where patients asked for privacy.</p>
-        </div>
+        ${sectionHeading(content.recoveries)}
         ${featured ? renderJourney(featured, imageMap) : ''}
         ${pairStories.length ? `<div class="pair-story-row${collapsibleRecoveries ? ' pair-story-row--collapsible is-collapsed' : ''}"${collapsibleRecoveries ? ' data-recovery-list' : ''}>${pairStories.map((testimonial, index) => renderPairStory(testimonial, imageMap, index)).join('')}</div>` : ''}
         ${collapsibleRecoveries ? `<div class="recoveries__more"><button type="button" class="button button--outline recoveries__more-btn" data-recovery-toggle aria-expanded="false" data-label-more="View more" data-label-less="View less"><span data-recovery-toggle-label>View more</span>${icon('arrowDown')}</button></div>` : ''}
@@ -787,55 +830,42 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
 
     <section class="section approach" id="approach">
       <div class="container">
-        <div class="section-heading" data-reveal>
-          <div>
-            <p class="kicker">What to expect</p>
-            <h2>The therapy comes <em>to you</em></h2>
-          </div>
-          <p>Hospital and clinic therapy for these conditions runs long, and every session means a visit. Many patients never manage it: there is no clinic in the vicinity, mobility is already limited, a family member must give up the whole day, and the travel and therapy costs deter treatment altogether. Our approach removes every one of those barriers.</p>
-        </div>
-        <ol class="pathway" aria-label="How a MediVasc engagement works">
-          <li data-reveal style="--reveal-order:0"><span>01</span><div><h3>Detailed case study</h3><p>We begin with your individual case: the condition, its history, current treatment, and reports. No two protocols are the same because no two cases are.</p></div></li>
-          <li data-reveal style="--reveal-order:1"><span>02</span><div><h3>A customized, affordable solution</h3><p>Where required, we customize the medical device modalities for your therapy, designed around your case, your home, and your budget.</p></div></li>
-          <li data-reveal style="--reveal-order:2"><span>03</span><div><h3>Therapy at home, under our guidance</h3><p>You take the therapy at home, guided by us, without any break: no travel, no waiting rooms, no dependence on anyone to get you there.</p></div></li>
-          <li data-reveal style="--reveal-order:3"><span>04</span><div><h3>Follow-ups</h3><p>We follow up at planned intervals to check the progress and adjust the plan.</p></div></li>
+        ${sectionHeading(content.approach)}
+        <ol class="pathway"${pathwayCols === 4 ? '' : ` style="--pathway-cols:${pathwayCols}"`} aria-label="How a MediVasc engagement works">
+          ${content.approach.steps
+            .map(
+              (step, index) =>
+                `<li data-reveal style="--reveal-order:${index}"><span>${String(index + 1).padStart(2, '0')}</span><div><h3>${escapeHtml(step.title)}</h3><p>${escapeHtml(step.body)}</p></div></li>`,
+            )
+            .join('\n          ')}
         </ol>
         <aside class="motto" data-reveal>
-          <p class="motto__line">A solution is not a solution unless it is <em>affordable</em></p>
-          <p>That is our motto, and we mean it literally. The solutions are designed not to pinch the pockets of patients and families already struggling with rising medical expenses.</p>
+          <p class="motto__line">${accentuate(content.approach.mottoLine, content.approach.mottoAccent)}</p>
+          <p>${escapeHtml(content.approach.mottoBody)}</p>
         </aside>
       </div>
     </section>
 
     <section class="section conditions" id="conditions">
       <div class="container">
-        <div class="section-heading" data-reveal>
-          <div>
-            <p class="kicker">Protocols available</p>
-            <h2>Conditions we <em>support</em></h2>
-          </div>
-          <p>Every protocol starts with the same detailed case study. If your condition is not listed here, ask us. The case study decides what is possible.</p>
-        </div>
-        <div class="condition-films" data-reveal>
-          <figure class="condition-case">
-            <figcaption class="condition-case__kicker">${conditionCase.kicker}</figcaption>
-            <blockquote class="condition-case__quote">${conditionCase.quote}</blockquote>
-            <ul class="condition-case__stats">${conditionCaseStats}</ul>
-          </figure>
+        ${sectionHeading(content.conditions)}${hasCase || filmList.length ? `
+        <div class="${conditionFilmsClass}" data-reveal>${hasCase ? `
+          <figure class="condition-case">${caseNoteLines(12, 'figcaption')}
+          </figure>` : ''}${filmList.length ? `
           <ul class="condition-films__grid">
-            ${films.map((film, i) => `<li class="condition-film-item${film.featured ? ' is-featured' : ''}">
-              <button class="condition-film" type="button" data-film-src="${film.src}" aria-label="Play video ${i + 1}: ${film.cap}">
+            ${filmList.map((film, i) => `<li class="condition-film-item${film.featured ? ' is-featured' : ''}">
+              <button class="condition-film" type="button" data-film-src="${escapeHtml(film.src)}" aria-label="Play video ${i + 1}: ${escapeHtml(film.caption)}">
                 <span class="condition-film__frame">
-                  <span class="condition-film__fill" aria-hidden="true"><img src="${film.poster}" alt="" width="480" height="854" loading="lazy" decoding="async"></span>
-                  <img class="condition-film__poster" src="${film.poster}" alt="" width="480" height="854" loading="lazy" decoding="async">
+                  <span class="condition-film__fill" aria-hidden="true"><img src="${escapeHtml(film.poster)}" alt="" width="480" height="854" loading="lazy" decoding="async"></span>
+                  <img class="condition-film__poster" src="${escapeHtml(film.poster)}" alt="" width="480" height="854" loading="lazy" decoding="async">
                   <span class="condition-film__play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
-                  <span class="condition-film__dur">${film.dur}</span>
+                  <span class="condition-film__dur">${escapeHtml(film.duration)}</span>
                 </span>
               </button>
-              <span class="condition-film__cap">${film.cap}${film.featured ? ` <button type="button" class="condition-film__more" data-case-open><span>View More</span>${icon('arrow')}</button>` : ''}</span>
+              <span class="condition-film__cap">${escapeHtml(film.caption)}${film.featured && hasCase ? ` <button type="button" class="condition-film__more" data-case-open><span>View more</span>${icon('arrow')}</button>` : ''}</span>
             </li>`).join('')}
-          </ul>
-        </div>
+          </ul>` : ''}
+        </div>` : ''}
         <div class="condition-tracks">
           ${tracks
             .map((track) => ({
@@ -852,11 +882,11 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
             .join('')}
         </div>
       </div>
-      <dialog class="film-lightbox" data-film-lightbox aria-label="Documented case footage">
+      ${filmList.length ? `<dialog class="film-lightbox" data-film-lightbox aria-label="Documented case footage">
         <div class="film-lightbox__stage">
           <div class="film-lightbox__track" data-film-track>
-            ${films.map((film, i) => `<div class="film-lightbox__slide" data-film-slide>
-              <video class="film-lightbox__video" data-film-video data-film-src="${film.src}" poster="${film.poster}" playsinline preload="none" aria-label="Clip ${i + 1}: ${film.cap}"></video>
+            ${filmList.map((film, i) => `<div class="film-lightbox__slide" data-film-slide>
+              <video class="film-lightbox__video" data-film-video data-film-src="${escapeHtml(film.src)}" poster="${escapeHtml(film.poster)}" playsinline preload="none" aria-label="Clip ${i + 1}: ${escapeHtml(film.caption)}"></video>
             </div>`).join('')}
           </div>
         </div>
@@ -864,41 +894,23 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
         <button type="button" class="film-lightbox__nav film-lightbox__nav--next" data-film-next aria-label="Next clip">${icon('arrow')}</button>
         <p class="film-lightbox__counter" data-film-counter hidden></p>
         <button type="button" class="film-lightbox__close" data-film-close aria-label="Close">${icon('close')}</button>
-      </dialog>
-      <dialog class="case-lightbox" data-case-lightbox aria-label="${escapeHtml(conditionCase.kicker)}">
-        <div class="case-lightbox__card">
-          <p class="condition-case__kicker">${conditionCase.kicker}</p>
-          <blockquote class="condition-case__quote">${conditionCase.quote}</blockquote>
-          <ul class="condition-case__stats">${conditionCaseStats}</ul>
+      </dialog>` : ''}${caseOpener ? `
+      <dialog class="case-lightbox" data-case-lightbox aria-label="${filled(conditionsCopy.caseKicker) ? escapeHtml(conditionsCopy.caseKicker) : 'Documented case'}">
+        <div class="case-lightbox__card">${caseNoteLines(10, 'p')}
         </div>
         <button type="button" class="case-lightbox__close" data-case-close aria-label="Close">${icon('close')}</button>
-      </dialog>
+      </dialog>` : ''}
     </section>
 
     <section class="section watch" id="watch">
       <div class="container">
         <div class="watch__panel" data-reveal>
-          <div class="section-heading">
-            <div>
-              <p class="kicker">Symptoms</p>
-              <h2>Vulnerability — <em>signs to watch out for</em></h2>
-            </div>
-            <p>These are the signs that a wound, a limb, or the circulation needs attention. If any of them apply to you or someone you care for, have it assessed without waiting.</p>
-          </div>
+          ${sectionHeading(content.watch, { pad: 10, reveal: false })}
           <ul class="watch-list">
-            <li>Insulin-dependence / Diabetic foot</li>
-            <li>Non-healing wounds</li>
-            <li>Oozing wounds / blisters</li>
-            <li>Dark red / black spots on lower limbs</li>
-            <li>Varicose veins, venous ulcers</li>
-            <li>Congenital lymphedema</li>
-            <li>Oncology surgeries / radiation therapies</li>
-            <li>CKD – those on dialysis</li>
-            <li>CVI – breathlessness</li>
-            <li>Lumbar / sacral surgeries</li>
+            ${content.watch.items.map((item) => `<li>${escapeHtml(item)}</li>`).join('\n            ')}
           </ul>
           <aside class="watch-note">
-            <p>Prevention is better than <em>cure</em></p>
+            <p>${accentuate(content.watch.note, content.watch.noteAccent)}</p>
           </aside>
         </div>
       </div>
@@ -911,9 +923,9 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
         <div class="act__panel" data-reveal>
           <div class="act__layout">
             <div>
-              <h2>If amputation has been advised, talk to us <em>today</em></h2>
-              <p>The recovery shown above began after a vascular surgeon had already referred the patient for below-knee amputation. Early assessment and appropriate care improve the chance of limb preservation. One message is enough to begin.</p>
-              ${freeConsultNote('on-dark')}
+              <h2>${accentuate(content.act.heading, content.act.accent)}</h2>
+              <p>${escapeHtml(content.act.body)}</p>
+              ${freeConsultNote(content.consult, 'on-dark')}
             </div>
             <div class="act__actions">
               <a class="button button--inverse" href="${cta.href}"${ctaAttrs}>${cta.icon} ${cta.label}</a>
@@ -930,7 +942,7 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
 
     <section class="section about" id="about">
       <div class="container about__layout">
-        <div class="about__title" data-reveal><h2>About MediVasc</h2><p class="about__location">New Delhi, India</p></div>
+        <div class="about__title" data-reveal><h2>${escapeHtml(content.about.heading)}</h2>${filled(content.about.location) ? `<p class="about__location">${escapeHtml(content.about.location)}</p>` : ''}</div>
         <div class="about__copy" data-reveal style="--reveal-order:1">${aboutParagraphs}</div>
       </div>
     </section>
@@ -938,9 +950,9 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
     <section class="contact" id="contact">
       <div class="container contact__layout">
         <div class="contact__intro" data-reveal>
-          <h2>Start with <em>your case</em></h2>
-          <p>Tell us the condition, how long it has persisted, and what treatment has been tried. We will study the case and tell you honestly what a protocol can do.</p>
-          ${freeConsultNote()}
+          <h2>${accentuate(content.contact.heading, content.contact.accent)}</h2>
+          <p>${escapeHtml(content.contact.body)}</p>
+          ${freeConsultNote(content.consult)}
         </div>
         <div class="contact__details" data-reveal style="--reveal-order:1">
           ${company.phone ? `<a class="contact-row" href="tel:${telephone}">${icon('call')}<span><small>Phone</small>Call us</span></a>` : ''}
@@ -956,11 +968,11 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
     <div class="container footer__top">
       <span class="footer-brand">${footerLockup()}<span class="sr-only">MediVasc™</span></span>
       <p>${escapeHtml(company.tagline)}</p>
-      <nav aria-label="Footer navigation"><a href="#recoveries">Recoveries</a><a href="#approach">Approach</a><a href="#conditions">Conditions</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
+      <nav aria-label="Footer navigation">${footerNavHtml}</nav>
       ${footerSocial}
     </div>
     <div class="container footer__bottom">
-      <p>Recovery time varies for every patient depending on cause &amp; duration of the condition, comorbidities and the patient’s participation in treatment &amp; follow-ups. Recovery timeline may vary from our stated estimates.</p>
+      <p>${escapeHtml(content.footer.disclaimer)}</p>
       <p>© ${escapeHtml(company.legalName)}. All rights reserved.</p>
     </div>
   </footer>
@@ -973,4 +985,4 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
 </html>`;
 };
 
-module.exports = { renderPage, TREATMENT_PATIENTS };
+module.exports = { renderPage, phoneHref };

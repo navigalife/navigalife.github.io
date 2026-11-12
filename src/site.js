@@ -107,8 +107,11 @@
   }
 
   // Hero counters ease up to their target the first time they scroll into view.
-  // The authored text (e.g. "500+", "7.5k+") is parsed into prefix/number/suffix
-  // so any admin-entered value animates without hard-coding the format.
+  // The authored text (e.g. "500+", "7.5k+", "1,00,000+") is parsed into
+  // prefix/number/suffix so any admin-entered value animates without hard-coding
+  // the format. The last frame is the authored text itself, never a reformat,
+  // and the frames before it group digits the way the owner did: lakh grouping
+  // (1,00,000) counts up in en-IN, anything else in en-US.
   const counters = [...document.querySelectorAll('[data-count]')];
   if (counters.length) {
     const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -118,11 +121,13 @@
       const value = Number(match[2].replace(/,/g, ''));
       if (!Number.isFinite(value)) return null;
       const fraction = match[2].includes('.') ? match[2].split('.')[1].length : 0;
-      return { prefix: match[1], suffix: match[3], value, fraction, group: match[2].includes(',') };
+      const whole = match[2].split('.')[0];
+      const locale = /^\d{1,2}(,\d{2})+,\d{3}$/.test(whole) ? 'en-IN' : 'en-US';
+      return { text, prefix: match[1], suffix: match[3], value, fraction, group: match[2].includes(','), locale };
     };
     const format = (n, spec) =>
       spec.prefix +
-      n.toLocaleString('en-US', {
+      n.toLocaleString(spec.locale, {
         minimumFractionDigits: spec.fraction,
         maximumFractionDigits: spec.fraction,
         useGrouping: spec.group,
@@ -142,7 +147,7 @@
         const current = spec.fraction ? spec.value * eased : Math.round(spec.value * eased);
         element.textContent = format(current, spec);
         if (progress < 1) requestAnimationFrame(step);
-        else element.textContent = format(spec.value, spec);
+        else element.textContent = spec.text;
       };
       requestAnimationFrame(step);
     };
@@ -731,7 +736,41 @@
   } catch (error) {
     config = {};
   }
-  const conditions = Array.isArray(config.conditions) ? config.conditions.filter(Boolean) : [];
+  // Every word the bot says comes from data/content.json (chat) via this config.
+  // It is copy, not markup: escaped before it reaches innerHTML, and the only tag
+  // ever added is the <strong> around the first whole-word match of `bold`.
+  // wholeWordMatch is a verbatim copy of admin/content-rules.js wholeWordMatch
+  // (the test accentMatches() runs), so a bold part the admin accepts is one the
+  // bot bolds — change both together.
+  const text = (value) => (typeof value === 'string' ? value : '');
+  const escapeHtml = (value) =>
+    text(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  const wholeWordMatch = (text, word) => {
+    const target = String(word);
+    if (!target) return null;
+    const edge = /[\p{L}\p{M}\p{N}_]/u;
+    const chars = Array.from(target);
+    const source = target.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+    const re = new RegExp(
+      (edge.test(chars[0]) ? '(?<![\\p{L}\\p{M}\\p{N}_])' : '') + source + (edge.test(chars[chars.length - 1]) ? '(?![\\p{L}\\p{M}\\p{N}_])' : ''),
+      'iu',
+    );
+    const match = re.exec(String(text));
+    return match ? { index: match.index, length: match[0].length } : null;
+  };
+  const emphasize = (value, bold) => {
+    const raw = text(value);
+    const match = wholeWordMatch(raw, text(bold).trim());
+    if (!match) return escapeHtml(raw);
+    const end = match.index + match.length;
+    return escapeHtml(raw.slice(0, match.index)) + '<strong>' + escapeHtml(raw.slice(match.index, end)) + '</strong>' + escapeHtml(raw.slice(end));
+  };
+  const conditions = Array.isArray(config.conditions) ? config.conditions.filter((label) => text(label).trim()) : [];
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const AVATAR = 'assets/brand/icon-192.png';
   const WA_ICON =
@@ -740,12 +779,19 @@
     '<svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.7 5.5L19 9.2l-5.3 1.7L12 16l-1.7-5.1L5 9.2l5.3-1.7L12 2Z"/></svg>';
 
   const answers = { name: '', age: '', condition: '', city: '' };
-  const steps = [
-    { key: 'name', prompt: 'What is the <strong>patient’s name</strong>?', placeholder: 'Patient’s name', required: true },
-    { key: 'age', prompt: 'And the <strong>patient’s age</strong>?', placeholder: 'Patient’s age', required: true },
-    { key: 'condition', prompt: 'What <strong>medical condition</strong> are you seeking a solution for? Pick one below or type your own.', placeholder: 'Condition', required: true, chips: true, rotate: true },
-    { key: 'city', prompt: 'Which <strong>city</strong> are you from?', placeholder: 'Your city', required: true },
-  ];
+  // The four questions are fixed (name, age, condition, city — the content rules
+  // pin them); their wording is copy. The condition question offers the chips.
+  const BEHAVIOUR = { condition: { chips: true, rotate: true } };
+  const steps = (Array.isArray(config.questions) ? config.questions : [])
+    .filter((question) => question && Object.prototype.hasOwnProperty.call(answers, question.key))
+    .map((question) => ({
+      key: question.key,
+      prompt: emphasize(question.prompt, question.bold),
+      placeholder: text(question.placeholder),
+      required: true,
+      ...BEHAVIOUR[question.key],
+    }));
+  if (!steps.length) return;
   let stepIndex = -1;
   let started = false;
   let busy = false;
@@ -782,6 +828,14 @@
   };
 
   const stopRotate = () => { if (rotateTimer) { clearTimeout(rotateTimer); rotateTimer = null; } };
+  // The owner's answer hint, with one trailing ellipsis (never doubled when the
+  // hint already ends in "…" or "..."). The condition question shows example
+  // conditions from the chips instead (owner call: keep the live behaviour).
+  const hint = (step) => {
+    if (step.key === 'condition' && conditions.length) return `e.g. ${conditions.slice(0, 3).join(', ')}…`;
+    const value = step.placeholder.trim();
+    return !value || /(…|\.\.\.)$/.test(value) ? value : `${value}…`;
+  };
   const startRotate = (step) => {
     stopRotate();
     if (!step.rotate || reduceMotion || !conditions.length) return;
@@ -805,7 +859,7 @@
   const buildQuick = (step) => {
     quick.innerHTML = '';
     if (step.chips) {
-      conditions.slice(0, 4).forEach((label) => {
+      conditions.forEach((label) => {
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'mvbot__chip';
@@ -829,10 +883,7 @@
     form.hidden = false;
     input.value = '';
     input.disabled = false;
-    input.placeholder =
-      step.key === 'condition' && conditions.length
-        ? `e.g. ${conditions.slice(0, 3).join(', ')}…`
-        : `${step.placeholder}…`;
+    input.placeholder = hint(step);
     updateSend();
     buildQuick(step);
     startRotate(step);
@@ -860,18 +911,18 @@
 
   const waHref = () => {
     const lines = [
-      'Hello MediVasc, I would like to request a solution.',
+      text(config.messageOpening),
       '',
       `Patient: ${answers.name}`,
     ];
     if (answers.age) lines.push(`Age: ${answers.age}`);
     lines.push(`Condition: ${answers.condition}`);
     if (answers.city) lines.push(`City: ${answers.city}`);
-    lines.push('', 'Please advise on a possible protocol.');
-    const text = encodeURIComponent(lines.join('\n'));
-    if (config.wa) return `https://wa.me/${config.wa}?text=${text}`;
+    lines.push('', text(config.messageClosing));
+    const encoded = encodeURIComponent(lines.join('\n'));
+    if (config.wa) return `https://wa.me/${config.wa}?text=${encoded}`;
     if (config.email) {
-      return `mailto:${config.email}?subject=${encodeURIComponent(`Solution request: ${answers.name}`)}&body=${text}`;
+      return `mailto:${config.email}?subject=${encodeURIComponent(`Solution request: ${answers.name}`)}&body=${encoded}`;
     }
     return '#contact';
   };
@@ -923,7 +974,7 @@
     started = true;
     stepIndex = steps.length;
     form.hidden = true;
-    addBot('Welcome back 🙏 Here’s the request you set up. Send it on WhatsApp whenever you’re ready.');
+    addBot(escapeHtml(config.welcomeBack));
     addSummary();
     root.classList.add('mvbot--engaged');
   };
@@ -937,7 +988,7 @@
   const finish = async () => {
     stepIndex = steps.length;
     closeComposer();
-    await botSay('Perfect. Here’s your request. Send it to us on WhatsApp and we’ll get back to you personally.', 820);
+    await botSay(escapeHtml(config.done), 820);
     addSummary();
     root.classList.add('mvbot--engaged');
     persist();
@@ -976,12 +1027,12 @@
     stepIndex = -1;
     log.innerHTML = '';
     root.classList.remove('mvbot--engaged');
-    await botSay('No problem, let’s update the details.', 420);
+    await botSay(escapeHtml(config.restart), 420);
     await askStep(0);
   }
 
   const runIntro = async () => {
-    await botSay('Namaste 🙏 I’m the <strong>MediVasc Assistant</strong>. A few quick taps and I’ll set up your request for a customized solution.', 620);
+    await botSay(emphasize(config.greeting, config.greetingBold), 620);
     await askStep(0);
   };
 

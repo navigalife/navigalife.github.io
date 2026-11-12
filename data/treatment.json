@@ -1,0 +1,25 @@
+[
+  {
+    "location": "Maharashtra",
+    "label": "",
+    "photos": [
+      "assets/treatment/treatment-01.webp",
+      "assets/treatment/treatment-02.webp"
+    ]
+  },
+  {
+    "location": "Gurugram, Haryana",
+    "label": "",
+    "photos": [
+      "assets/treatment/treatment-03.webp"
+    ]
+  },
+  {
+    "location": "Visakhapatnam, Andhra Pradesh",
+    "label": "",
+    "photos": [
+      "assets/treatment/treatment-04.webp",
+      "assets/treatment/treatment-05.webp"
+    ]
+  }
+]

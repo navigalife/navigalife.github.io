@@ -66,7 +66,13 @@ const drawEvidenceWatermark = (context, w) => {
 // with the same soft contact shadow and the locked watermark. The subject mask
 // comes from the API's /cutout (Cloudflare Images, segment: foreground). Do not
 // tweak these constants per image: consistency across stories is the point.
-const CUTOUT_MAX_EDGE = 1600; // >= the 640x800 crop at 2x zoom, so no upscaling
+// The 4:5 crop frame and its zoom cap (#crop-canvas, #crop-zoom max): the cutout
+// is sized from what that frame can show, so the subject layer is never upscaled.
+const CROP_FRAME = { w: 640, h: 800, zoom: 2 };
+// /cutout refuses bodies over 15 MB (traffic/worker.js CUTOUT_MAX_BYTES); keep
+// the work canvas well inside that whatever the source size.
+const CUTOUT_MAX_PIXELS = 16e6;
+const CUTOUT_MAX_BYTES = 15 * 1024 * 1024;
 const smoothstep = (e0, e1, t) => {
   const x = Math.min(1, Math.max(0, (t - e0) / (e1 - e0)));
   return x * x * (3 - 2 * x);
@@ -202,17 +208,37 @@ const shadowLayer = (subject, drawnWidth, frameWidth) => {
   return canvas;
 };
 
-const cutoutSubject = async (image, cutout) => {
-  const scale = Math.min(1, CUTOUT_MAX_EDGE / Math.max(image.width, image.height));
+// The canonical backdrop + contact shadow + subject, drawn at (x, y, width,
+// height) inside a frame the size of `context`'s canvas. The crop dialog and the
+// redaction dialog share this so every cleaned photo is composed the same way.
+const drawCleanSubject = (context, subject, backdrop, x, y, width, height) => {
+  const frame = context.canvas;
+  context.drawImage(backdrop, 0, 0);
+  context.drawImage(shadowLayer(subject, width, frame.width), x, y + Math.round(frame.height * 0.008), width, height);
+  context.drawImage(subject.layer, x, y, width, height);
+};
+
+// The cutout's working resolution. The 4:5 crop draws the photo at cover scale
+// times zoom, so at full zoom it needs max(1280/W, 1600/H) of the source (a
+// landscape subject is limited by its height, not its long edge); natural-aspect
+// callers pass 1 (their output is the source size). Never above the source.
+const cropCutoutScale = (image) => CROP_FRAME.zoom * Math.max(CROP_FRAME.w / image.width, CROP_FRAME.h / image.height);
+const encodeJpeg = (canvas, quality) => new Promise((resolve, reject) => canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('This browser could not encode the image.'))), 'image/jpeg', quality));
+const cutoutSubject = async (image, cutout, wanted = cropCutoutScale(image)) => {
+  const scale = Math.min(1, wanted, Math.sqrt(CUTOUT_MAX_PIXELS / (image.width * image.height)));
   const w = Math.max(1, Math.round(image.width * scale));
   const h = Math.max(1, Math.round(image.height * scale));
   const work = document.createElement('canvas');
   work.width = w;
   work.height = h;
   const context = work.getContext('2d', { willReadFrequently: true });
+  // Transparent pixels (a PNG with alpha) sit on the canonical backdrop, so any
+  // the cutout keeps inside the subject read as backdrop, never as black.
+  context.drawImage(paintBackdrop(w, h), 0, 0);
   context.drawImage(image, 0, 0, w, h);
   const photo = context.getImageData(0, 0, w, h);
-  const sent = await new Promise((resolve, reject) => work.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('This browser could not encode the image.'))), 'image/jpeg', 0.92));
+  let sent = await encodeJpeg(work, 0.92);
+  if (sent.size > CUTOUT_MAX_BYTES) sent = await encodeJpeg(work, 0.8);
   const png = await createImageBitmap(await cutout(sent));
   context.clearRect(0, 0, w, h);
   context.drawImage(png, 0, 0, w, h);
@@ -221,9 +247,39 @@ const cutoutSubject = async (image, cutout) => {
   return prepareSubject(photo, cut);
 };
 
-// options.cutout(blob) -> Promise<Blob PNG with alpha>; when given (recovery
-// photos), the dialog offers "Clean background", on by default once ready.
-export const cropEvidenceImage = async (file, label, { cutout } = {}) => {
+// The whole dialog has to fit the screen (image, controls, and the save button,
+// with no scrolling), so the canvas' displayed width is capped until its height
+// fits what the rest of the dialog leaves free. The dialog's max-height must
+// resolve to px (styles.css sets it in dvh at every width; the UA default is a
+// percentage, reads as NaN, and skips the fit). `frame` is the canvas' own box
+// when it has one (the redaction stage). Phones and laptop screens hit the cap.
+const fitToScreen = (dialog, canvas, frame = canvas) => {
+  canvas.style.maxWidth = '';
+  const limit = parseFloat(getComputedStyle(dialog).maxHeight);
+  if (!dialog.open || !Number.isFinite(limit) || !canvas.offsetHeight) return;
+  const style = getComputedStyle(frame);
+  const framePad = frame === canvas ? 0 : parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+  const total = dialog.scrollHeight + dialog.offsetHeight - dialog.clientHeight;
+  // -1: offsetHeight/scrollHeight are integers but the form can be fractional
+  // (W2c: 0.7px at 360 with two-line buttons) — absorb it so the dialog never scrolls.
+  const room = Math.floor(limit - (total - frame.offsetHeight) - framePad) - 1;
+  if (canvas.offsetHeight > room) canvas.style.maxWidth = 'min(100%, ' + Math.max(96, Math.floor((room * canvas.offsetWidth) / canvas.offsetHeight)) + 'px)';
+};
+
+// A failed /cutout never falls back on its own: the toggle stays on, saving
+// stays blocked, and the owner picks "Try again" or "Use original background"
+// (or switches the toggle off). An uncleaned photo is only ever saved on purpose.
+const cleanFailureText = (error) => (error && error.message ? error.message : 'Background cleaning failed.') + ' The background was not cleaned.';
+
+// options.cutout(blob) -> Promise<Blob PNG with alpha>; when given, the dialog
+// offers a per-image "Clean background" toggle that starts at
+// options.cleanDefault (on unless false). On: the subject on the canonical gray
+// backdrop. Off: the original background, and /cutout is never called. The
+// cutout is fetched once, on first need, so flipping the toggle never re-requests
+// it. The canvas always shows exactly what "Use crop" saves; "Use crop" waits
+// while a cleaned preview is on its way and stays blocked after a failure until
+// the owner chooses (cleanFailureText).
+export const cropEvidenceImage = async (file, label, { cutout, cleanDefault } = {}) => {
   assertImage(file);
   const image = await createImageBitmap(file, { imageOrientation: 'from-image' });
   const dialog = document.querySelector('#crop-dialog');
@@ -235,16 +291,19 @@ export const cropEvidenceImage = async (file, label, { cutout } = {}) => {
   const clean = document.querySelector('#crop-clean');
   const note = document.querySelector('#crop-note');
   const apply = document.querySelector('#crop-apply');
+  const choice = document.querySelector('#crop-choice');
   document.querySelector('#crop-title').textContent = `Crop ${label} image`;
   zoom.value = '1';
   positionX.value = '0';
   positionY.value = '0';
   cleanRow.hidden = !cutout;
-  clean.checked = false;
-  clean.disabled = true;
+  clean.checked = Boolean(cutout && (cleanDefault ?? true));
+  clean.disabled = false;
   note.textContent = '';
+  choice.hidden = true;
   apply.disabled = false;
   let subject = null;
+  let pending = false;
   let backdrop = null;
   let open = true;
 
@@ -260,9 +319,7 @@ export const cropEvidenceImage = async (file, label, { cutout } = {}) => {
     const y = -(overflowY / 2) + (Number(positionY.value) * overflowY / 2);
     if (subject && clean.checked) {
       if (!backdrop || backdrop.width !== canvas.width || backdrop.height !== canvas.height) backdrop = paintBackdrop(canvas.width, canvas.height);
-      context.drawImage(backdrop, 0, 0);
-      context.drawImage(shadowLayer(subject, width, canvas.width), x, y + Math.round(canvas.height * 0.008), width, height);
-      context.drawImage(subject.layer, x, y, width, height);
+      drawCleanSubject(context, subject, backdrop, x, y, width, height);
     } else {
       context.fillStyle = '#F5F8F9';
       context.fillRect(0, 0, canvas.width, canvas.height);
@@ -270,42 +327,77 @@ export const cropEvidenceImage = async (file, label, { cutout } = {}) => {
     }
     drawEvidenceWatermark(context, canvas.width);
   };
-  const update = () => draw();
-  zoom.addEventListener('input', update);
-  positionX.addEventListener('input', update);
-  positionY.addEventListener('input', update);
-  clean.addEventListener('change', update);
-  draw();
-
-  if (cutout) {
-    note.textContent = 'Cleaning background…';
-    apply.disabled = true;
+  const fit = () => fitToScreen(dialog, canvas);
+  const setNote = (text) => {
+    note.textContent = text;
+    fit();
+  };
+  // "Use crop" saves the canvas as drawn, so it waits only while a cleaned
+  // preview the owner asked for is still on its way.
+  const sync = () => {
+    apply.disabled = clean.checked && !subject;
+    draw();
+  };
+  const requestClean = () => {
+    if (subject || pending) return;
+    pending = true;
+    choice.hidden = true;
+    setNote('Cleaning background…');
     cutoutSubject(image, cutout).then((result) => {
       if (!open) return;
       subject = result;
-      clean.checked = true;
-      clean.disabled = false;
-      note.textContent = '';
-      draw();
+      setNote('');
     }).catch((error) => {
       if (!open) return;
-      note.textContent = (error && error.message ? error.message : 'Background cleaning failed.') + ' Using the original photo.';
+      // Only an owner still asking for a clean photo has a choice to make.
+      choice.hidden = !clean.checked;
+      setNote(clean.checked ? cleanFailureText(error) : '');
     }).finally(() => {
-      if (open) apply.disabled = false;
+      pending = false;
+      if (open) sync();
     });
-  }
+  };
+  const onClean = () => {
+    if (clean.checked) requestClean();
+    else if (!pending) {
+      choice.hidden = true;
+      setNote('');
+    }
+    sync();
+  };
+  const onChoice = (event) => {
+    const action = event.target.closest('[data-clean]')?.dataset.clean;
+    if (action === 'retry') requestClean();
+    if (action === 'skip') {
+      clean.checked = false;
+      choice.hidden = true;
+      setNote('');
+    }
+    sync();
+  };
+  choice.addEventListener('click', onChoice);
+  zoom.addEventListener('input', draw);
+  positionX.addEventListener('input', draw);
+  positionY.addEventListener('input', draw);
+  clean.addEventListener('change', onClean);
+  window.addEventListener('resize', fit);
+  if (clean.checked) requestClean();
+  sync();
 
   const accepted = await new Promise((resolve) => {
-    const close = () => resolve(dialog.returnValue === 'default');
-    dialog.addEventListener('close', close, { once: true });
+    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'default'), { once: true });
+    dialog.returnValue = ''; // Escape keeps the previous value; never let it read as "Use crop"
     dialog.showModal();
+    fit();
   });
   open = false;
   apply.disabled = false;
-  zoom.removeEventListener('input', update);
-  positionX.removeEventListener('input', update);
-  positionY.removeEventListener('input', update);
-  clean.removeEventListener('change', update);
+  zoom.removeEventListener('input', draw);
+  positionX.removeEventListener('input', draw);
+  positionY.removeEventListener('input', draw);
+  clean.removeEventListener('change', onClean);
+  choice.removeEventListener('click', onChoice);
+  window.removeEventListener('resize', fit);
   image.close();
   if (!accepted) return null;
   return canvasBlob(canvas, 0.88);
@@ -335,6 +427,32 @@ export const resizeFeedbackImage = async (file) => {
 // function so the WYSIWYG preview and the baked output cannot drift apart.
 const redactRadius = (w, h) => Math.max(8, Math.round(Math.min(w, h) * 0.7));
 
+// One redaction box of `source`, as an opaque tile that fully replaces the box
+// when drawn at (x, y) on the same pixel scale. The blur samples the real
+// neighbours around the box; then every tile pixel is divided by its own
+// coverage (getImageData un-premultiplies) and made opaque. A plain clipped blur
+// fades toward transparent where its kernel runs off the image, so a box near an
+// edge (where chat headers put the contact name) let up to half of the sharp
+// original show through (measured: alpha 127/255 at the border). The live
+// preview and the bake both use this, so they cannot drift apart.
+const redactionTile = (source, box) => {
+  const x = Math.max(0, Math.floor(box.x));
+  const y = Math.max(0, Math.floor(box.y));
+  const w = Math.min(source.width, Math.ceil(box.x + box.w)) - x;
+  const h = Math.min(source.height, Math.ceil(box.y + box.h)) - y;
+  if (w < 1 || h < 1) return null;
+  const tile = document.createElement('canvas');
+  tile.width = w;
+  tile.height = h;
+  const t = tile.getContext('2d', { willReadFrequently: true });
+  t.filter = `blur(${redactRadius(box.w, box.h)}px)`;
+  t.drawImage(source, -x, -y);
+  const pixels = t.getImageData(0, 0, w, h);
+  for (let i = 3; i < pixels.data.length; i += 4) pixels.data[i] = 255;
+  t.putImageData(pixels, 0, 0);
+  return { canvas: tile, x, y };
+};
+
 // Identity-redaction tool for chat-screenshot uploads. The editor drags one box
 // per avatar / contact name / phone number; each is baked as a heavy, permanent
 // Gaussian blur (non-generative — pixels are smeared, never invented). This is
@@ -343,19 +461,52 @@ const redactRadius = (w, h) => Math.max(8, Math.round(Math.min(w, h) * 0.7));
 // is baked here is exactly what ships. Boxes live in DISPLAY-canvas coordinates
 // and are mapped to natural pixels at bake time. Resolves to a WebP blob, or
 // null if the editor cancels the upload.
-export const redactImage = async (blob, label = 'screenshot') => {
+//
+// options.cutout: offer "Clean background" (natural aspect, no watermark), off
+// unless options.cleanDefault is true. PRIVACY ORDER: redact FIRST, then cutout.
+// The boxes are drawn on the original; "Bake blur & clean" burns every box into
+// a natural-size copy (bakeRedacted), and only that copy is sent to /cutout. The
+// cleaned result is built from the redacted pixels alone (subject from the
+// redacted copy, backdrop painted), so the sharp original never leaves the
+// browser and can never reappear: a box over the subject stays blurred, a box
+// over the background becomes backdrop. The canvas then shows that result, and
+// "Use cleaned image" saves exactly it; editing a box drops back to the original
+// and the next save cleans again.
+export const redactImage = async (blob, label = 'screenshot', { cutout, cleanDefault } = {}) => {
   const image = await createImageBitmap(blob, { imageOrientation: 'from-image' });
   const dialog = document.querySelector('#redact-dialog');
   const canvas = document.querySelector('#redact-canvas');
+  const stage = dialog.querySelector('.redact-stage');
   const removeButton = document.querySelector('#redact-remove');
   const clearButton = document.querySelector('#redact-clear');
+  const editButton = document.querySelector('#redact-edit');
   const countLabel = document.querySelector('#redact-count');
+  const announce = document.querySelector('#redact-announce');
   const title = document.querySelector('#redact-title');
+  const cleanRow = document.querySelector('#redact-clean-row');
+  const clean = document.querySelector('#redact-clean');
+  const note = document.querySelector('#redact-note');
+  const choice = document.querySelector('#redact-choice');
+  const apply = document.querySelector('#redact-apply');
   title.textContent = `Blur identifying details — ${label}`;
+  cleanRow.hidden = !cutout;
+  clean.checked = Boolean(cutout && cleanDefault);
+  note.textContent = '';
+  choice.hidden = true;
+  apply.disabled = false;
+  let cleaned = null; // { key, canvas }: natural-size result cleaned from the redacted copy
+  let reviewing = false; // the canvas shows `cleaned` (what will be saved), editing paused
+  let pending = false;
+  let run = 0; // a toggle-off or new request makes an in-flight result stale
+  let open = true;
 
   // Fit the working canvas inside the viewport; boxes are stored at this scale.
+  // From 1024px wide the controls sit beside the image (styles.css), so it may
+  // take the screen height less the heading, buttons and margins (~240px);
+  // fitToScreen trims the displayed size to what is actually free.
+  const sideBySide = window.matchMedia('(min-width: 1024px)').matches;
   const maxW = Math.min(680, Math.round(window.innerWidth * 0.84));
-  const maxH = Math.min(760, Math.round(window.innerHeight * 0.6));
+  const maxH = Math.min(760, sideBySide ? window.innerHeight - 240 : Math.round(window.innerHeight * 0.6));
   const fit = Math.min(maxW / image.width, maxH / image.height, 1);
   canvas.width = Math.max(1, Math.round(image.width * fit));
   canvas.height = Math.max(1, Math.round(image.height * fit));
@@ -379,22 +530,58 @@ export const redactImage = async (blob, label = 'screenshot') => {
     b.y = Math.max(0, Math.min(b.y, canvas.height - b.h));
     return b;
   };
+  // The boxes that bake (the MIN filter matches bakeRedacted), as a key: a cleaned
+  // result is only ever saved for the exact boxes it was cleaned with.
+  const baked = () => boxes.map(norm).filter((b) => b.w >= MIN && b.h >= MIN);
+  const boxKey = () => JSON.stringify(baked());
 
+  // Every box burned into a natural-size copy of the original: the plain save,
+  // and the only image /cutout ever receives.
+  const bakeRedacted = () => {
+    const out = document.createElement('canvas');
+    out.width = image.width;
+    out.height = image.height;
+    const octx = out.getContext('2d');
+    octx.drawImage(image, 0, 0);
+    for (const b of baked()) {
+      const tile = redactionTile(image, { x: b.x / scale, y: b.y / scale, w: b.w / scale, h: b.h / scale });
+      if (tile) octx.drawImage(tile.canvas, tile.x, tile.y);
+    }
+    return out;
+  };
+
+  // The original at display size, plus each box's blur tile at its current
+  // geometry, so a drag re-blurs only the box being dragged.
+  const photo = document.createElement('canvas');
+  photo.width = canvas.width;
+  photo.height = canvas.height;
+  photo.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+  let tiles = new Map();
+
+  const boxCount = () => {
+    const n = baked().length;
+    return `${n} box${n === 1 ? '' : 'es'}`;
+  };
   const draw = () => {
+    countLabel.textContent = boxCount();
+    removeButton.disabled = pending || selected < 0;
+    clearButton.disabled = pending || boxes.length === 0;
     context.clearRect(0, 0, canvas.width, canvas.height);
-    context.filter = 'none';
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    if (reviewing) {
+      context.drawImage(cleaned.canvas, 0, 0, canvas.width, canvas.height);
+      return;
+    }
+    const shown = new Map();
+    context.drawImage(photo, 0, 0);
     boxes.forEach((raw, index) => {
       const b = norm(raw);
       if (b.w < 1 || b.h < 1) return;
-      context.save();
-      context.beginPath();
-      context.rect(b.x, b.y, b.w, b.h);
-      context.clip();
-      context.filter = `blur(${redactRadius(b.w, b.h)}px)`;
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      context.restore();
-      context.filter = 'none';
+      const id = b.x + ',' + b.y + ',' + b.w + ',' + b.h;
+      const tile = tiles.get(id) || redactionTile(photo, b);
+      if (tile) {
+        shown.set(id, tile);
+        context.drawImage(tile.canvas, tile.x, tile.y);
+      }
       context.lineWidth = index === selected ? 2 : 1.5;
       context.setLineDash(index === selected ? [] : [5, 4]);
       context.strokeStyle = index === selected ? '#0E5F76' : 'rgba(255,255,255,0.9)';
@@ -406,10 +593,7 @@ export const redactImage = async (blob, label = 'screenshot') => {
       }
     });
     context.setLineDash([]);
-    const n = boxes.filter((raw) => { const b = norm(raw); return b.w >= MIN && b.h >= MIN; }).length;
-    countLabel.textContent = `${n} box${n === 1 ? '' : 'es'}`;
-    removeButton.disabled = selected < 0;
-    clearButton.disabled = boxes.length === 0;
+    tiles = shown;
   };
 
   const toCanvas = (event) => {
@@ -431,6 +615,8 @@ export const redactImage = async (blob, label = 'screenshot') => {
   };
 
   const onDown = (event) => {
+    if (pending) return;
+    if (reviewing) { backToEdit(); return; } // touching the cleaned result means "edit the boxes"
     const p = toCanvas(event);
     if (selected >= 0 && onHandle(norm(boxes[selected]), p)) {
       const b = norm(boxes[selected]);
@@ -449,15 +635,23 @@ export const redactImage = async (blob, label = 'screenshot') => {
         drag = { mode: 'new', index: selected };
       }
     }
+    drag.pointerId = event.pointerId;
     try { canvas.setPointerCapture(event.pointerId); } catch { /* no active pointer */ }
     draw();
   };
+  // A box removed mid-drag (Delete, Clear all) ends that drag.
+  const endDrag = () => {
+    if (!drag) return;
+    try { canvas.releasePointerCapture(drag.pointerId); } catch { /* already released */ }
+    drag = null;
+  };
   const onMove = (event) => {
     if (!drag) return;
+    const b = boxes[drag.index];
+    if (!b) { endDrag(); return; }
     const p = toCanvas(event);
     const cx = Math.max(0, Math.min(p.x, canvas.width));
     const cy = Math.max(0, Math.min(p.y, canvas.height));
-    const b = boxes[drag.index];
     if (drag.mode === 'move') {
       b.x = drag.origX + (p.x - drag.startX);
       b.y = drag.origY + (p.y - drag.startY);
@@ -471,6 +665,7 @@ export const redactImage = async (blob, label = 'screenshot') => {
   const onUp = (event) => {
     if (!drag) return;
     try { canvas.releasePointerCapture(event.pointerId); } catch { /* already released */ }
+    if (!boxes[drag.index]) { drag = null; draw(); return; }
     const b = norm(boxes[drag.index]);
     if (b.w < MIN || b.h < MIN) {
       boxes.splice(drag.index, 1);
@@ -482,8 +677,65 @@ export const redactImage = async (blob, label = 'screenshot') => {
     draw();
   };
 
-  const onRemove = () => { if (selected >= 0) { boxes.splice(selected, 1); selected = -1; draw(); } };
-  const onClear = () => { boxes = []; selected = -1; draw(); };
+  const say = (text) => { announce.textContent = text; };
+  const onRemove = () => {
+    if (pending || reviewing || selected < 0) return;
+    endDrag();
+    boxes.splice(selected, 1);
+    selected = -1;
+    draw();
+    say(`Box removed. ${boxCount()} left.`);
+  };
+  const onClear = () => { if (pending || reviewing) return; endDrag(); boxes = []; selected = -1; draw(); say('All boxes cleared.'); };
+
+  // Keyboard editing on the focused canvas: N adds a centred box, arrows move
+  // the selected box (Shift: bigger steps), Alt/Option + arrows resize it, [ and ]
+  // step through the boxes, Delete removes it. Tab is never handled, so focus
+  // always moves on; Escape still closes the dialog.
+  const STEP = 2;
+  const BIG_STEP = 20;
+  const ARROWS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+  const selectedText = () => `Box ${selected + 1} of ${boxes.length} selected.`;
+  const onCanvasKey = (event) => {
+    if (event.ctrlKey || event.metaKey || drag) return;
+    const key = event.key;
+    const arrow = ARROWS[key];
+    const add = key === 'n' || key === 'N';
+    const cycle = key === '[' || key === ']';
+    if (!arrow && !add && !cycle) return;
+    event.preventDefault(); // arrows would otherwise scroll the stage
+    if (pending) return;
+    if (reviewing) { backToEdit(); say('Editing the blur boxes again.'); return; }
+    if (add) {
+      const w = Math.max(MIN * 2, Math.round(canvas.width * 0.3));
+      const h = Math.max(MIN * 2, Math.round(Math.min(canvas.height * 0.08, canvas.width * 0.12)));
+      boxes.push(clampBox({ x: Math.round((canvas.width - w) / 2), y: Math.round((canvas.height - h) / 2), w, h }));
+      selected = boxes.length - 1;
+      draw();
+      say(`Box added. ${selectedText()}`);
+      return;
+    }
+    if (!boxes.length) { say('No boxes yet. Press N to add one.'); return; }
+    if (cycle) {
+      const dir = key === ']' ? 1 : -1;
+      selected = selected < 0 ? (dir > 0 ? 0 : boxes.length - 1) : (selected + dir + boxes.length) % boxes.length;
+      draw();
+      say(selectedText());
+      return;
+    }
+    if (selected < 0) { say('No box selected. Press ] to select one.'); return; }
+    const step = event.shiftKey ? BIG_STEP : STEP;
+    const b = norm(boxes[selected]);
+    if (event.altKey) {
+      b.w = Math.max(MIN, Math.min(b.w + arrow[0] * step, canvas.width - b.x));
+      b.h = Math.max(MIN, Math.min(b.h + arrow[1] * step, canvas.height - b.y));
+    } else {
+      b.x += arrow[0] * step;
+      b.y += arrow[1] * step;
+    }
+    boxes[selected] = clampBox(b);
+    draw();
+  };
   const onKey = (event) => {
     if ((event.key === 'Delete' || event.key === 'Backspace') && selected >= 0) {
       event.preventDefault();
@@ -491,53 +743,146 @@ export const redactImage = async (blob, label = 'screenshot') => {
     }
   };
 
+  const fitDialog = () => fitToScreen(dialog, canvas, stage);
+  const setNote = (text) => {
+    note.textContent = text;
+    fitDialog();
+  };
+  // The primary button is the plain bake (toggle off), the blur-then-clean step
+  // (toggle on), or, once the cleaned result is on screen, saving exactly that.
+  // A failure blocks it until the owner picks "Try again" or "Use original
+  // background" (cleanFailureText).
+  const sync = () => {
+    if (reviewing && (!clean.checked || !cleaned || cleaned.key !== boxKey())) reviewing = false;
+    apply.textContent = !clean.checked ? 'Blur & use' : reviewing ? 'Use cleaned image' : 'Blur & clean';
+    apply.disabled = pending || (clean.checked && !choice.hidden);
+    removeButton.hidden = reviewing;
+    clearButton.hidden = reviewing;
+    editButton.hidden = !reviewing;
+    draw();
+    fitDialog();
+  };
+  const REVIEW_NOTE = 'Background cleaned. This is the image that will be saved.';
+  const backToEdit = () => {
+    reviewing = false;
+    setNote('');
+    sync();
+  };
+  const requestClean = () => {
+    const key = boxKey();
+    choice.hidden = true;
+    if (cleaned && cleaned.key === key) { // same boxes as last time: no second request
+      reviewing = true;
+      setNote(REVIEW_NOTE);
+      sync();
+      return;
+    }
+    const mine = ++run;
+    pending = true;
+    setNote('Blurring, then cleaning the background…');
+    sync();
+    const redacted = bakeRedacted(); // every box burned in BEFORE anything leaves the browser
+    cutoutSubject(redacted, cutout, 1).then((subject) => {
+      if (!open || mine !== run) return;
+      const result = document.createElement('canvas');
+      result.width = redacted.width;
+      result.height = redacted.height;
+      drawCleanSubject(result.getContext('2d'), subject, paintBackdrop(result.width, result.height), 0, 0, result.width, result.height);
+      cleaned = { key, canvas: result };
+      reviewing = true;
+      setNote(REVIEW_NOTE);
+    }).catch((error) => {
+      if (!open || mine !== run) return;
+      choice.hidden = false;
+      setNote(cleanFailureText(error));
+    }).finally(() => {
+      if (mine !== run) return;
+      pending = false;
+      if (open) sync();
+    });
+  };
+  const onClean = () => {
+    if (pending) { // switching the toggle abandons an in-flight clean
+      run += 1;
+      pending = false;
+    }
+    reviewing = false;
+    choice.hidden = true;
+    setNote('');
+    sync();
+  };
+  const onChoice = (event) => {
+    const action = event.target.closest('[data-clean]')?.dataset.clean;
+    if (action === 'retry') requestClean();
+    if (action === 'skip') {
+      clean.checked = false;
+      onClean();
+    }
+  };
+  const onApply = (event) => {
+    if (!clean.checked || reviewing) return; // the plain bake, or the cleaned result on screen
+    event.preventDefault();
+    requestClean();
+  };
+
   canvas.addEventListener('pointerdown', onDown);
+  canvas.addEventListener('keydown', onCanvasKey);
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerup', onUp);
   canvas.addEventListener('pointercancel', onUp);
   removeButton.addEventListener('click', onRemove);
   clearButton.addEventListener('click', onClear);
+  editButton.addEventListener('click', backToEdit);
   dialog.addEventListener('keydown', onKey);
-  draw();
+  clean.addEventListener('change', onClean);
+  choice.addEventListener('click', onChoice);
+  apply.addEventListener('click', onApply);
+  window.addEventListener('resize', fitDialog);
+  sync();
 
+  announce.textContent = '';
   const accepted = await new Promise((resolve) => {
     dialog.addEventListener('close', () => resolve(dialog.returnValue === 'default'), { once: true });
+    dialog.returnValue = ''; // Escape keeps the previous value; never let it read as a save
     dialog.showModal();
+    fitDialog();
   });
+  open = false;
+  run += 1;
 
   canvas.removeEventListener('pointerdown', onDown);
+  canvas.removeEventListener('keydown', onCanvasKey);
   canvas.removeEventListener('pointermove', onMove);
   canvas.removeEventListener('pointerup', onUp);
   canvas.removeEventListener('pointercancel', onUp);
   removeButton.removeEventListener('click', onRemove);
   clearButton.removeEventListener('click', onClear);
+  editButton.removeEventListener('click', backToEdit);
   dialog.removeEventListener('keydown', onKey);
+  clean.removeEventListener('change', onClean);
+  choice.removeEventListener('click', onChoice);
+  apply.removeEventListener('click', onApply);
+  window.removeEventListener('resize', fitDialog);
+  // With the toggle on, the only saveable state is the cleaned result on screen
+  // for these exact boxes (onApply). Anything else is refused, never saved plain.
+  const cleanedOut = clean.checked && reviewing && cleaned && cleaned.key === boxKey() ? cleaned.canvas : null;
+  apply.textContent = 'Blur & use';
+  apply.disabled = false;
+  removeButton.hidden = false;
+  clearButton.hidden = false;
+  editButton.hidden = true;
 
-  if (!accepted) { image.close(); return null; }
-
-  // Bake at natural resolution: redraw the whole image blurred, clipped to each
-  // box, so the blur samples real neighbours (no dark clip-edge halo).
-  const out = document.createElement('canvas');
-  out.width = image.width;
-  out.height = image.height;
-  const octx = out.getContext('2d');
-  octx.drawImage(image, 0, 0);
-  for (const raw of boxes) {
-    const b = norm(raw);
-    if (b.w < MIN || b.h < MIN) continue;
-    const bx = b.x / scale;
-    const by = b.y / scale;
-    const bw = b.w / scale;
-    const bh = b.h / scale;
-    octx.save();
-    octx.beginPath();
-    octx.rect(bx, by, bw, bh);
-    octx.clip();
-    octx.filter = `blur(${redactRadius(bw, bh)}px)`;
-    octx.drawImage(image, 0, 0);
-    octx.restore();
+  if (!accepted) {
+    // Focus goes back to the opener (or its re-rendered twin) through the
+    // caller's focus keeper (admin/a11y.js), as it does after a crop.
+    image.close();
+    return null;
   }
-  octx.filter = 'none';
+  if (clean.checked && !cleanedOut) {
+    image.close();
+    throw new Error('The cleaned image was not ready, so nothing was saved. Upload the screenshot again.');
+  }
+  const out = cleanedOut || bakeRedacted();
   image.close();
   return canvasBlob(out, 0.9);
 };

@@ -16,11 +16,24 @@ export class AuthError extends ApiError {
   }
 }
 
+// Someone else (the advisor, another admin tab) published since this admin
+// loaded. Raised both by the up-front HEAD check and when GitHub refuses the
+// final branch move as "not a fast forward" — the same race, caught later.
 export class BranchConflictError extends Error {
-  constructor(currentSha) {
-    super('The branch changed after this editor loaded. Reload the source and reapply your draft before publishing.');
+  constructor(currentSha = null) {
+    super('Someone else published since you opened the admin, so nothing of yours was published yet.');
     this.name = 'BranchConflictError';
     this.currentSha = currentSha;
+  }
+}
+
+// A data file on the branch that is not valid JSON. Not a token problem and not
+// something a retry fixes on its own, so it is told apart from ApiError.
+export class DataFileError extends Error {
+  constructor(path, cause) {
+    super(`${path} on GitHub is not valid JSON (${cause.message}).`);
+    this.name = 'DataFileError';
+    this.path = path;
   }
 }
 
@@ -104,7 +117,9 @@ export class GhApi {
 
   async getJson(path) {
     const content = await this.request(this.repoPath(`/contents/${path}?ref=${encodeURIComponent(this.branch)}`));
-    return { data: JSON.parse(base64ToUtf8(content.content)), sha: content.sha };
+    let data;
+    try { data = JSON.parse(base64ToUtf8(content.content)); } catch (error) { throw new DataFileError(path, error); }
+    return { data, sha: content.sha };
   }
 
   createBlob(content, encoding = 'utf-8') {
@@ -148,14 +163,27 @@ export class GhApi {
     }));
     const tree = await this.createTree(baseCommit.tree.sha, treeEntries);
     const commit = await this.createCommit(message, tree.sha, [expectedBaseSha]);
-    await this.updateRef(commit.sha);
+    try {
+      await this.updateRef(commit.sha);
+    } catch (error) {
+      // The branch moved between getRef above and this update. The commit made
+      // here is simply left unreferenced; nothing on the branch changed.
+      if ((error.status === 422 || error.status === 409) && /fast.?forward|reference update failed/i.test(error.message)) {
+        throw new BranchConflictError();
+      }
+      throw error;
+    }
     return commit;
   }
 
-  listRuns(commitSha) {
+  // Recent workflow runs on the branch, newest first.
+  listBranchRuns() {
     const query = new URLSearchParams({ branch: this.branch, per_page: '20' });
-    return this.request(this.repoPath(`/actions/runs?${query}`)).then((payload) =>
-      payload.workflow_runs.filter((run) => run.head_sha === commitSha));
+    return this.request(this.repoPath(`/actions/runs?${query}`)).then((payload) => payload.workflow_runs || []);
+  }
+
+  listRuns(commitSha) {
+    return this.listBranchRuns().then((runs) => runs.filter((run) => run.head_sha === commitSha));
   }
 
   dispatchWorkflow() {

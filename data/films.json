@@ -1,0 +1,16 @@
+[
+  {
+    "src": "assets/conditions/severity-b.mp4",
+    "poster": "assets/conditions/severity-b.jpg",
+    "duration": "0:06",
+    "caption": "Referred for a below-knee amputation. Recovered in 90 days.",
+    "featured": true
+  },
+  {
+    "src": "assets/conditions/severity-a.mp4",
+    "poster": "assets/conditions/severity-a.jpg",
+    "duration": "0:28",
+    "caption": "Documented case of Elephantiasis",
+    "featured": false
+  }
+]

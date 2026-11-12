@@ -41,7 +41,7 @@ export const createVault = async (token, passcode, branch) => {
 
 export const unlockVault = async (passcode) => {
   const raw = localStorage.getItem(VAULT_KEY);
-  if (!raw) throw new Error('No vault exists on this device.');
+  if (!raw) throw new Error('This device isn’t set up yet.');
   const vault = JSON.parse(raw);
   const key = await deriveKey(passcode, fromBase64(vault.salt));
   try {

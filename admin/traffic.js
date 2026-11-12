@@ -224,6 +224,11 @@ const render = () => {
   root.innerHTML = '<section class="tr">' + head + body + renderLinks() + renderDevice() + '</section>';
 };
 
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const isStats = (d) => Boolean(d) && typeof d === 'object' && DAY.test(d.today) &&
+  (d.first == null || DAY.test(d.first)) && Array.isArray(d.rows) &&
+  d.rows.every((r) => Array.isArray(r) && r.length >= 9 && typeof r[0] === 'string' && Number.isFinite(r[8]));
+
 const load = async () => {
   view.loading = true;
   view.error = '';
@@ -232,13 +237,25 @@ const load = async () => {
     const response = await fetch(apiBase() + '/s', { headers: { Authorization: 'Bearer ' + view.token }, cache: 'no-store' });
     if (response.status === 401) throw new Error('Traffic could not confirm your access. Lock the admin, unlock it again, and retry.');
     if (!response.ok) throw new Error('The traffic service answered with an error (' + response.status + '). Try Refresh in a minute.');
-    view.data = await response.json();
+    // A 200 that is not the expected { today, rows: [[...], ...] } (an HTML error
+    // page, `{}`, `{ error }`) gets the same friendly error state, never a render
+    // that throws and leaves the tab stuck on "Loading…".
+    const data = await response.json().catch(() => null);
+    if (!isStats(data)) throw new Error('The traffic service answered with ' + (data && typeof data.error === 'string' ? 'an error (' + data.error.slice(0, 40) + ')' : 'something unexpected') + '. Try Refresh in a minute.');
+    view.data = data;
     view.fetchedAt = Date.now();
   } catch (error) {
     view.error = error instanceof TypeError ? 'Could not reach the traffic service. Check the connection and press Refresh.' : error.message;
   } finally {
     view.loading = false;
-    render();
+    try {
+      render();
+    } catch {
+      // Never leave Refresh disabled: whatever broke, show the error state instead.
+      view.data = null;
+      view.error = 'The traffic numbers could not be shown. Try Refresh in a minute.';
+      render();
+    }
   }
 };
 

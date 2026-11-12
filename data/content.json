@@ -1,0 +1,203 @@
+{
+  "nav": [
+    {
+      "target": "recoveries",
+      "label": "Recoveries",
+      "footerLabel": "Recoveries"
+    },
+    {
+      "target": "approach",
+      "label": "Our approach",
+      "footerLabel": "Approach"
+    },
+    {
+      "target": "conditions",
+      "label": "Conditions",
+      "footerLabel": "Conditions"
+    },
+    {
+      "target": "about",
+      "label": "About",
+      "footerLabel": "About"
+    },
+    {
+      "target": "contact",
+      "label": "Contact",
+      "footerLabel": "Contact"
+    }
+  ],
+  "cta": {
+    "message": "I would like to discuss my case with MediVasc."
+  },
+  "hero": {
+    "lead": "Prevention of foot and leg amputation",
+    "recoveriesButton": "See the recoveries",
+    "chips": [
+      "Diabetic foot",
+      "Lymphedema arms/legs",
+      "Venous ulcers",
+      "Filariasis & elephantiasis",
+      "Varicose veins",
+      "Bedridden & elderly care"
+    ],
+    "evidenceLead": "A documented MediVasc recovery.",
+    "evidenceBody": "Below-knee amputation was advised. Therapy prevented it.",
+    "evidenceLink": "See the full story"
+  },
+  "recoveries": {
+    "kicker": "Documented recoveries",
+    "heading": "Recoveries you can see",
+    "accent": "see",
+    "lede": "Every story below is a real MediVasc case, shown exactly as photographed: before, during, and after therapy. We never generate or edit outcome images. Names are withheld where patients asked for privacy."
+  },
+  "solutions": {
+    "kicker": "Real cases",
+    "heading": "Complications we manage",
+    "accent": "we manage",
+    "lede": ""
+  },
+  "treatment": {
+    "kicker": "In therapy now",
+    "heading": "Patients undergoing treatment",
+    "accent": "undergoing treatment",
+    "lede": "Current MediVasc patients, photographed during their therapy. Their progress is ongoing, and we’ll add their after photographs as they recover."
+  },
+  "voices": {
+    "kicker": "In their words",
+    "heading": "What patients say about us",
+    "accent": "say",
+    "lede": "Unedited messages from patients and their families, shared with their permission. Tap any note to read it in full."
+  },
+  "approach": {
+    "kicker": "What to expect",
+    "heading": "The therapy comes to you",
+    "accent": "to you",
+    "lede": "Hospital and clinic therapy for these conditions runs long, and every session means a visit. Many patients never manage it: there is no clinic in the vicinity, mobility is already limited, a family member must give up the whole day, and the travel and therapy costs deter treatment altogether. Our approach removes every one of those barriers.",
+    "steps": [
+      {
+        "title": "Detailed case study",
+        "body": "We begin with your individual case: the condition, its history, current treatment, and reports. No two protocols are the same because no two cases are."
+      },
+      {
+        "title": "A customized, affordable solution",
+        "body": "Where required, we customize the medical device modalities for your therapy, designed around your case, your home, and your budget."
+      },
+      {
+        "title": "Therapy at home, under our guidance",
+        "body": "You take the therapy at home, guided by us, without any break: no travel, no waiting rooms, no dependence on anyone to get you there."
+      },
+      {
+        "title": "Follow-ups",
+        "body": "We follow up at planned intervals to check the progress and adjust the plan."
+      }
+    ],
+    "mottoLine": "A solution is not a solution unless it is affordable",
+    "mottoAccent": "affordable",
+    "mottoBody": "That is our motto, and we mean it literally. The solutions are designed not to pinch the pockets of patients and families already struggling with rising medical expenses."
+  },
+  "conditions": {
+    "kicker": "Protocols available",
+    "heading": "Conditions we support",
+    "accent": "support",
+    "lede": "Every protocol starts with the same detailed case study. If your condition is not listed here, ask us. The case study decides what is possible.",
+    "caseKicker": "The amputation we prevented",
+    "caseQuote": "A top hospital had already referred this patient for a below-knee amputation. He recovered in 90 days instead, keeping his leg and sparing his family at least ₹7 lakh in surgery costs, and the anguish that goes with it.",
+    "caseStats": [
+      "Recovered in 90 days",
+      "₹7 lakh+ saved",
+      "Amputation avoided"
+    ],
+    "trackDisease": "Disease-specific protocols",
+    "trackElderly": "Bedridden and elderly care"
+  },
+  "watch": {
+    "kicker": "Symptoms",
+    "heading": "Vulnerability — signs to watch out for",
+    "accent": "signs to watch out for",
+    "lede": "These are the signs that a wound, a limb, or the circulation needs attention. If any of them apply to you or someone you care for, have it assessed without waiting.",
+    "items": [
+      "Insulin-dependence / Diabetic foot",
+      "Non-healing wounds",
+      "Oozing wounds / blisters",
+      "Dark red / black spots on lower limbs",
+      "Varicose veins, venous ulcers",
+      "Congenital lymphedema",
+      "Oncology surgeries / radiation therapies",
+      "CKD – those on dialysis",
+      "CVI – breathlessness",
+      "Lumbar / sacral surgeries"
+    ],
+    "note": "Prevention is better than cure",
+    "noteAccent": "cure"
+  },
+  "eligibility": {
+    "kicker": "Eligibility"
+  },
+  "act": {
+    "heading": "If amputation has been advised, talk to us today",
+    "accent": "today",
+    "body": "The recovery shown above began after a vascular surgeon had already referred the patient for below-knee amputation. Early assessment and appropriate care improve the chance of limb preservation. One message is enough to begin."
+  },
+  "consult": {
+    "title": "No consultation charges",
+    "text": "At any stage of the case study or follow-ups"
+  },
+  "about": {
+    "heading": "About MediVasc",
+    "location": "New Delhi, India"
+  },
+  "contact": {
+    "heading": "Start with your case",
+    "accent": "your case",
+    "body": "Tell us the condition, how long it has persisted, and what treatment has been tried. We will study the case and tell you honestly what a protocol can do."
+  },
+  "footer": {
+    "disclaimer": "Recovery time varies for every patient depending on cause & duration of the condition, comorbidities and the patient’s participation in treatment & follow-ups. Recovery timeline may vary from our stated estimates."
+  },
+  "chat": {
+    "name": "MediVasc Assistant",
+    "status": "Online · replies personally",
+    "nudgeLead": "Have a case?",
+    "nudgeBody": "Request a customized solution in ~30 seconds.",
+    "legal": "Opens WhatsApp with your details ready to send. A person replies. This isn’t medical advice.",
+    "conditions": [
+      "Diabetic foot",
+      "Lymphedema",
+      "Venous ulcers",
+      "Mastectomy"
+    ],
+    "greeting": "Namaste 🙏 I’m the MediVasc Assistant. A few quick taps and I’ll set up your request for a customized solution.",
+    "greetingBold": "MediVasc Assistant",
+    "questions": [
+      {
+        "key": "name",
+        "prompt": "What is the patient’s name?",
+        "bold": "patient’s name",
+        "placeholder": "Patient’s name"
+      },
+      {
+        "key": "age",
+        "prompt": "And the patient’s age?",
+        "bold": "patient’s age",
+        "placeholder": "Patient’s age"
+      },
+      {
+        "key": "condition",
+        "prompt": "What medical condition are you seeking a solution for? Pick one below or type your own.",
+        "bold": "medical condition",
+        "placeholder": "Condition"
+      },
+      {
+        "key": "city",
+        "prompt": "Which city are you from?",
+        "bold": "city",
+        "placeholder": "Your city"
+      }
+    ],
+    "done": "Perfect. Here’s your request. Send it to us on WhatsApp and we’ll get back to you personally.",
+    "welcomeBack": "Welcome back 🙏 Here’s the request you set up. Send it on WhatsApp whenever you’re ready.",
+    "restart": "No problem, let’s update the details.",
+    "messageOpening": "Hello MediVasc, I would like to request a solution.",
+    "messageClosing": "Please advise on a possible protocol."
+  }
+}
