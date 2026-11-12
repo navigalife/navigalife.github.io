@@ -9,7 +9,8 @@ const { renderPage, phoneHref } = require('./template');
 const rules = require('../admin/content-rules.js');
 
 const ROOT = path.resolve(__dirname, '..');
-const DIST = path.join(ROOT, 'dist');
+// MV_DIST overrides the output dir (parallel builds, previews).
+const DIST = process.env.MV_DIST ? path.resolve(process.env.MV_DIST) : path.join(ROOT, 'dist');
 const SITE_URL = 'https://medivasc.in/';
 
 const readJson = async (relativePath) =>
