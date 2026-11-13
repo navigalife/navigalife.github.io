@@ -172,6 +172,11 @@ html:not(.js) .blog-featured__track{scrollbar-width:thin;scrollbar-color:color-m
 .blog-author__role{margin:-8px 0 20px;color:var(--ink);font-size:1.0625rem;font-weight:500}
 .blog-empty{padding-bottom:clamp(80px,9vw,136px);color:var(--ink-muted);text-align:center}
 
+/* ---- Coming soon (0 live posts) -------------------------------------------- */
+.blog-soon{padding-bottom:clamp(80px,9vw,136px)}
+.blog-soon .blog-masthead{padding-bottom:clamp(32px,4vw,52px)}
+.blog-soon__cta{width:min(100% - 40px,720px);margin-inline:auto}
+
 /* ---- Breakpoints (site ladder ≤1000 / ≤760 / ≤400) ------------------------- */
 @media (max-width:1000px){
   /* One swipeable row instead of a ragged wrap: centred while it fits, start-aligned

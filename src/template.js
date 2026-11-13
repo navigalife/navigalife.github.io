@@ -500,7 +500,8 @@ const HOME_NOSCRIPT = 'Theme controls require JavaScript. All recovery stories, 
 // every relative path and turns the homepage section anchors into `${depth}#id`,
 // so a blog page's header and footer still land on the homepage sections — and
 // the whole site keeps working when it is mounted under a subpath (/changes/).
-// The Blog nav link renders only when `site.blogNav` is set (≥1 live post).
+// The Blog nav link renders whenever `site.blogNav` is set — i.e. whenever a
+// blog exists (build.js), whether /blog/ is the landing or a coming-soon page.
 const renderShell = ({
   site,
   depth = '',

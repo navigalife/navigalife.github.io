@@ -620,7 +620,10 @@ const build = async () => {
   // The Journal (data/blog/): validated here with the rest of the content, so a
   // blog problem stops the build before dist is wiped. null = no blog settings.
   const blog = await loadBlog({ root: ROOT, rules, films: filmsData });
-  const blogNav = blog && blog.live.length ? { label: blog.config.navLabel || 'Blog' } : null;
+  // The Blog link is always in the nav/footer once a blog exists (owner call
+  // 2026-11-13): with 0 live posts /blog/ is a coming-soon placeholder, so the
+  // link still has a page to land on. null only when there is no blog at all.
+  const blogNav = blog ? { label: blog.config.navLabel || 'Blog' } : null;
   await assertNotAdminSource(DIST, 'wipe the build output');
   await fs.rm(DIST, { recursive: true, force: true });
   await fs.mkdir(DIST, { recursive: true });

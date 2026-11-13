@@ -262,7 +262,12 @@ and sitemaps. blog-blocks `depthOf` silently drops an absolute depth (`'/'`).
   + allowlisted inline marks (`INLINE_KEYS`; links only to `BLOG_HREFS`), never raw
   HTML. Alt text is required. Headings are H2/H3 and an H3 cannot precede the first
   H2. Sizes and colours are presets, never raw px/hex.
-- Build-side: the Blog nav and all blog pages exist only with ≥1 live post (`blogNav`).
+- Build-side: the Blog nav link (header, drawer, footer) and `/blog/` exist
+  whenever a blog is configured (`blogNav`, owner call 2026-11-13). With 0 live
+  posts `/blog/` is a **noindex coming-soon placeholder** (`renderComingSoon`),
+  kept out of `sitemap.xml`, `feed.xml` and `llms.txt`; the post, category and
+  author pages still exist only with ≥1 live post. A scheduled-but-not-yet-due
+  post never reaches `live`, so it neither shows nor leaks.
 
 **Blog gotchas**
 - `data-theme` on ANY element matches styles.css's global `[data-theme="dark"]`

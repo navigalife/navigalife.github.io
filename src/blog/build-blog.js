@@ -219,21 +219,59 @@ const buildBlog = async (blog, {
   const { config, live } = blog;
   const { company, content, themeId } = site;
   // Renderers are required lazily: the other lanes replace them while we build.
-  const { renderLanding, renderCategoryPage, renderAuthorPage } = require('./render-landing.js');
+  const { renderLanding, renderCategoryPage, renderAuthorPage, renderComingSoon } = require('./render-landing.js');
   const { renderPost } = require('./render-post.js');
+
+  // The one hashed blog stylesheet (landing + post + blocks). Every blog page
+  // links it, including the placeholder below, so it is built before the branch.
+  const blogCss = await writeHashed('assets', 'blog', 'css', await blogCssSource());
+
+  // No live post yet: /blog/ is a quiet "coming soon" placeholder on the same
+  // page shell — noindex, and OUT of the sitemap, feed and llms.txt (nothing is
+  // returned for those here, and build.js only wires them from a live journal).
+  // A scheduled-but-not-yet-due post sits in posts.json but never reaches `live`,
+  // so it cannot show or leak. The normal landing replaces this the moment a post
+  // goes live, with no other change.
+  if (!live.length) {
+    const depth = '../';
+    const ctx = {
+      depth,
+      blog: config,
+      company,
+      content,
+      contactHref: contactHrefs(company, content, depth),
+      homeHref: depth,
+    };
+    const html = renderShell({
+      site,
+      depth,
+      title: text(config.seo && config.seo.title) || text(config.name),
+      description: text(config.seo && config.seo.description) || text(config.intro),
+      canonical: `${siteUrl}blog/`,
+      ogImage: `${siteUrl}${siteOgImage}`,
+      ogImageAlt: site.config.seo.imageAlt,
+      jsonLd: [],
+      robots: 'noindex',
+      bodyClass: 'page-blog page-blog--soon',
+      main: renderComingSoon(ctx),
+      extraCss: [blogCss],
+      lightDefault: true,
+      blogCurrent: true,
+      noscript: '',
+    });
+    const dir = path.join(dist, 'blog');
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, 'index.html'), html);
+    return { sitemapEntries: [], llmsSection: '', pages: 1, posts: 0 };
+  }
 
   const images = await buildBlogImages(
     [...live.flatMap(postImageSrcs), ...list(config.authors).map((a) => a && a.photo).filter(Boolean)],
     { root, buildGallery },
   );
 
-  // Hashed blog stylesheet + script.
-  const [blogCssText, readerJs, landingJs] = await Promise.all([
-    blogCssSource(),
-    readOptional('reader.js'),
-    readOptional('landing.js'),
-  ]);
-  const blogCss = await writeHashed('assets', 'blog', 'css', blogCssText);
+  // Hashed blog script (reader + landing), only where there are posts to drive.
+  const [readerJs, landingJs] = await Promise.all([readOptional('reader.js'), readOptional('landing.js')]);
   const jsSource = [readerJs, landingJs].filter((source) => source.trim()).join('\n;\n');
   const blogJs = jsSource ? await writeHashed('assets', 'blog', 'js', jsSource) : '';
 
