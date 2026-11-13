@@ -25,7 +25,7 @@
   --wide:1180px;
   --body-fs:1.1875rem;
   --measure:calc(var(--body-fs) * 34);
-  --sticky-top:116px;
+  --sticky-top:calc(var(--header-h) + 31px);
   --photo-ink:var(--ink);
   --photo-paper:var(--bg);
   --photo-accent:color-mix(in srgb,var(--accent) 52%,var(--bg));
@@ -101,16 +101,15 @@
   .post--toc .post-toc-m{display:none}
 }
 
-/* Breakouts: geometry is ours (CONTRACT cross-lane pin); look is W2c's. */
+/* Breakouts: geometry is ours; look is W2c's. */
 .post-body>.b-wide{width:var(--wide-w);max-width:none;margin-left:var(--wide-ml);margin-right:0}
 .post-body>.b-full{width:100cqw;max-width:none;margin-left:calc(-1 * var(--left));margin-right:0}
 .post-body>:is(.b-wide,.b-full){position:relative;z-index:2}
 .post-body>:first-child{margin-top:0}
-/* Anchors land 16px under the sticky header (85px tall; 73px at <=760px). One
-   mechanism: the root scroll-padding, retuned for blog pages; targets carry no
-   scroll-margin (it adds to the padding). */
-html:has(>body.page-blog){scroll-padding-top:101px}
-@media (max-width:760px){html:has(>body.page-blog){scroll-padding-top:89px}}
+/* Anchors land 16px under the sticky header (--header-h, styles.css: it carries the
+   per-breakpoint height). One mechanism: the root scroll-padding, retuned for blog
+   pages; targets carry no scroll-margin (it adds to the padding). */
+html:has(>body.page-blog){scroll-padding-top:calc(var(--header-h) + 16px)}
 html:not(.js) .post-body>:is(.b-wide,.b-full){background:var(--bg)}
 
 /* ---- header ------------------------------------------------------------- */

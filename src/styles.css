@@ -43,7 +43,12 @@ section[id]{scroll-margin-top:92px}
 
 .site-header{position:sticky;z-index:50;top:0;border-bottom:1px solid transparent;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:border-color 300ms ease,box-shadow 300ms ease}
 .site-header.is-scrolled{border-bottom-color:color-mix(in srgb,var(--line) 65%,transparent);box-shadow:0 14px 34px -26px color-mix(in srgb,var(--ink) 45%,transparent)}
-.header-inner{display:grid;grid-template-columns:auto 1fr auto;min-height:84px;align-items:center;gap:32px}
+/* --header-h = the sticky header's full height: .header-inner's min-height plus
+   .site-header's 1px bottom border. The header sizes from it and every anchor/sticky
+   offset reads it (blog scroll-padding + sticky TOC/rail), so they cannot drift.
+   Per breakpoint: 85px; 73px at <=760px (below). */
+:root{--header-h:85px}
+.header-inner{display:grid;grid-template-columns:auto 1fr auto;min-height:calc(var(--header-h) - 1px);align-items:center;gap:32px}
 .wordmark{display:inline-flex;min-height:44px;align-items:center;text-decoration:none}
 .lockup{display:inline-flex;align-items:center}
 .lockup img{width:auto;height:62px}
@@ -72,6 +77,9 @@ html.nav-open{overflow:hidden}
 .header-actions{display:flex;align-items:center;gap:12px}
 .header-cta{min-height:46px;padding:10px 20px;font-size:1rem}
 .menu-toggle{display:none}
+/* No JS = no theme switch and no drawer, so both buttons would render inert: hide
+   them (the head script adds html.js). The header keeps logo + nav + CTA. */
+html:not(.js) :is(.theme-toggle,.menu-toggle){display:none}
 .theme-toggle__sun,.theme-toggle__moon{align-items:center;justify-content:center}
 .theme-toggle__sun{display:inline-flex}
 .theme-toggle__moon{display:none}
@@ -336,6 +344,8 @@ html:not(.js) .recoveries__more{display:none}
   .nav-drawer__foot{margin-top:auto;display:flex;flex-direction:column;gap:12px;padding:22px 24px calc(22px + env(safe-area-inset-bottom,0px));border-top:1px solid color-mix(in srgb,var(--line) 78%,transparent)}
   .nav-drawer__cta{display:inline-flex;justify-content:center;min-height:52px;font-size:1.05rem}
   .header-actions{grid-column:2;grid-row:1;justify-self:end}
+  /* no JS: the hamburger is hidden, so the actions take its corner (CTA flush right) */
+  html:not(.js) .header-actions{grid-column:3}
   .hero__layout{grid-template-columns:1fr;gap:44px}
   .hero__evidence{max-width:600px}
   .pathway{grid-template-columns:repeat(2,minmax(0,1fr));gap:36px}
@@ -354,7 +364,7 @@ html:not(.js) .recoveries__more{display:none}
   html{scroll-padding-top:80px}
   .container{width:min(100% - 40px,1240px)}
   .section,.contact{padding-block:clamp(2.5rem,7vw,3.25rem)}
-  .header-inner{min-height:72px}
+  :root{--header-h:73px}
   .lockup img{height:58px}
   .header-cta{display:none}
   /* The written case study is desktop-only; on phones the two clips sit side by

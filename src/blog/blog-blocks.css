@@ -228,6 +228,10 @@
   .b-cta__button{white-space:normal}
   .b-table{border-radius:14px}
   .b-table__caption,.b-table th,.b-table td{padding-inline:1rem}
+  /* A portrait film at column width fills ~3/4 of a phone screen; cap it at 60% of
+     the small viewport (vh fallback). width:auto keeps the ratio and centres it;
+     landscape films never reach the cap. */
+  .b-video--film video{max-height:60vh;max-height:60svh}
 }
 
 @media (prefers-reduced-motion:reduce){
