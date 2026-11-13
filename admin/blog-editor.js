@@ -478,7 +478,7 @@ function wholeWordMatch(text, word) {
 function parseYouTube(raw) {
   const v = String(raw || '').trim();
   if (/^[A-Za-z0-9_-]{11}$/.test(v)) return v;
-  const m = v.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/))([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])/i);
+  const m = v.match(/(?<![\w-])(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/))([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])/i);
   return m ? m[1] : '';
 }
 
@@ -1545,6 +1545,13 @@ export function mountBlockEditor(root, opts = {}) {
     const cd = e.clipboardData || window.clipboardData;
     const html = cd ? cd.getData('text/html') : '';
     const text = cd ? cd.getData('text/plain') : '';
+    // a spreadsheet range (Sheets/Excel/Numbers paste TSV) into a table cell fills the grid from that cell
+    const tt = targetOf(f);
+    if (tt && tt.obj && tt.obj.type === 'table' && /^(?:header\.\d+|rows\.\d+\.\d+)$/.test(f.dataset.f)
+      && (text.includes('\t') || /<table[\s>]/i.test(html)) && /[\t\n]/.test(text.replace(/\s+$/, ''))) {
+      pasteGrid(f, tt, text);
+      return;
+    }
     if (f.dataset.kind !== 'rich') {
       const clean = String(text || '').replace(/\s+/g, ' ');
       if (!clean) return;
@@ -1566,6 +1573,35 @@ export function mountBlockEditor(root, opts = {}) {
     let pieces = html ? sanitizeHtml(html) : [];
     if (!pieces.length && text) pieces = piecesFromText(text);
     if (pieces.length) insertPieces(f, pieces);
+  }
+  function pasteGrid(f, t, text) {
+    const b = t.obj;
+    const m = f.dataset.f.match(/^(?:header\.(\d+)|rows\.(\d+)\.(\d+))$/);
+    const r0 = m[1] != null ? -1 : Number(m[2]);
+    const c0 = Number(m[1] ?? m[3]);
+    const grid = String(text).replace(/\r\n?/g, '\n').replace(/\s+$/, '').split('\n')
+      .map((l) => l.split('\t').map((c) => c.replace(/\s+/g, ' ').trim()));
+    const width = Math.min(6, Math.max(b.header.length, c0 + Math.max(...grid.map((r) => r.length))));
+    const lost = grid.some((r) => c0 + r.length > 6);
+    change('blocks', () => {
+      while (b.header.length < width) { b.header.push(''); b.rows.forEach((row) => row.push('')); }
+      grid.forEach((cells, i) => {
+        const r = r0 + i;
+        while (r >= 0 && b.rows.length <= r) b.rows.push(Array(b.header.length).fill(''));
+        cells.forEach((v, j) => {
+          const c = c0 + j;
+          if (c >= b.header.length) return;
+          if (r < 0) b.header[c] = v;
+          else b.rows[r][c] = v;
+        });
+      });
+    });
+    lastCell = null;
+    renderBlock(t.key);
+    const lr = r0 + grid.length - 1;
+    const lc = Math.min(b.header.length - 1, c0 + grid[grid.length - 1].length - 1);
+    focusPath(t.key, lr < 0 ? `header.${lc}` : `rows.${lr}.${lc}`, 'end');
+    announce(`Pasted ${grid.length} ${grid.length === 1 ? 'row' : 'rows'} into the table${lost ? ' — columns past the sixth were left out' : ''}`);
   }
   function piecesToBlocks(pieces, seenH2) {
     const out = [];
@@ -2235,6 +2271,9 @@ export function mountBlockEditor(root, opts = {}) {
     rerenderTarget(t.key);
     const w = wrapOf(t.key);
     const back = w && [...w.querySelectorAll(`input[data-act="${act}"]`)].find((x) => (x.dataset.p || '') === path);
+    // the cover's details are display:none until it holds focus — land focus inside it first or back.focus() is a no-op
+    const frame = t.key === 'doc' && headEl.querySelector('.bed-cover [data-focal]');
+    if (back && frame) frame.focus({ preventScroll: true });
     if (back) back.focus({ preventScroll: true });
   }
 

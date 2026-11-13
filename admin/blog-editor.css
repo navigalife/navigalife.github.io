@@ -201,7 +201,7 @@
 
 /* gutter handle + between-block "+" (fine pointers only; strip has both too) */
 .bed-gutter{position:absolute;top:0;left:calc(-1 * var(--gut));display:none;width:var(--gut);justify-content:center;padding-top:.15em}
-.bed-handle{display:inline-grid;width:26px;height:30px;padding:0;place-items:center;border:0;border-radius:6px;background:transparent;color:var(--ink-muted);cursor:grab;opacity:0;transition:opacity 200ms var(--ease),background-color 200ms var(--ease)}
+.bed-handle{display:inline-grid;width:26px;height:30px;padding:0;place-items:center;border:0;border-radius:6px;background:transparent;color:var(--ink-muted);cursor:grab;touch-action:none;opacity:0;transition:opacity 200ms var(--ease),background-color 200ms var(--ease)}
 .bed-handle:hover{background:var(--surface-2);color:var(--ink)}
 .bed-handle .bed-ic{width:16px;height:16px}
 .bed-gap{position:relative;z-index:5;height:0}
