@@ -1357,13 +1357,13 @@
         optionalText(author, key, `${at}.${key}`, `${where}: ${who}'s ${name}`, add);
       }
       if (!blank(author.photo) && !BLOG_IMAGE.test(author.photo)) {
-        add(`${at}.photo`, `${where}: ${who}'s photo “${author.photo}” must be an image file inside assets/.`);
+        add(`${at}.photo`, `${where}: ${who}’s photo “${author.photo}” must be an image file inside assets/.`);
       }
       if (author.sameAs !== undefined) {
-        if (!Array.isArray(author.sameAs)) add(`${at}.sameAs`, `${where}: ${who}'s profile links are not a list.`);
+        if (!Array.isArray(author.sameAs)) add(`${at}.sameAs`, `${where}: ${who}’s profile links are not a list.`);
         else author.sameAs.forEach((url, k) => {
           if (typeof url !== 'string' || !/^https:\/\/[^\s<>"]+$/.test(url)) {
-            add(`${at}.sameAs.${k}`, `${where}: ${who}'s profile link “${String(url)}” must be a full https:// address.`);
+            add(`${at}.sameAs.${k}`, `${where}: ${who}’s profile link “${String(url)}” must be a full https:// address.`);
           }
         });
       }

@@ -312,3 +312,14 @@ Optional extras, now pinned (hosts may pass them; components must work without t
   author slug change with live posts appends `blog/author/<old>/` → new, same rules as categories.
 - `stageAsset(file, { purpose: 'author' })` → `Promise<{ src }>`; a replaced or removed staged
   author photo is unstaged by the host when W5d calls the optional `unstageAsset(src)`.
+
+### Addendum pins (4) — session 5
+- Preview / render ctx `depth` is always RELATIVE (`'../'`, `'../../'`…). blog-blocks `depthOf`
+  silently drops an absolute depth (`'/'`), so every depth-prefixed href breaks without an error.
+- `mountPostPreview(root, { …, contactHref })` — optional `{ whatsapp, call, contact }` built from
+  company.json (same shape as ctx.contactHref). The host passes it; without it CTAs use defaults.
+- `titleSize`, `bodySize`, `leadIn` are REQUIRED by validateBlogPosts. A new post carries them
+  from creation (blog-tab blankPost); never rely on the editor's first patch to add them.
+- Author photos: W5d already resizes the photo (≤800px). The host stages that blob AS-IS (no
+  second intakeImage) at `assets/blog/authors/<author-slug>.<webp|jpg>` and returns that
+  `assets/` src — never `draft:`, never a random name.
