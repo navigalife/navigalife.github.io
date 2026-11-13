@@ -221,7 +221,8 @@ function markState(runs, start, end, mark) {
   return text.every((r) => r[mark]);
 }
 function applyMark(runs, start, end, mark, value) {
-  const [a, mid, c] = rangeRuns(runs, start, end);
+  // copies: callers' runs are never changed (_internals are pure)
+  const [a, mid, c] = rangeRuns(runs.map((r) => ({ ...r })), start, end);
   const on = value !== undefined ? value : !markState(runs, start, end, mark);
   for (const r of mid) {
     if (isCiteRun(r)) continue;

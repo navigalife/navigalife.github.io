@@ -234,12 +234,11 @@ const E = RULES.BLOG_ENUMS;
       }
     }
   });
-  // FINDING: applyMark mutates its input runs (CONTRACT Addendum pins (3): `_internals` = "pure helpers").
-  //   const r=[{t:'Hello world'}]; applyMark(r,0,11,'b'); r[0].b === true   // splitRuns hands back the
-  //   caller's run objects whole, and applyMark sets/deletes marks on them. Kept out of the passing suite:
-  // test('marks', 'applyMark leaves its input untouched', () => {
-  //   const r = [{ t: 'Hello world' }]; applyMark(r, 0, 11, 'b'); assert.deepStrictEqual(r, [{ t: 'Hello world' }]);
-  // });
+  // Was a FINDING (applyMark mutated its input runs); fixed in blog-editor.js applyMark.
+  test('marks', 'applyMark leaves its input untouched', () => {
+    const r = [{ t: 'Hello world' }]; applyMark(r, 0, 11, 'b'); assert.deepStrictEqual(r, [{ t: 'Hello world' }]);
+    const s = [{ t: 'Hi', b: true }, { t: ' there' }]; applyMark(s, 0, 8, 'b'); assert.deepStrictEqual(s, [{ t: 'Hi', b: true }, { t: ' there' }]);
+  });
   test('marks', 'markState leaves its input untouched', () => {
     const r = [{ t: 'Hello', b: true }, { t: ' world' }];
     const before = JSON.stringify(r);
