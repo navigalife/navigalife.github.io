@@ -1,0 +1,62 @@
+{
+  "name": "The MediVasc Journal",
+  "navLabel": "Blog",
+  "intro": "Plain-spoken guidance on diabetic feet, circulation, wounds and swollen limbs — written to help you act early and keep walking.",
+  "seo": { "title": "", "description": "" },
+  "featured": ["p_s01", "p_s02", "p_s04"],
+  "categories": [
+    {
+      "id": "c_foot",
+      "name": "Diabetic foot",
+      "slug": "diabetic-foot",
+      "intro": "Diabetes can quietly dull the nerves and narrow the blood vessels of the feet. These articles explain the early signs, the daily checks and when a small problem needs a doctor the same day.",
+      "metaDescription": "Diabetic foot care explained simply: warning signs, daily foot checks, footwear and when to see a doctor — practical guidance from MediVasc, Delhi.",
+      "tint": "teal"
+    },
+    {
+      "id": "c_pad",
+      "name": "Circulation & PAD",
+      "slug": "circulation-pad",
+      "intro": "Peripheral arterial disease narrows the arteries that feed the legs. Learn what leg pain on walking can mean, how circulation is checked and what helps.",
+      "metaDescription": "Peripheral arterial disease (PAD) and leg circulation in plain words: symptoms, tests, walking, risk factors and when to seek care.",
+      "tint": "clay"
+    },
+    {
+      "id": "c_wound",
+      "name": "Wound care",
+      "slug": "wound-care",
+      "intro": "A wound that is slow to heal is a signal, not a nuisance. Practical guides on dressings, pressure, infection signs and getting the right help early.",
+      "metaDescription": "Non-healing wounds and foot ulcers: how to care for them at home, signs of infection, offloading and when a wound needs specialist attention.",
+      "tint": "sage"
+    },
+    {
+      "id": "c_lymph",
+      "name": "Lymphoedema",
+      "slug": "lymphoedema",
+      "intro": "Long-standing swelling of an arm or leg — including filarial elephantiasis — can be managed. Daily habits, skin care and compression, explained step by step.",
+      "metaDescription": "Lymphoedema and elephantiasis explained: causes, skin care, compression, exercise and daily habits that help control limb swelling.",
+      "tint": "plum"
+    },
+    {
+      "id": "c_prev",
+      "name": "Prevention & daily care",
+      "slug": "prevention-daily-care",
+      "intro": "Small, steady habits protect feet and legs over years. Routines, checklists and questions to take to your next appointment.",
+      "metaDescription": "Everyday prevention for feet and legs: foot-care routines, footwear, walking, check-up checklists and questions to ask your doctor.",
+      "tint": "ochre"
+    }
+  ],
+  "authors": [
+    {
+      "id": "a_team",
+      "name": "MediVasc Care Team",
+      "slug": "medivasc-care-team",
+      "role": "",
+      "credentials": "",
+      "bio": "The MediVasc care team works with people across India to help protect feet and legs from the complications of diabetes, poor circulation and long-standing swelling.",
+      "photo": "",
+      "sameAs": []
+    }
+  ],
+  "redirects": []
+}

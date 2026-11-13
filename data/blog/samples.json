@@ -1,0 +1,2040 @@
+[
+  {
+    "id": "p_s01",
+    "slug": "diabetic-foot-warning-signs",
+    "previousSlugs": [],
+    "status": "published",
+    "publishAt": "2026-11-04T09:00:00+05:30",
+    "lang": "en",
+    "layout": "editorial",
+    "category": "c_foot",
+    "title": "Seven warning signs your feet need a doctor",
+    "titleAccent": "warning signs",
+    "dek": "Most serious foot problems in diabetes start as something small that nobody watched. Here is what to look for — and when not to wait.",
+    "titleSize": "L",
+    "bodySize": "M",
+    "leadIn": "dropcap",
+    "cover": {
+      "src": "assets/products/diabetic-foot-pad-8/01.webp",
+      "alt": "A compression therapy unit with green leg sleeves, photographed on a cream backdrop",
+      "caption": "Good foot care starts with noticing changes early.",
+      "credit": "MediVasc",
+      "focal": {
+        "x": 0.5,
+        "y": 0.55
+      },
+      "patient": false
+    },
+    "author": "a_team",
+    "reviewer": null,
+    "reviewedAt": null,
+    "about": [
+      "Diabetic foot ulcer",
+      "Diabetic neuropathy"
+    ],
+    "seo": {
+      "title": "",
+      "description": "Seven diabetic foot warning signs that need a doctor — wounds that will not heal, colour change, numbness and more — and what to do about each.",
+      "focusKeyphrase": "diabetic foot warning signs",
+      "keywords": [
+        "foot ulcer",
+        "neuropathy",
+        "diabetes foot care"
+      ]
+    },
+    "related": [],
+    "blocks": [
+      {
+        "type": "lead",
+        "text": "If you live with diabetes, your feet can be hurt without telling you. Nerve damage dulls pain and narrowed arteries slow healing — so a blister or a crack that a healthy foot would shrug off can quietly turn into an ulcer."
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "The reassuring part is that most serious foot problems give warning signs first. Knowing those diabetic foot warning signs, and acting on them early, is one of the most effective ways to "
+          },
+          {
+            "t": "lower the risk of an ulcer or an amputation",
+            "b": true
+          },
+          {
+            "t": "."
+          },
+          {
+            "cite": "r1"
+          },
+          {
+            "t": " This guide lists the seven we most want you to watch for."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Why diabetic feet need extra attention"
+      },
+      {
+        "type": "image",
+        "src": "assets/treatment/treatment-02.webp",
+        "alt": "Two lower legs side by side against a grey background, one visibly more swollen than the other",
+        "caption": "A difference between the two legs — in size, colour or warmth — is worth showing to a doctor.",
+        "credit": "MediVasc, shared with consent",
+        "width": "column",
+        "align": "right",
+        "size": "S",
+        "patient": true
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "High blood sugar over many years can damage the nerves of the feet ("
+          },
+          {
+            "t": "peripheral neuropathy",
+            "i": true
+          },
+          {
+            "t": ") and the blood vessels that feed them. With less feeling, you may not notice a stone in your shoe, a tight strap or a burn from a hot floor. With less blood flow, skin heals slowly and infection spreads more easily."
+          },
+          {
+            "cite": "r2"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Neither change is something you can feel happening. That is why doctors ask people with diabetes to "
+          },
+          {
+            "t": "look",
+            "b": true
+          },
+          {
+            "t": " at their feet rather than wait for them to hurt."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "The seven warning signs"
+      },
+      {
+        "type": "list",
+        "style": "number",
+        "items": [
+          [
+            {
+              "t": "A wound, blister or crack that is not healing",
+              "b": true
+            },
+            {
+              "t": " within a few days — even if it does not hurt."
+            }
+          ],
+          [
+            {
+              "t": "Redness, warmth or swelling",
+              "b": true
+            },
+            {
+              "t": " in one part of the foot, or one foot that feels warmer than the other."
+            }
+          ],
+          [
+            {
+              "t": "A change in skin colour",
+              "b": true
+            },
+            {
+              "t": " — pale, bluish, dark or blackened toes or patches of skin."
+            }
+          ],
+          [
+            {
+              "t": "Numbness, tingling or burning",
+              "b": true
+            },
+            {
+              "t": ", especially if it is new or getting worse."
+            }
+          ],
+          [
+            {
+              "t": "Pain in the calf or buttock when you walk",
+              "b": true
+            },
+            {
+              "t": " that eases when you stop — a possible sign of poor circulation."
+            }
+          ],
+          [
+            {
+              "t": "Discharge or a bad smell",
+              "b": true
+            },
+            {
+              "t": " from a wound, from under a nail or from between the toes."
+            }
+          ],
+          [
+            {
+              "t": "A change in the shape of the foot",
+              "b": true
+            },
+            {
+              "t": " — a new bump, a flattened arch or a toe that has started to curl."
+            }
+          ]
+        ]
+      },
+      {
+        "type": "callout",
+        "tone": "doctor",
+        "text": [
+          {
+            "t": "If you notice "
+          },
+          {
+            "t": "any",
+            "b": true
+          },
+          {
+            "t": " of these signs, show your foot to a doctor within a day or two. If there is spreading redness, fever, a black area of skin or a wound with a bad smell, "
+          },
+          {
+            "t": "seek care the same day",
+            "hl": true
+          },
+          {
+            "t": "."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "What a doctor will usually check"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "A foot examination is quick and painless. Expect your doctor to look closely at the skin and nails, test feeling with a soft nylon thread (a "
+          },
+          {
+            "t": "monofilament",
+            "i": true
+          },
+          {
+            "t": ") or a tuning fork, feel the pulses at the ankle and on top of the foot, and look at the shoes you wear every day."
+          },
+          {
+            "cite": "r1"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "If the pulses are weak, they may suggest a simple circulation test that compares the blood pressure at your ankle with the pressure in your arm. Our article on "
+          },
+          {
+            "t": "leg pain when walking",
+            "href": "blog/leg-pain-when-walking-circulation/"
+          },
+          {
+            "t": " explains what that test shows."
+          }
+        ]
+      },
+      {
+        "type": "image",
+        "src": "assets/products/foot-leg-amputation-prevention-6/01.webp",
+        "alt": "A compression therapy unit with black inflatable leg sleeves resting on a white plinth",
+        "caption": [
+          {
+            "t": "Where circulation is poor, supportive therapy may be advised "
+          },
+          {
+            "t": "alongside",
+            "b": true
+          },
+          {
+            "t": " wound care and blood-sugar control — never instead of them."
+          }
+        ],
+        "credit": "MediVasc",
+        "width": "column",
+        "align": "center"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "What you can do at home, starting today"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Warning signs are easier to catch when you go looking for them. Our "
+          },
+          {
+            "t": "five-minute daily foot-care routine",
+            "href": "blog/daily-foot-care-routine-diabetes/"
+          },
+          {
+            "t": " walks through an evening check step by step. In short:"
+          }
+        ]
+      },
+      {
+        "type": "list",
+        "style": "bullet",
+        "items": [
+          "Look at both feet every day, including the soles and between the toes — use a mirror or ask a family member to help.",
+          "Never walk barefoot, indoors or outdoors, and shake out your shoes before putting them on.",
+          "Keep blood sugar, blood pressure and cholesterol in the range your doctor has set for you.",
+          [
+            {
+              "t": "If you smoke, ask for help to stop — smoking narrows the arteries of the legs."
+            },
+            {
+              "cite": "r3"
+            }
+          ]
+        ]
+      },
+      {
+        "type": "takeaways",
+        "items": [
+          [
+            {
+              "t": "Diabetes can hide foot injuries by dulling pain — "
+            },
+            {
+              "t": "look",
+              "i": true
+            },
+            {
+              "t": ", do not wait to feel."
+            }
+          ],
+          "Any wound that is not clearly healing within a few days needs a doctor.",
+          [
+            {
+              "t": "Colour change, spreading redness or a bad smell needs care the "
+            },
+            {
+              "t": "same day",
+              "b": true
+            },
+            {
+              "t": "."
+            }
+          ],
+          "A foot check at least once a year — more often if you have had an ulcer — helps catch problems early."
+        ]
+      },
+      {
+        "type": "faq",
+        "items": [
+          {
+            "q": "Can a small blister really become serious?",
+            "a": "Yes. In a foot with reduced feeling or blood flow, a blister can break down into an ulcer and become infected. Keep it clean and covered, take pressure off it, and show it to a doctor if it is not clearly healing within a few days."
+          },
+          {
+            "q": "How often should someone with diabetes have a foot check?",
+            "a": [
+              {
+                "t": "At least once a year, and more often if you have numbness, poor circulation, a past ulcer or a change in foot shape. Your doctor will advise the right interval for you."
+              },
+              {
+                "cite": "r1"
+              }
+            ]
+          },
+          {
+            "q": "Is numbness in the feet just part of getting older?",
+            "a": "Numbness is common in diabetes, but it is never something to ignore. Mention it to your doctor so your feet can be assessed and protected."
+          }
+        ]
+      },
+      {
+        "type": "cta",
+        "kind": "whatsapp",
+        "label": "Message us on WhatsApp",
+        "text": "Worried about a wound or a change in your foot? Our team can help you decide on the next step."
+      }
+    ],
+    "references": [
+      {
+        "id": "r1",
+        "text": "International Working Group on the Diabetic Foot (IWGDF). Guidelines on the prevention and management of diabetes-related foot disease, 2023.",
+        "url": "https://iwgdfguidelines.org/"
+      },
+      {
+        "id": "r2",
+        "text": "World Health Organization. Diabetes — fact sheet.",
+        "url": "https://www.who.int/news-room/fact-sheets/detail/diabetes"
+      },
+      {
+        "id": "r3",
+        "text": "NHS. Peripheral arterial disease (PAD).",
+        "url": "https://www.nhs.uk/conditions/peripheral-arterial-disease-pad/"
+      }
+    ],
+    "sample": true
+  },
+  {
+    "id": "p_s02",
+    "slug": "leg-pain-when-walking-circulation",
+    "previousSlugs": [
+      "calf-pain-on-walking"
+    ],
+    "status": "published",
+    "publishAt": "2026-10-28T09:00:00+05:30",
+    "lang": "en",
+    "layout": "cover",
+    "category": "c_pad",
+    "title": "Leg pain when you walk: what it can mean for your circulation",
+    "titleAccent": "circulation",
+    "dek": "An ache in the calf that comes on with walking and fades with rest is not just age. It can be your arteries asking for attention.",
+    "titleSize": "XL",
+    "bodySize": "L",
+    "leadIn": "smallcaps",
+    "cover": {
+      "src": "assets/products/pad-pvd-circulation-4/01.webp",
+      "alt": "A circulation therapy unit with black inflatable leg sleeves on a round white stand",
+      "caption": "Leg pain on walking deserves a proper circulation check.",
+      "credit": "MediVasc",
+      "focal": {
+        "x": 0.5,
+        "y": 0.55
+      },
+      "patient": false
+    },
+    "author": "a_team",
+    "reviewer": null,
+    "reviewedAt": null,
+    "about": [
+      "Peripheral arterial disease",
+      "Intermittent claudication"
+    ],
+    "seo": {
+      "title": "Leg pain when walking: is it your circulation?",
+      "description": "",
+      "focusKeyphrase": "leg pain when walking",
+      "keywords": [
+        "peripheral arterial disease",
+        "claudication",
+        "ankle brachial index"
+      ]
+    },
+    "related": [
+      "p_s01"
+    ],
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Many people put leg pain when walking down to age. "
+          },
+          {
+            "t": "My legs are just tired",
+            "i": true
+          },
+          {
+            "t": ", they say, and slow down. But one particular kind of pain — a cramp or ache in the calf, thigh or buttock that comes on with walking and settles with rest — has a name: "
+          },
+          {
+            "t": "intermittent claudication",
+            "b": true
+          },
+          {
+            "t": ". It is often the first sign of "
+          },
+          {
+            "t": "peripheral arterial disease (PAD)",
+            "hl": true
+          },
+          {
+            "t": "."
+          },
+          {
+            "cite": "r1"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "PAD means the arteries that carry blood to the legs have become narrowed, usually by fatty deposits in the artery wall. It is more common in people with diabetes, people who smoke, and people with high blood pressure or cholesterol."
+          },
+          {
+            "cite": "r1"
+          },
+          {
+            "cite": "r2"
+          },
+          {
+            "t": " Recognising it early matters, because the same process can affect the arteries of the heart and brain."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "How PAD pain feels"
+      },
+      {
+        "type": "paragraph",
+        "text": "Claudication tends to follow a pattern. It comes on after walking a fairly predictable distance, it is felt in the muscle rather than the joint, and it fades within a few minutes of standing still. Over time, as the narrowing progresses, that distance can shrink — from a few streets to a few houses."
+      },
+      {
+        "type": "paragraph",
+        "text": "Some people with PAD feel no pain at all, especially if diabetes has also dulled the nerves. For them, the first clue may be a foot wound that is slow to heal, cold feet, shiny skin or toenails that have stopped growing."
+      },
+      {
+        "type": "image",
+        "src": "assets/products/kl-5000-pro-neo/01.webp",
+        "alt": "A therapy control unit beside a pair of black multi-chamber leg sleeves in a softly lit studio",
+        "caption": "Circulation is assessed first. Any therapy comes after a diagnosis, and only if it suits you.",
+        "credit": "MediVasc",
+        "width": "full",
+        "align": "center"
+      },
+      {
+        "type": "pullquote",
+        "text": "Pain that stops when you stop walking is a message from your arteries — not simply a sign of getting older.",
+        "cite": "MediVasc Care Team"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Is it my arteries, nerves or veins?"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Leg pain has many causes, and each needs different care. This rough guide can help you describe what you feel to your doctor. It does "
+          },
+          {
+            "t": "not",
+            "b": true
+          },
+          {
+            "t": " replace an examination."
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "caption": "Common patterns of leg pain — a guide, not a diagnosis",
+        "header": [
+          "What you notice",
+          "What it may point to",
+          "What to do"
+        ],
+        "rows": [
+          [
+            "Calf or buttock ache on walking that eases with rest",
+            "Narrowed arteries (PAD)",
+            "See a doctor for a pulse and ankle–arm check"
+          ],
+          [
+            "Burning, tingling or numb feet, often worse at night",
+            "Nerve damage (neuropathy)",
+            "Mention it at your next diabetes review"
+          ],
+          [
+            "Heavy, aching legs and ankle swelling by evening",
+            "Vein problems",
+            "Ask about leg elevation and compression"
+          ],
+          [
+            [
+              {
+                "t": "Pain at rest, a cold pale foot, or a dark toe",
+                "b": true
+              }
+            ],
+            "Severely reduced blood flow",
+            [
+              {
+                "t": "Seek care the same day",
+                "b": true
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "How circulation is checked"
+      },
+      {
+        "type": "image",
+        "src": "assets/products/kl-2000-pro-neo/01.webp",
+        "alt": "A compact therapy unit with two black leg sleeves arranged on a white block",
+        "caption": "Some people are advised supportive therapy to help blood flow; your doctor will say whether it is right for you.",
+        "width": "column",
+        "align": "left",
+        "size": "M"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "The first test is usually simple. Your doctor feels the pulses in your feet and may measure the "
+          },
+          {
+            "t": "ankle–brachial index",
+            "b": true
+          },
+          {
+            "t": " (ABI) — the blood pressure at your ankle compared with your arm — using an ordinary cuff and a small hand-held Doppler probe."
+          },
+          {
+            "cite": "r3"
+          },
+          {
+            "t": " If needed, an ultrasound scan can show where an artery is narrowed and by how much."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "In diabetes the arteries can become stiff, which may make the ABI read falsely normal. Doctors sometimes measure toe pressures or look at the Doppler sound itself for that reason."
+          },
+          {
+            "cite": "r3"
+          }
+        ]
+      },
+      {
+        "type": "video",
+        "source": "youtube",
+        "youtube": "M7lc1UVf-VE",
+        "caption": "Sample embed — replace with a patient-education video before publishing."
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "What helps"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "PAD care has three aims: ease symptoms, protect the feet, and lower the risk of heart attack and stroke. That usually means stopping smoking, keeping diabetes, blood pressure and cholesterol in range, taking the medicines your doctor prescribes, and — perhaps surprisingly — "
+          },
+          {
+            "t": "walking more, not less",
+            "b": true
+          },
+          {
+            "t": "."
+          },
+          {
+            "cite": "r1"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "A structured walking programme, where you walk until the pain is moderate, rest until it settles and then walk again, helps many people walk further over a few months."
+          },
+          {
+            "cite": "r2"
+          },
+          {
+            "t": " Some people also need a procedure to open or bypass a narrowed artery; a vascular specialist can explain whether that applies to you."
+          }
+        ]
+      },
+      {
+        "type": "quote",
+        "text": "Walk to the point of discomfort, pause until it settles, then walk again. Little by little, most people find the distance grows.",
+        "cite": "MediVasc Care Team"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "If you have diabetes, PAD also makes foot wounds slower to heal, so daily checks matter even more — see "
+          },
+          {
+            "t": "seven warning signs your feet need a doctor",
+            "href": "blog/diabetic-foot-warning-signs/"
+          },
+          {
+            "t": ". For more on the condition itself, the "
+          },
+          {
+            "t": "NHS guide to PAD",
+            "href": "https://www.nhs.uk/conditions/peripheral-arterial-disease-pad/"
+          },
+          {
+            "t": " is a clear, reliable read."
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "tone": "note",
+        "title": "A note on “tired legs”",
+        "text": "Leg pain is not an inevitable part of ageing. If walking has started to hurt, ask for your circulation to be checked — it only takes a few minutes."
+      },
+      {
+        "type": "cta",
+        "kind": "call",
+        "label": "Call to book a circulation check",
+        "text": "Talk to our team about leg pain on walking and what to do next."
+      }
+    ],
+    "references": [
+      {
+        "id": "r1",
+        "text": "NHS. Peripheral arterial disease (PAD).",
+        "url": "https://www.nhs.uk/conditions/peripheral-arterial-disease-pad/"
+      },
+      {
+        "id": "r2",
+        "text": "American Diabetes Association. Standards of Care in Diabetes (updated annually), Diabetes Care.",
+        "url": "https://diabetesjournals.org/care"
+      },
+      {
+        "id": "r3",
+        "text": "International Working Group on the Diabetic Foot (IWGDF). Guidelines on the prevention and management of diabetes-related foot disease, 2023.",
+        "url": "https://iwgdfguidelines.org/"
+      }
+    ],
+    "sample": true
+  },
+  {
+    "id": "p_s03",
+    "slug": "non-healing-wound-care-guide",
+    "previousSlugs": [],
+    "status": "published",
+    "publishAt": "2026-10-20T09:00:00+05:30",
+    "lang": "en",
+    "layout": "guide",
+    "category": "c_wound",
+    "title": "Caring for a wound that will not heal: a step-by-step guide",
+    "titleAccent": "step-by-step guide",
+    "dek": "When a wound on the foot or leg stalls, something is holding it back. Four steps to help it along — and the signs that mean it needs a doctor now.",
+    "titleSize": "M",
+    "bodySize": "M",
+    "leadIn": "boldwords",
+    "cover": {
+      "src": "assets/products/venous-ulcer-compression/01.webp",
+      "alt": "Black graduated compression leg sleeves laid out on a pale stand",
+      "caption": "Most stalled wounds have a cause that can be found and treated.",
+      "credit": "MediVasc",
+      "focal": {
+        "x": 0.5,
+        "y": 0.55
+      },
+      "patient": false
+    },
+    "author": "a_team",
+    "reviewer": null,
+    "reviewedAt": null,
+    "about": [
+      "Chronic wound",
+      "Diabetic foot ulcer",
+      "Venous leg ulcer"
+    ],
+    "seo": {
+      "title": "",
+      "description": "Non-healing wound care, step by step: keep it clean, take the pressure off, watch for infection and treat the cause. When a wound needs a doctor.",
+      "focusKeyphrase": "non-healing wound care",
+      "keywords": [
+        "foot ulcer",
+        "leg ulcer",
+        "wound infection",
+        "offloading"
+      ]
+    },
+    "related": [],
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Most cuts and scrapes heal in a week or two. A wound that is still open after "
+          },
+          {
+            "t": "two weeks",
+            "b": true
+          },
+          {
+            "t": ", or that is getting bigger, is called a "
+          },
+          {
+            "t": "non-healing",
+            "i": true
+          },
+          {
+            "t": " or "
+          },
+          {
+            "t": "chronic",
+            "i": true
+          },
+          {
+            "t": " wound. On the feet and lower legs this is common in people with diabetes, poor circulation or swollen legs — and it is a signal to act, not to wait."
+          },
+          {
+            "cite": "r1"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Good non-healing wound care is less about a special cream and more about removing whatever is holding the wound back. This guide walks through the four steps doctors and nurses focus on. You can "
+          },
+          {
+            "t": "jump straight to the infection signs",
+            "href": "#watch-for-infection"
+          },
+          {
+            "t": " if you are worried right now."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Why some wounds stop healing"
+      },
+      {
+        "type": "paragraph",
+        "text": "A wound needs blood flow, a clean surface and freedom from repeated pressure to close. Take any one of those away and healing stalls. Usually more than one is at play."
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Pressure and friction"
+      },
+      {
+        "type": "paragraph",
+        "text": "Walking on a wound — or rubbing it in a tight shoe — reopens it many times a day. If nerve damage has dulled pain, you may not realise it is happening."
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Poor blood flow"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Narrowed arteries deliver less oxygen to the skin. A wound on a cold, pale foot with weak pulses may not heal until circulation is improved."
+          },
+          {
+            "cite": "r2"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Swelling and vein problems"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Long-standing swelling stretches the skin and slows repair. Many leg ulcers around the ankle are linked to veins and improve with compression, once a doctor has checked the arteries are healthy enough for it."
+          },
+          {
+            "cite": "r3"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Infection and blood sugar"
+      },
+      {
+        "type": "paragraph",
+        "text": "Infection uses up the body's healing effort, and high blood sugar weakens the defences that fight it. The two often feed each other."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Step 1: Keep it clean and covered"
+      },
+      {
+        "type": "list",
+        "style": "bullet",
+        "items": [
+          "Wash your hands before and after touching the wound.",
+          "Rinse the wound gently with clean water or saline, as your nurse or doctor advises.",
+          "Cover it with a clean dressing and change it as often as you have been told — sooner if it gets wet or soaked through.",
+          "Avoid home remedies such as turmeric paste, ash or tight cloth wraps on an open wound; they can trap infection."
+        ]
+      },
+      {
+        "type": "callout",
+        "tone": "tip",
+        "title": "A simple habit that helps",
+        "text": "Take a photo of the wound in the same light, from the same distance, once a week. Side-by-side photos make it much easier for you and your doctor to see whether it is really improving."
+      },
+      {
+        "type": "imageText",
+        "image": {
+          "src": "assets/conditions/severity-b.jpg",
+          "alt": "A patient's lower leg resting on a bed sheet during a wound-care visit",
+          "caption": "Shared with the patient's consent.",
+          "patient": true
+        },
+        "side": "left",
+        "text": [
+          "Weekly photos are also useful when you cannot travel easily. Many clinics, including ours, can look at a clear photo and advise whether a visit is needed.",
+          "Keep a note of the date with each photo, and mention any new pain, smell or discharge — details a picture cannot show."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Step 2: Take the pressure off",
+        "size": "L",
+        "anchor": "take-the-pressure-off"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Doctors call this "
+          },
+          {
+            "t": "offloading",
+            "b": true
+          },
+          {
+            "t": ". For a wound on the sole of the foot it is often the single most important step: a wound that is walked on every day will struggle to close no matter how well it is dressed."
+          },
+          {
+            "cite": "r1"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Footwear and offloading devices"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Depending on where the wound is, your doctor may suggest a special shoe, an insole with a cut-out, a removable boot or a cast that spreads the load. Use it "
+          },
+          {
+            "t": "every time",
+            "b": true
+          },
+          {
+            "t": " you are on your feet — including the short walk to the bathroom at night."
+          }
+        ]
+      },
+      {
+        "type": "gallery",
+        "images": [
+          {
+            "src": "assets/products/venous-care-6/01.webp",
+            "alt": "Black multi-chamber compression sleeves arranged in a curve on a white plinth",
+            "caption": "Full-leg sleeves"
+          },
+          {
+            "src": "assets/products/varicose-vein-care/01.webp",
+            "alt": "A pair of black leg sleeves with connecting tubes, photographed against cream",
+            "caption": "Calf-and-thigh sleeves"
+          },
+          {
+            "src": "assets/products/venous-ulcer-dvt-care/01.webp",
+            "alt": "A single black compression sleeve folded at the knee on a white stand",
+            "caption": "Single-limb sleeve"
+          }
+        ],
+        "caption": "Compression comes in different lengths and strengths. It is only used once a doctor has confirmed blood flow is adequate."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Step 3: Watch for infection",
+        "anchor": "watch-for-infection"
+      },
+      {
+        "type": "paragraph",
+        "text": "Infection can turn a slow wound into an emergency within days, especially in diabetes. Check the wound and the skin around it at every dressing change."
+      },
+      {
+        "type": "callout",
+        "tone": "doctor",
+        "text": [
+          {
+            "t": "Seek care "
+          },
+          {
+            "t": "the same day",
+            "b": true
+          },
+          {
+            "t": " if you notice redness spreading away from the wound, new swelling or warmth, pus or a bad smell, a black or grey area, fever or chills, or if your blood sugar suddenly becomes hard to control."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Step 4: Treat the underlying cause"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Dressings protect a wound; they rarely fix the reason it stalled. Ask your doctor directly: "
+          },
+          {
+            "t": "what is stopping this wound from healing, and what are we doing about it?",
+            "i": true
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Circulation"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "If pulses are weak, a circulation test and a referral to a vascular specialist may be needed. Restoring blood flow can be what finally lets a wound close."
+          },
+          {
+            "cite": "r2"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Swelling"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Leg elevation, regular walking and compression — when safe — reduce swelling and help many vein-related ulcers."
+          },
+          {
+            "cite": "r3"
+          },
+          {
+            "t": " Lymphoedema needs its own plan; see our guide to "
+          },
+          {
+            "t": "daily habits for lymphoedema",
+            "href": "blog/lymphoedema-daily-habits/"
+          },
+          {
+            "t": "."
+          }
+        ]
+      },
+      {
+        "type": "video",
+        "source": "film",
+        "src": "assets/conditions/severity-b.mp4",
+        "caption": "A patient's own short video, shared with consent. Every person's situation is different — talk to a doctor about yours."
+      },
+      {
+        "type": "takeaways",
+        "title": "In short",
+        "items": [
+          "A wound still open after two weeks needs a doctor's assessment, not more waiting.",
+          [
+            {
+              "t": "Keep it clean and covered, and "
+            },
+            {
+              "t": "take the pressure off",
+              "b": true
+            },
+            {
+              "t": " — offloading matters as much as the dressing."
+            }
+          ],
+          "Spreading redness, smell, fever or a dark patch means care the same day.",
+          "Ask what is stopping the wound from healing: pressure, blood flow, swelling, infection or sugar."
+        ]
+      },
+      {
+        "type": "faq",
+        "items": [
+          {
+            "q": "Should I leave a wound open to the air so it dries out?",
+            "a": "Generally no. Most wounds heal better when they are kept clean, slightly moist and covered with a suitable dressing. Follow the advice of the nurse or doctor who knows your wound."
+          },
+          {
+            "q": "Can I put antiseptic on it every day?",
+            "a": "Strong antiseptics used too often can damage new tissue. Use only what your doctor or nurse recommends, in the way they recommend it."
+          },
+          {
+            "q": "How long should a foot ulcer take to heal?",
+            "a": [
+              {
+                "t": "It varies widely with the cause, the blood flow and how well pressure is taken off. What matters most is steady progress — if a wound is not getting smaller over two to four weeks, the plan needs reviewing."
+              },
+              {
+                "cite": "r1"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "references": [
+      {
+        "id": "r1",
+        "text": "International Working Group on the Diabetic Foot (IWGDF). Guidelines on the prevention and management of diabetes-related foot disease, 2023.",
+        "url": "https://iwgdfguidelines.org/"
+      },
+      {
+        "id": "r2",
+        "text": "NHS. Peripheral arterial disease (PAD).",
+        "url": "https://www.nhs.uk/conditions/peripheral-arterial-disease-pad/"
+      },
+      {
+        "id": "r3",
+        "text": "NHS. Leg ulcer.",
+        "url": "https://www.nhs.uk/conditions/leg-ulcer/"
+      }
+    ],
+    "sample": true
+  },
+  {
+    "id": "p_s04",
+    "slug": "lymphoedema-daily-habits",
+    "previousSlugs": [],
+    "status": "published",
+    "publishAt": "2026-10-14T09:00:00+05:30",
+    "lang": "en",
+    "layout": "split",
+    "category": "c_lymph",
+    "title": "Living with lymphoedema: small daily habits that help",
+    "titleAccent": "small daily habits",
+    "dek": "Long-standing swelling of a leg or arm can be managed. Skin care, movement, elevation and compression — done a little every day — make the difference.",
+    "titleSize": "S",
+    "bodySize": "S",
+    "leadIn": "none",
+    "cover": {
+      "src": "assets/products/limb-lymphedema-8/01.webp",
+      "alt": "A grey compression garment and a white therapy unit with a small display, on a cream surface",
+      "caption": "Daily habits matter as much as any single treatment.",
+      "credit": "MediVasc",
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "patient": false
+    },
+    "author": "a_team",
+    "reviewer": null,
+    "reviewedAt": null,
+    "about": [
+      "Lymphoedema",
+      "Lymphatic filariasis"
+    ],
+    "seo": {
+      "title": "Lymphoedema daily care: habits that help control swelling",
+      "description": "Lymphoedema daily care made simple: skin care, gentle exercise, elevation and compression habits that help control leg or arm swelling, including elephantiasis.",
+      "focusKeyphrase": "lymphoedema daily care",
+      "keywords": [
+        "elephantiasis",
+        "filariasis",
+        "leg swelling",
+        "compression"
+      ]
+    },
+    "related": [],
+    "blocks": [
+      {
+        "type": "lead",
+        "text": "Lymphoedema is swelling that happens when the lymphatic system — the network that drains fluid from the tissues — cannot keep up. It usually affects a leg or an arm, and it tends to be long-term. But it is not something you have to simply put up with."
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "In India, a common cause of leg lymphoedema is "
+          },
+          {
+            "t": "lymphatic filariasis",
+            "b": true
+          },
+          {
+            "t": ", the mosquito-borne infection behind the swelling often called "
+          },
+          {
+            "t": "elephantiasis",
+            "i": true
+          },
+          {
+            "t": " (hathipaon)."
+          },
+          {
+            "cite": "r1"
+          },
+          {
+            "cite": "r2"
+          },
+          {
+            "t": " Lymphoedema can also follow cancer treatment, surgery, injury or repeated skin infections."
+          },
+          {
+            "cite": "r3"
+          },
+          {
+            "t": " Whatever the cause, the daily care is remarkably similar."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Why daily care matters"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Swollen skin is fragile. Tiny cracks between the toes or in skin folds let bacteria in, and each bout of infection ("
+          },
+          {
+            "t": "cellulitis",
+            "i": true
+          },
+          {
+            "t": ") can damage the lymph vessels further and make the swelling worse. Breaking that cycle is the heart of lymphoedema daily care."
+          },
+          {
+            "cite": "r1"
+          }
+        ]
+      },
+      {
+        "type": "gallery",
+        "images": [
+          {
+            "src": "assets/solutions/elephantiasis-01.webp",
+            "alt": "The sole and toes of a foot with long-standing lymphoedema, with thickened skin",
+            "caption": "Thickened skin and deep folds need daily washing and drying.",
+            "patient": true
+          },
+          {
+            "src": "assets/solutions/elephantiasis-02.webp",
+            "alt": "A swollen lower leg with lymphoedema photographed at home",
+            "caption": "Swelling that has been present for years can still be helped by care.",
+            "patient": true
+          }
+        ],
+        "caption": "Photographs shared with the patients' consent."
+      },
+      {
+        "type": "paragraph",
+        "text": "In the early stages, swelling may come and go: pressing on the skin leaves a dent, and the leg is smaller in the morning. Over years, the skin can thicken and harden and the swelling stops going down overnight. Care helps at every stage, but it is easier — and does more — when it starts early."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Five habits that help"
+      },
+      {
+        "type": "imageText",
+        "image": {
+          "src": "assets/treatment/treatment-04.webp",
+          "alt": "A swollen lower leg and foot photographed from behind against a grey background",
+          "caption": "Photographed with consent.",
+          "patient": true
+        },
+        "side": "right",
+        "text": [
+          [
+            {
+              "t": "1. Wash and dry the skin every day.",
+              "b": true
+            },
+            {
+              "t": " Use mild soap and clean water, then dry carefully — especially between the toes and in skin folds. A soft cloth and patience matter more than any product."
+            }
+          ],
+          [
+            {
+              "t": "2. Moisturise.",
+              "b": true
+            },
+            {
+              "t": " A plain, unscented moisturiser keeps skin supple and less likely to crack. Avoid putting it between the toes, where moisture can collect."
+            }
+          ]
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "3. Keep moving.",
+            "b": true
+          },
+          {
+            "t": " Gentle exercise — walking, ankle circles, calf raises — works the muscles that help push lymph fluid along. Little and often is better than one long session."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "4. Raise the limb when you rest.",
+            "b": true
+          },
+          {
+            "t": " Prop your leg on a pillow or stool so the foot is higher than the hip when you sit or lie down. Avoid sitting cross-legged for long periods."
+          }
+        ]
+      },
+      {
+        "type": "image",
+        "src": "assets/products/lymphedema-cellulitis-6/01.webp",
+        "alt": "A therapy unit with grey multi-chamber sleeves for leg, arm and waist arranged on a white surface",
+        "caption": [
+          {
+            "t": "Some people are advised "
+          },
+          {
+            "t": "compression garments",
+            "b": true
+          },
+          {
+            "t": " or a pneumatic compression device as part of their plan — always after a doctor's assessment."
+          }
+        ],
+        "credit": "MediVasc",
+        "width": "wide",
+        "align": "center"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "5. Use compression as advised.",
+            "b": true
+          },
+          {
+            "t": " Bandages, garments or devices that apply graded pressure help reduce swelling and keep it down. They need to be fitted and prescribed for you — the wrong pressure can do harm, especially if circulation is also poor."
+          },
+          {
+            "cite": "r3"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "It helps to pair each habit with something you already do: moisturise after the evening wash, do ankle exercises during the television news, raise the leg while you rest after lunch. Family members can help with the parts that are hard to reach."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Protect your skin from infection"
+      },
+      {
+        "type": "image",
+        "src": "assets/products/filariasis-leg-compression/01.webp",
+        "alt": "Green full-leg compression sleeves with a matching control unit on a round white base",
+        "caption": "Compression is one part of a plan that also includes skin care and movement.",
+        "width": "column",
+        "align": "right",
+        "size": "L"
+      },
+      {
+        "type": "list",
+        "style": "bullet",
+        "items": [
+          "Treat fungal infection between the toes promptly — it is a common entry point for bacteria.",
+          "Wear footwear outdoors, and cut nails straight across.",
+          "Protect the limb from cuts, insect bites and sunburn.",
+          "Learn the signs of cellulitis: a red, hot, painful patch, often with fever or feeling unwell."
+        ]
+      },
+      {
+        "type": "callout",
+        "tone": "doctor",
+        "title": "Signs of infection — act quickly",
+        "text": [
+          {
+            "t": "If the limb becomes red, hot and more painful, or you develop a fever, contact a doctor "
+          },
+          {
+            "t": "the same day",
+            "b": true
+          },
+          {
+            "t": ". Cellulitis usually needs prompt antibiotics, and early treatment helps protect the lymph vessels."
+          }
+        ]
+      },
+      {
+        "type": "quote",
+        "text": "The habits are simple. The hard part is doing them every day, including the days the leg looks fine.",
+        "cite": "MediVasc Care Team"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "When to see a doctor"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "See a doctor "
+          },
+          {
+            "t": "urgently",
+            "b": true
+          },
+          {
+            "t": " if swelling in one leg starts suddenly, especially with pain or tenderness in the calf — this can be a blood clot. Ask for advice, too, if the swelling keeps getting worse despite daily care, if the skin starts leaking fluid, or if infections keep coming back. A doctor can confirm the cause, check the veins and arteries, and help you build a plan that includes the right compression."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "In areas where filariasis is common, community drug-administration rounds help protect families from new infection; your local health worker or the "
+          },
+          {
+            "t": "national programme",
+            "href": "https://ncvbdc.mohfw.gov.in/"
+          },
+          {
+            "t": " can tell you more."
+          },
+          {
+            "cite": "r2"
+          },
+          {
+            "t": " For the wider picture on swollen limbs, our "
+          },
+          {
+            "t": "step-by-step guide to stalled wounds",
+            "href": "blog/non-healing-wound-care-guide/"
+          },
+          {
+            "t": " covers skin breakdown in more detail."
+          }
+        ]
+      }
+    ],
+    "references": [
+      {
+        "id": "r1",
+        "text": "World Health Organization. Lymphatic filariasis — fact sheet.",
+        "url": "https://www.who.int/news-room/fact-sheets/detail/lymphatic-filariasis"
+      },
+      {
+        "id": "r2",
+        "text": "National Center for Vector Borne Diseases Control, Ministry of Health and Family Welfare, Government of India. Lymphatic filariasis programme.",
+        "url": "https://ncvbdc.mohfw.gov.in/"
+      },
+      {
+        "id": "r3",
+        "text": "NHS. Lymphoedema.",
+        "url": "https://www.nhs.uk/conditions/lymphoedema/"
+      }
+    ],
+    "sample": true
+  },
+  {
+    "id": "p_s05",
+    "slug": "daily-foot-care-routine-diabetes",
+    "previousSlugs": [],
+    "status": "published",
+    "publishAt": "2026-10-07T09:00:00+05:30",
+    "lang": "en",
+    "layout": "editorial",
+    "category": "c_prev",
+    "title": "A five-minute daily foot-care routine for people with diabetes",
+    "titleAccent": "five-minute",
+    "dek": "Five minutes each evening, a mirror and a towel. The simplest habit there is for protecting your feet — and one of the most important.",
+    "titleSize": "M",
+    "bodySize": "L",
+    "leadIn": "smallcaps",
+    "cover": {
+      "src": "assets/products/foot-amputation-prevention-4/01.webp",
+      "alt": "A therapy unit with black foot-and-calf sleeves on a white plinth under soft light",
+      "caption": "A daily routine catches problems while they are still small.",
+      "credit": "MediVasc",
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "patient": false
+    },
+    "author": "a_team",
+    "reviewer": null,
+    "reviewedAt": null,
+    "about": [
+      "Diabetic foot"
+    ],
+    "seo": {
+      "title": "",
+      "description": "A simple daily foot care routine for diabetes: wash, dry, check, moisturise and protect — five minutes each evening to help catch problems early.",
+      "focusKeyphrase": "daily foot care routine",
+      "keywords": [
+        "diabetes foot care",
+        "foot check",
+        "diabetic footwear"
+      ]
+    },
+    "related": [],
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "A daily foot care routine sounds almost too simple to matter. Yet guidelines for diabetes care around the world — including those used in India — put it near the top of the list for protecting the feet."
+          },
+          {
+            "cite": "r1"
+          },
+          {
+            "cite": "r2"
+          },
+          {
+            "t": " The reason is straightforward: when nerves are dulled, your eyes have to do the work your feet no longer can."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "Here is a routine that takes about five minutes. Pick a fixed time — after your evening bath, or before bed — so it becomes as automatic as brushing your teeth."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "The routine, step by step"
+      },
+      {
+        "type": "image",
+        "src": "assets/products/kl-3000-pro-neo/01.webp",
+        "alt": "A black therapy unit and folded leg sleeves arranged on a cream surface",
+        "caption": "Keep your foot-care things — towel, mirror, moisturiser — in one place.",
+        "width": "column",
+        "align": "left",
+        "size": "S"
+      },
+      {
+        "type": "list",
+        "style": "number",
+        "items": [
+          [
+            {
+              "t": "Wash",
+              "b": true
+            },
+            {
+              "t": " your feet in lukewarm water. Test the temperature with your elbow or a thermometer, never your foot."
+            }
+          ],
+          [
+            {
+              "t": "Dry",
+              "b": true
+            },
+            {
+              "t": " them gently and thoroughly, especially between the toes."
+            }
+          ],
+          [
+            {
+              "t": "Look",
+              "b": true
+            },
+            {
+              "t": " at the tops, soles, heels and between every toe. Use a mirror, or ask someone at home to look for you."
+            }
+          ],
+          [
+            {
+              "t": "Moisturise",
+              "b": true
+            },
+            {
+              "t": " dry skin on the tops and soles — but not between the toes."
+            }
+          ],
+          [
+            {
+              "t": "Protect",
+              "b": true
+            },
+            {
+              "t": ": put on clean, dry socks and check inside your shoes with your hand before wearing them."
+            }
+          ]
+        ]
+      },
+      {
+        "type": "pullquote",
+        "text": "When nerves are dulled, your eyes have to do the work your feet no longer can."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "What you are looking for"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "You are not trying to diagnose anything — only to spot change. Look for cuts, blisters, cracks, redness, swelling, hard skin, corns, ingrown nails, fungal infection between the toes, or any colour change. Our list of "
+          },
+          {
+            "t": "seven warning signs",
+            "href": "blog/diabetic-foot-warning-signs/"
+          },
+          {
+            "t": " explains which ones need a doctor and how quickly."
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "tone": "doctor",
+        "text": "Do not treat corns, calluses or ingrown nails yourself with blades, corn plasters or acids. In a diabetic foot these can cause wounds that are slow to heal. Ask a doctor or podiatrist instead."
+      },
+      {
+        "type": "paragraph",
+        "text": "If bending is difficult or your eyesight is not what it was, a family member can do the check — show them this article. Some people sketch a simple outline of both feet in a notebook and mark anything new, so the next day's check has something to compare against."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "If you find something"
+      },
+      {
+        "type": "list",
+        "style": "bullet",
+        "items": [
+          [
+            {
+              "t": "A small cut or blister:",
+              "b": true
+            },
+            {
+              "t": " wash it gently, cover it with a clean dressing and keep pressure off it. Look again the next day."
+            }
+          ],
+          [
+            {
+              "t": "Anything not clearly better within two or three days:",
+              "b": true
+            },
+            {
+              "t": " show it to a doctor."
+            }
+          ],
+          [
+            {
+              "t": "Spreading redness, swelling, pus, a bad smell, a dark patch or fever:",
+              "b": true
+            },
+            {
+              "t": " seek care the same day."
+            }
+          ]
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Shoes and socks"
+      },
+      {
+        "type": "paragraph",
+        "text": "Choose closed shoes that fit well, with room for the toes and a soft lining without rough seams. Buy new shoes in the afternoon, when feet are slightly larger, and wear them in for short periods at first. Indoors, wear soft slippers rather than going barefoot — on hot terraces and floors in summer this matters even more."
+      },
+      {
+        "type": "list",
+        "style": "bullet",
+        "items": [
+          "Socks should be clean, soft and not tight at the top.",
+          "Avoid walking barefoot, including at temples, on the beach and at home.",
+          "Keep your feet away from heaters, hot-water bags and hot sand."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Beyond the routine"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "The routine works best alongside the bigger picture: keeping blood sugar, blood pressure and cholesterol in your target range, staying active, not smoking, and having your feet examined by a professional at least once a year."
+          },
+          {
+            "cite": "r3"
+          },
+          {
+            "t": " If you have ever had an ulcer, your doctor will likely want to see your feet more often."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "Finally, be kind to yourself on the days you forget. The routine protects you through steady repetition, not perfection — pick it up again the next evening. If a family member shares the habit with you, it is far easier to keep going."
+      },
+      {
+        "type": "faq",
+        "items": [
+          {
+            "q": "Should I soak my feet in warm water?",
+            "a": "Long soaks can dry out and soften the skin, which makes it easier to crack. A short wash in lukewarm water is better."
+          },
+          {
+            "q": "Can I use coconut oil to moisturise?",
+            "a": "A plain moisturiser or oil can help very dry skin. Keep it off the skin between the toes, and stop if the skin becomes red or irritated."
+          }
+        ]
+      },
+      {
+        "type": "cta",
+        "kind": "whatsapp",
+        "label": "Ask us on WhatsApp",
+        "text": "Not sure whether something you spotted needs a doctor? Send our team a message."
+      }
+    ],
+    "references": [
+      {
+        "id": "r1",
+        "text": "International Working Group on the Diabetic Foot (IWGDF). Guidelines on the prevention and management of diabetes-related foot disease, 2023.",
+        "url": "https://iwgdfguidelines.org/"
+      },
+      {
+        "id": "r2",
+        "text": "Research Society for the Study of Diabetes in India (RSSDI). Clinical practice recommendations for the management of type 2 diabetes.",
+        "url": "https://www.rssdi.in/"
+      },
+      {
+        "id": "r3",
+        "text": "American Diabetes Association. Standards of Care in Diabetes (updated annually), Diabetes Care.",
+        "url": "https://diabetesjournals.org/care"
+      }
+    ],
+    "sample": true
+  },
+  {
+    "id": "p_s06",
+    "slug": "check-up-what-to-bring-and-ask",
+    "previousSlugs": [],
+    "status": "published",
+    "publishAt": "2026-09-30T09:00:00+05:30",
+    "updatedAt": "2026-11-02T10:00:00+05:30",
+    "lang": "en",
+    "layout": "guide",
+    "category": "c_prev",
+    "title": "Before your foot and circulation check-up: what to bring and what to ask",
+    "titleAccent": "what to ask",
+    "dek": "A little preparation turns a short appointment into a useful one. A checklist of papers to carry and questions worth asking.",
+    "titleSize": "L",
+    "bodySize": "M",
+    "leadIn": "dropcap",
+    "cover": {
+      "src": "assets/products/kl-2000-pro-neo/01.webp",
+      "alt": "A compact therapy unit with two leg sleeves on a white block against a warm backdrop",
+      "caption": "Preparation makes a short appointment count.",
+      "credit": "MediVasc",
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "patient": false
+    },
+    "author": "a_team",
+    "reviewer": null,
+    "reviewedAt": null,
+    "about": [
+      "Peripheral arterial disease",
+      "Diabetic foot"
+    ],
+    "seo": {
+      "title": "",
+      "description": "Vascular check-up questions to ask, and what to bring: reports, medicines list, footwear and wound photos — a simple checklist for foot and circulation visits.",
+      "focusKeyphrase": "vascular check-up questions",
+      "keywords": [
+        "foot check-up",
+        "circulation test",
+        "doctor appointment checklist"
+      ]
+    },
+    "related": [
+      "p_s02",
+      "p_s05"
+    ],
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "Appointments can feel rushed, and it is easy to come home and realise you forgot to ask the one thing that was worrying you. A little preparation helps your doctor understand your situation quickly — and helps you leave with clear answers. Here are the vascular check-up questions and the papers we suggest you take along."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Before the appointment"
+      },
+      {
+        "type": "paragraph",
+        "text": "Gather these a day or two before and keep them together in one folder, so nothing is left behind on the morning of the visit."
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Papers and reports to bring"
+      },
+      {
+        "type": "list",
+        "style": "bullet",
+        "items": [
+          "Recent blood reports — HbA1c, blood sugar, cholesterol and kidney function if you have them.",
+          "Any earlier scans, Doppler or ABI reports, and discharge summaries.",
+          "Photos of any wound, taken over the past few weeks, with dates."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Your medicines list"
+      },
+      {
+        "type": "paragraph",
+        "text": "Write down every medicine you take, with the dose — including insulin, blood thinners, ayurvedic or homeopathic medicines and supplements. Or simply bring the strips and bottles in a bag."
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "What to wear"
+      },
+      {
+        "type": "paragraph",
+        "text": "Wear or carry the shoes you use most days, and clothes that let you uncover your legs up to the knee easily. Your shoes tell a doctor a great deal about where pressure falls on your feet."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Questions worth asking"
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "About your feet"
+      },
+      {
+        "type": "list",
+        "style": "number",
+        "items": [
+          [
+            {
+              "t": "Is the feeling in my feet normal? Am I at higher risk of foot ulcers?"
+            },
+            {
+              "cite": "r2"
+            }
+          ],
+          "Are my shoes suitable, or do I need special footwear or insoles?",
+          "How often should my feet be checked from now on?"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "About your circulation"
+      },
+      {
+        "type": "list",
+        "style": "number",
+        "items": [
+          "Are the pulses in my feet normal? Do I need an ABI or ultrasound test?",
+          "If my circulation is reduced, how much exercise is safe — and how should I build it up?",
+          [
+            {
+              "t": "Which of my medicines protect my arteries, and what are my targets for sugar, blood pressure and cholesterol?"
+            },
+            {
+              "cite": "r1"
+            }
+          ]
+        ]
+      },
+      {
+        "type": "quote",
+        "text": "There is no such thing as a silly question about your own feet."
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "About a wound, if you have one"
+      },
+      {
+        "type": "list",
+        "style": "number",
+        "items": [
+          "What is stopping this wound from healing?",
+          "How often should the dressing be changed, and who should change it?",
+          "Which signs mean I should come back before my next appointment?"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Travelling for your appointment"
+      },
+      {
+        "type": "paragraph",
+        "text": "If you are coming from another town, call ahead to confirm what to bring and whether any test needs you to fast. Carry your diabetes medicines and a snack for the journey, wear comfortable shoes you already know rather than new ones, and get up to walk every hour or two on long trips — hours of sitting can make legs and ankles swell."
+      },
+      {
+        "type": "paragraph",
+        "text": "If you can, bring a family member. A second pair of ears helps, and they are often the person who will be helping with foot checks and dressings at home."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "After the appointment"
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "Before you leave, repeat back the plan in your own words: what to do, what to watch for, and when to come back. Ask who to contact if a warning sign appears between visits — and keep that number somewhere the whole family can find it. Our guide to "
+          },
+          {
+            "t": "leg pain when walking",
+            "href": "blog/leg-pain-when-walking-circulation/"
+          },
+          {
+            "t": " and the "
+          },
+          {
+            "t": "daily foot-care routine",
+            "href": "blog/daily-foot-care-routine-diabetes/"
+          },
+          {
+            "t": " are good follow-up reading."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Keeping track between visits"
+      },
+      {
+        "type": "paragraph",
+        "text": "A simple log helps you notice trends and gives your doctor useful information next time. Copy this into a notebook or your phone:"
+      },
+      {
+        "type": "table",
+        "caption": "An example of a simple weekly log",
+        "header": [
+          "Date",
+          "Feet checked?",
+          "Anything new?",
+          "Sugar (fasting)",
+          "Walking today"
+        ],
+        "rows": [
+          [
+            "Monday",
+            "Yes",
+            "Small blister, left heel — covered",
+            "128",
+            "20 min"
+          ],
+          [
+            "Tuesday",
+            "Yes",
+            "Blister drying, no redness",
+            "121",
+            "25 min"
+          ],
+          [
+            "Wednesday",
+            "Yes",
+            [
+              {
+                "t": "Nothing new",
+                "i": true
+              }
+            ],
+            "118",
+            "25 min"
+          ]
+        ]
+      },
+      {
+        "type": "callout",
+        "tone": "note",
+        "title": "Your doctor's advice comes first",
+        "text": "This checklist is general guidance. Your own doctor knows your history and may ask for different reports or a different schedule — follow their advice."
+      },
+      {
+        "type": "cta",
+        "kind": "contact",
+        "label": "Plan a visit",
+        "text": "Tell us a little about your situation and we will help you prepare."
+      }
+    ],
+    "references": [
+      {
+        "id": "r1",
+        "text": "Indian Council of Medical Research (ICMR). Guidelines for the management of type 2 diabetes.",
+        "url": "https://www.icmr.gov.in/"
+      },
+      {
+        "id": "r2",
+        "text": "International Working Group on the Diabetic Foot (IWGDF). Guidelines on the prevention and management of diabetes-related foot disease, 2023.",
+        "url": "https://iwgdfguidelines.org/"
+      }
+    ],
+    "sample": true
+  }
+]

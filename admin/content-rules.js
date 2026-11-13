@@ -17,6 +17,9 @@
 //   validateSeo(config.seo)    validateCompany(company)   validateCompanyLocation(company)
 //   validateHero(config)       (the site-config.json hero fields)
 //   validateEligibility(config)  (site-config.json → eligibility)
+//   validateBlogConfig(config)   (data/blog/config.json)
+//   validateBlogPosts(posts, config, films?)  (data/blog/posts.json [+ samples.json];
+//                                films = data/films.json, optional, checks video clips)
 // and a *Detailed twin returning [{ path, message }] so an editor can place
 // each error next to its field (path is dot-separated: "approach.steps.1.title").
 //
@@ -980,6 +983,615 @@
     return errors;
   };
 
+  // -------------------------------------------------------------------- blog
+  // data/blog/config.json and posts.json (+ samples.json) — shapes pinned in
+  // src/blog/CONTRACT.md. Keep the enums below in sync with that file.
+
+  const TINTS = ['teal', 'clay', 'sage', 'ochre', 'slate', 'plum'];
+  const LAYOUTS = ['editorial', 'cover', 'split', 'guide'];
+  const BLOCK_TYPES = [
+    'paragraph', 'lead', 'heading', 'list', 'quote', 'pullquote', 'image', 'gallery',
+    'imageText', 'callout', 'takeaways', 'divider', 'table', 'video', 'faq', 'cta',
+  ];
+  const BLOG_ENUMS = {
+    status: ['published', 'scheduled', 'unpublished'],
+    titleSize: ['S', 'M', 'L', 'XL'],
+    bodySize: ['S', 'M', 'L'],
+    leadIn: ['dropcap', 'smallcaps', 'boldwords', 'none'],
+    headingSize: ['S', 'M', 'L'],
+    imageWidth: ['column', 'wide', 'full'],
+    imageAlign: ['center', 'left', 'right'],
+    imageSize: ['S', 'M', 'L'],
+    side: ['left', 'right'],
+    calloutTone: ['doctor', 'tip', 'note'],
+    listStyle: ['bullet', 'number'],
+    ctaKind: ['whatsapp', 'call', 'contact'],
+    videoSource: ['film', 'youtube'],
+  };
+  // Owner-facing block names (the editor's block picker uses the same words).
+  const BLOCK_LABELS = {
+    paragraph: 'Paragraph', lead: 'Intro paragraph', heading: 'Heading', list: 'List',
+    quote: 'Quote', pullquote: 'Pull quote', image: 'Image', gallery: 'Gallery',
+    imageText: 'Image with text', callout: 'Callout box', takeaways: 'Key takeaways',
+    divider: 'Divider', table: 'Table', video: 'Video', faq: 'Questions', cta: 'Contact button',
+  };
+  // Post addresses that would collide with the blog's own pages.
+  const RESERVED_BLOG_SLUGS = ['category', 'author', 'feed.xml'];
+  const BLOG_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  const BLOG_ID = /^[A-Za-z0-9_-]+$/;
+  const BLOG_ANCHOR = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+  const BLOG_IMAGE = /^assets\/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.(?:webp|jpe?g|png|avif)$/i;
+  const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+  const ISO_WITH_OFFSET = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,3})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
+  const ISO_DATE = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/;
+  // Raw HTML in text (renderers escape everything, so a tag would show as code).
+  const HTML_TAG = /<\/?[A-Za-z][^<>]*>|<!--/;
+  const INLINE_KEYS = ['t', 'b', 'i', 'hl', 'href', 'cite'];
+  const MARK_NAMES = { b: 'bold', i: 'italic', hl: 'highlight' };
+  // Link targets the renderers keep (CONTRACT "Inline text"): anything else is dropped.
+  const BLOG_HREFS = [
+    /^https:\/\/[^\s<>"]+$/,
+    /^mailto:[^\s<>"@]+@[^\s<>"@]+$/,
+    /^tel:\+?[0-9][0-9 ()-]*$/,
+    /^blog\/[a-z0-9]+(?:-[a-z0-9]+)*\/(?:#[A-Za-z0-9_-]+)?$/,
+    /^#[A-Za-z0-9][A-Za-z0-9_-]*$/,
+  ];
+
+  const isIsoWithOffset = (value) =>
+    typeof value === 'string' && ISO_WITH_OFFSET.test(value) && !Number.isNaN(Date.parse(value));
+  const blogHrefAllowed = (href) => typeof href === 'string' && BLOG_HREFS.some((re) => re.test(href));
+  const asList = (value) => (Array.isArray(value) ? value : []);
+  const shortTitle = (title) => {
+    const t = title.trim();
+    return t.length > 60 ? `${t.slice(0, 58).replace(/\s+\S*$/, '')}…` : t;
+  };
+  const optionalText = (obj, key, path, label, add) => {
+    if (obj[key] !== undefined && obj[key] !== null && typeof obj[key] !== 'string') add(path, `${label} must be text.`);
+  };
+  const tagIn = (text) => {
+    const match = HTML_TAG.exec(text);
+    return match ? match[0].slice(0, 40) : null;
+  };
+
+  // Inline text: a plain string, or runs [{ t, b, i, hl, href } | { cite }].
+  // Reports problems through add(); returns true when it carries visible text.
+  const checkInline = (value, path, where, add, refIds) => {
+    if (typeof value === 'string') {
+      const tag = tagIn(value);
+      if (tag) add(path, `${where} contains HTML code (“${tag}”). Use the editor's formatting buttons instead.`);
+      return value.trim() !== '';
+    }
+    if (!Array.isArray(value)) {
+      add(path, `${where} is not valid text.`);
+      return false;
+    }
+    let visible = false;
+    value.forEach((run, k) => {
+      const at = `${path}.${k}`;
+      if (!isObject(run)) {
+        add(at, `${where}: part ${k + 1} of the text is not valid.`);
+        return;
+      }
+      const unknown = Object.keys(run).filter((key) => !INLINE_KEYS.includes(key));
+      if (unknown.length) add(at, `${where}: part ${k + 1} has unknown formatting (${unknown.join(', ')}).`);
+      if (run.cite !== undefined) {
+        if (Object.keys(run).some((key) => key !== 'cite')) {
+          add(at, `${where}: a citation number cannot also carry text, a link or formatting.`);
+        }
+        if (blank(run.cite)) add(`${at}.cite`, `${where}: a citation does not say which reference it points to.`);
+        else if (!refIds.has(run.cite)) {
+          add(`${at}.cite`, `${where}: cites reference “${run.cite}”, which is not in this post's references list.`);
+        }
+        return;
+      }
+      if (typeof run.t !== 'string') {
+        add(`${at}.t`, `${where}: part ${k + 1} of the text is empty or not text.`);
+        return;
+      }
+      const tag = tagIn(run.t);
+      if (tag) add(`${at}.t`, `${where} contains HTML code (“${tag}”). Use the editor's formatting buttons instead.`);
+      if (run.t.trim() !== '') visible = true;
+      for (const mark of Object.keys(MARK_NAMES)) {
+        if (run[mark] !== undefined && typeof run[mark] !== 'boolean') {
+          add(`${at}.${mark}`, `${where}: the ${MARK_NAMES[mark]} setting on “${run.t.slice(0, 30)}” is not valid.`);
+        }
+      }
+      if (run.href !== undefined && !blogHrefAllowed(run.href)) {
+        add(`${at}.href`, `${where}: the link “${String(run.href).slice(0, 60)}” is not allowed. Use a full https:// address, mailto:, tel:, another post (blog/post-address/) or a #section link.`);
+      }
+    });
+    return visible;
+  };
+
+  const requireInline = (value, path, where, add, refIds, what) => {
+    if (value === undefined || value === null) {
+      add(path, `${where} needs ${what}.`);
+      return;
+    }
+    if (!checkInline(value, path, where, add, refIds) && (typeof value === 'string' || Array.isArray(value))) {
+      add(path, `${where} needs ${what}.`);
+    }
+  };
+
+  const checkInlineList = (items, path, where, add, refIds, { min = 1, what = 'item' } = {}) => {
+    if (!Array.isArray(items) || items.length < min) {
+      add(path, `${where} needs at least ${min} ${what}${min === 1 ? '' : 's'}.`);
+      return;
+    }
+    items.forEach((item, k) => requireInline(item, `${path}.${k}`, `${where}, ${what} ${k + 1}`, add, refIds, 'some text'));
+  };
+
+  const checkBlogImage = (img, path, where, add, refIds) => {
+    if (!isObject(img)) {
+      add(path, `${where}: choose an image.`);
+      return;
+    }
+    if (blank(img.src)) add(`${path}.src`, `${where}: choose an image.`);
+    else if (!BLOG_IMAGE.test(img.src)) {
+      add(`${path}.src`, `${where}: the image “${img.src}” must be a .webp, .jpg, .png or .avif file inside assets/.`);
+    }
+    if (blank(img.alt)) {
+      add(`${path}.alt`, `${where}: describe the image in its alt text (it is read aloud to blind readers and helps Google understand the picture).`);
+    } else {
+      const tag = tagIn(img.alt);
+      if (tag) add(`${path}.alt`, `${where}: the alt text contains HTML code (“${tag}”).`);
+    }
+    if (img.caption !== undefined && img.caption !== null) checkInline(img.caption, `${path}.caption`, `${where} caption`, add, refIds);
+    optionalText(img, 'credit', `${path}.credit`, `${where}: the photo credit`, add);
+    if (img.patient !== undefined && typeof img.patient !== 'boolean') add(`${path}.patient`, `${where}: the “patient photo” setting is not valid.`);
+  };
+
+  const checkEnum = (value, allowed, path, label, add, { required = true } = {}) => {
+    if (value === undefined || value === null) {
+      if (required) add(path, `${label} is not set (choose ${allowed.join(', ')}).`);
+      return false;
+    }
+    if (!allowed.includes(value)) {
+      add(path, `${label} “${String(value)}” is not one of: ${allowed.join(', ')}.`);
+      return false;
+    }
+    return true;
+  };
+
+  const checkBlock = (block, path, where, add, env) => {
+    const { refIds, filmSrcs, headings } = env;
+    if (!isObject(block)) {
+      add(path, `${where} is not a valid block.`);
+      return;
+    }
+    if (!BLOCK_TYPES.includes(block.type)) {
+      add(`${path}.type`, `${where} has an unknown block type “${String(block.type)}”.`);
+      return;
+    }
+    const label = `${where} (${BLOCK_LABELS[block.type]})`;
+    const E = BLOG_ENUMS;
+    switch (block.type) {
+      case 'paragraph':
+      case 'lead':
+        requireInline(block.text, `${path}.text`, label, add, refIds, 'some text');
+        break;
+      case 'heading': {
+        if (block.level !== 2 && block.level !== 3) {
+          add(`${path}.level`, `${label}: choose a main heading (H2) or a sub-heading (H3).`);
+        } else if (block.level === 3 && !headings.seenH2) {
+          add(`${path}.level`, `${label}: a sub-heading (H3) cannot come before the first main heading (H2). Make it an H2, or add an H2 above it.`);
+        }
+        if (block.level === 2) headings.seenH2 = true;
+        if (blank(block.text)) add(`${path}.text`, `${label} needs text.`);
+        else if (tagIn(block.text)) add(`${path}.text`, `${label} contains HTML code (“${tagIn(block.text)}”).`);
+        checkEnum(block.size, E.headingSize, `${path}.size`, `${label}: size`, add, { required: false });
+        if (block.anchor !== undefined && block.anchor !== null && block.anchor !== '') {
+          if (typeof block.anchor !== 'string' || !BLOG_ANCHOR.test(block.anchor)) {
+            add(`${path}.anchor`, `${label}: the section link name “${String(block.anchor)}” may only use letters, digits, - and _.`);
+          } else if (headings.anchors.has(block.anchor)) {
+            add(`${path}.anchor`, `${label}: the section link name “${block.anchor}” is already used by another heading in this post.`);
+          } else headings.anchors.add(block.anchor);
+        }
+        break;
+      }
+      case 'list':
+        checkEnum(block.style, E.listStyle, `${path}.style`, `${label}: list style`, add);
+        checkInlineList(block.items, `${path}.items`, label, add, refIds, { what: 'item' });
+        break;
+      case 'quote':
+        requireInline(block.text, `${path}.text`, label, add, refIds, 'the quoted words');
+        optionalText(block, 'cite', `${path}.cite`, `${label}: who said it`, add);
+        break;
+      case 'pullquote':
+        if (blank(block.text)) add(`${path}.text`, `${label} needs the quoted words (plain text).`);
+        else if (tagIn(block.text)) add(`${path}.text`, `${label} contains HTML code (“${tagIn(block.text)}”).`);
+        optionalText(block, 'cite', `${path}.cite`, `${label}: who said it`, add);
+        break;
+      case 'image': {
+        checkBlogImage(block, path, label, add, refIds);
+        const widthOk = checkEnum(block.width, E.imageWidth, `${path}.width`, `${label}: width`, add);
+        const alignOk = checkEnum(block.align, E.imageAlign, `${path}.align`, `${label}: position`, add);
+        checkEnum(block.size, E.imageSize, `${path}.size`, `${label}: size`, add, { required: false });
+        if (widthOk && alignOk && block.align !== 'center' && block.width !== 'column') {
+          add(`${path}.align`, `${label}: only a column-width image can sit to the left or right of the text. Make it column width, or centre it.`);
+        }
+        break;
+      }
+      case 'gallery':
+        if (!Array.isArray(block.images) || block.images.length < 2 || block.images.length > 3) {
+          add(`${path}.images`, `${label} needs 2 or 3 images (has ${Array.isArray(block.images) ? block.images.length : 0}).`);
+        }
+        asList(block.images).forEach((img, k) => checkBlogImage(img, `${path}.images.${k}`, `${label}, image ${k + 1}`, add, refIds));
+        if (block.caption !== undefined && block.caption !== null) checkInline(block.caption, `${path}.caption`, `${label} caption`, add, refIds);
+        break;
+      case 'imageText':
+        checkBlogImage(block.image, `${path}.image`, label, add, refIds);
+        checkEnum(block.side, E.side, `${path}.side`, `${label}: image side`, add);
+        checkInlineList(block.text, `${path}.text`, label, add, refIds, { what: 'paragraph' });
+        break;
+      case 'callout':
+        checkEnum(block.tone, E.calloutTone, `${path}.tone`, `${label}: style`, add);
+        optionalText(block, 'title', `${path}.title`, `${label}: the title`, add);
+        requireInline(block.text, `${path}.text`, label, add, refIds, 'some text');
+        break;
+      case 'takeaways':
+        optionalText(block, 'title', `${path}.title`, `${label}: the title`, add);
+        checkInlineList(block.items, `${path}.items`, label, add, refIds, { what: 'point' });
+        break;
+      case 'divider':
+        break;
+      case 'table': {
+        optionalText(block, 'caption', `${path}.caption`, `${label}: the caption`, add);
+        const header = block.header;
+        if (!Array.isArray(header) || header.length < 1) {
+          add(`${path}.header`, `${label} needs column headings.`);
+        } else {
+          header.forEach((cell, k) => {
+            if (blank(cell)) add(`${path}.header.${k}`, `${label}: column ${k + 1} needs a heading.`);
+          });
+        }
+        if (!Array.isArray(block.rows) || block.rows.length < 1) {
+          add(`${path}.rows`, `${label} needs at least 1 row.`);
+          break;
+        }
+        block.rows.forEach((row, r) => {
+          if (!Array.isArray(row)) {
+            add(`${path}.rows.${r}`, `${label}: row ${r + 1} is not valid.`);
+            return;
+          }
+          if (Array.isArray(header) && row.length !== header.length) {
+            add(`${path}.rows.${r}`, `${label}: row ${r + 1} has ${row.length} cells but the table has ${header.length} columns.`);
+          }
+          row.forEach((cell, c) => checkInline(cell, `${path}.rows.${r}.${c}`, `${label}, row ${r + 1} cell ${c + 1}`, add, refIds));
+        });
+        break;
+      }
+      case 'video':
+        if (checkEnum(block.source, E.videoSource, `${path}.source`, `${label}: source`, add)) {
+          if (block.source === 'film') {
+            if (blank(block.src)) add(`${path}.src`, `${label}: choose one of the site's videos.`);
+            else if (filmSrcs && !filmSrcs.has(block.src)) {
+              add(`${path}.src`, `${label}: “${block.src}” is not one of the site's videos (Videos tab).`);
+            }
+          } else if (typeof block.youtube !== 'string' || !YOUTUBE_ID.test(block.youtube)) {
+            add(`${path}.youtube`, `${label}: the YouTube video id must be the 11 characters after “v=” in the video's address (got “${String(block.youtube)}”).`);
+          }
+        }
+        if (block.caption !== undefined && block.caption !== null) checkInline(block.caption, `${path}.caption`, `${label} caption`, add, refIds);
+        break;
+      case 'faq':
+        optionalText(block, 'title', `${path}.title`, `${label}: the title`, add);
+        if (!Array.isArray(block.items) || block.items.length < 1) {
+          add(`${path}.items`, `${label} needs at least 1 question.`);
+          break;
+        }
+        block.items.forEach((item, k) => {
+          const at = `${path}.items.${k}`;
+          if (!isObject(item)) {
+            add(at, `${label}: question ${k + 1} is not valid.`);
+            return;
+          }
+          if (blank(item.q)) add(`${at}.q`, `${label}: question ${k + 1} needs the question.`);
+          else if (tagIn(item.q)) add(`${at}.q`, `${label}: question ${k + 1} contains HTML code (“${tagIn(item.q)}”).`);
+          requireInline(item.a, `${at}.a`, `${label}, question ${k + 1}`, add, refIds, 'an answer');
+        });
+        break;
+      case 'cta':
+        checkEnum(block.kind, E.ctaKind, `${path}.kind`, `${label}: button type`, add);
+        optionalText(block, 'label', `${path}.label`, `${label}: the button label`, add);
+        optionalText(block, 'text', `${path}.text`, `${label}: the text`, add);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const validateBlogConfigDetailed = (config) => {
+    const { errors, add } = collector();
+    const where = 'Blog settings';
+    if (!isObject(config)) {
+      add('', `${where}: the blog settings file is missing or not valid.`);
+      return errors;
+    }
+    if (blank(config.name)) add('name', `${where}: the blog needs a name.`);
+    if (blank(config.navLabel)) add('navLabel', `${where}: the menu label for the blog is empty.`);
+    optionalText(config, 'intro', 'intro', `${where}: the intro`, add);
+    if (config.seo !== undefined) {
+      if (!isObject(config.seo)) add('seo', `${where}: the search settings are not valid.`);
+      else {
+        optionalText(config.seo, 'title', 'seo.title', `${where}: the search title`, add);
+        optionalText(config.seo, 'description', 'seo.description', `${where}: the search description`, add);
+      }
+    }
+
+    const checkSlugged = (list, key, noun, extra) => {
+      if (!Array.isArray(list) || list.length < 1) {
+        add(key, `${where}: add at least one ${noun}.`);
+        return;
+      }
+      const ids = new Map();
+      const slugs = new Map();
+      list.forEach((item, i) => {
+        const at = `${key}.${i}`;
+        const who = isObject(item) && !blank(item.name) ? `${noun} “${item.name.trim()}”` : `${noun} ${i + 1}`;
+        if (!isObject(item)) {
+          add(at, `${where}: ${who} is not valid.`);
+          return;
+        }
+        if (blank(item.id) || !BLOG_ID.test(item.id)) add(`${at}.id`, `${where}: ${who} has a missing or invalid id.`);
+        else if (ids.has(item.id)) add(`${at}.id`, `${where}: ${who} has the same id as ${ids.get(item.id)}.`);
+        else ids.set(item.id, who);
+        if (blank(item.name)) add(`${at}.name`, `${where}: ${who} needs a name.`);
+        if (typeof item.slug !== 'string' || !BLOG_SLUG.test(item.slug)) {
+          add(`${at}.slug`, `${where}: ${who}'s web address “${String(item.slug)}” may only use lowercase letters, digits and single hyphens.`);
+        } else if (slugs.has(item.slug)) {
+          add(`${at}.slug`, `${where}: ${who} has the same web address as ${slugs.get(item.slug)}.`);
+        } else slugs.set(item.slug, who);
+        extra(item, at, who);
+      });
+    };
+
+    checkSlugged(config.categories, 'categories', 'category', (cat, at, who) => {
+      optionalText(cat, 'intro', `${at}.intro`, `${where}: ${who}'s intro`, add);
+      optionalText(cat, 'metaDescription', `${at}.metaDescription`, `${where}: ${who}'s search description`, add);
+      checkEnum(cat.tint, TINTS, `${at}.tint`, `${where}: ${who}'s colour`, add);
+    });
+
+    checkSlugged(config.authors, 'authors', 'author', (author, at, who) => {
+      for (const [key, name] of [['role', 'role'], ['credentials', 'credentials'], ['bio', 'bio'], ['photo', 'photo']]) {
+        optionalText(author, key, `${at}.${key}`, `${where}: ${who}'s ${name}`, add);
+      }
+      if (!blank(author.photo) && !BLOG_IMAGE.test(author.photo)) {
+        add(`${at}.photo`, `${where}: ${who}'s photo “${author.photo}” must be an image file inside assets/.`);
+      }
+      if (author.sameAs !== undefined) {
+        if (!Array.isArray(author.sameAs)) add(`${at}.sameAs`, `${where}: ${who}'s profile links are not a list.`);
+        else author.sameAs.forEach((url, k) => {
+          if (typeof url !== 'string' || !/^https:\/\/[^\s<>"]+$/.test(url)) {
+            add(`${at}.sameAs.${k}`, `${where}: ${who}'s profile link “${String(url)}” must be a full https:// address.`);
+          }
+        });
+      }
+    });
+
+    if (config.featured !== undefined) {
+      if (!Array.isArray(config.featured)) add('featured', `${where}: the featured posts are not a list.`);
+      else {
+        const seen = new Set();
+        config.featured.forEach((id, k) => {
+          if (blank(id)) add(`featured.${k}`, `${where}: featured post ${k + 1} is empty.`);
+          else if (seen.has(id)) add(`featured.${k}`, `${where}: a post is featured twice (“${id}”).`);
+          else seen.add(id);
+        });
+      }
+    }
+
+    if (config.redirects !== undefined) {
+      const URL_FORM = /^blog\/[a-z0-9]+(?:-[a-z0-9]+)*\/$/;
+      if (!Array.isArray(config.redirects)) add('redirects', `${where}: the redirects are not a list.`);
+      else {
+        const froms = new Set();
+        config.redirects.forEach((r, k) => {
+          const at = `redirects.${k}`;
+          if (!isObject(r)) {
+            add(at, `${where}: redirect ${k + 1} is not valid.`);
+            return;
+          }
+          for (const key of ['from', 'to']) {
+            if (typeof r[key] !== 'string' || !URL_FORM.test(r[key])) {
+              add(`${at}.${key}`, `${where}: redirect ${k + 1} “${key}” must look like blog/post-address/ (got “${String(r[key])}”).`);
+            }
+          }
+          if (r.from === r.to) add(at, `${where}: redirect ${k + 1} points to itself.`);
+          else if (froms.has(r.from)) add(`${at}.from`, `${where}: ${r.from} is redirected twice.`);
+          froms.add(r.from);
+        });
+      }
+    }
+    return errors;
+  };
+
+  const validateBlogPostsDetailed = (posts, config, films) => {
+    const { errors, add } = collector();
+    if (!Array.isArray(posts)) {
+      add('', 'Blog: the post list is missing or is not a list.');
+      return errors;
+    }
+    const cfg = isObject(config) ? config : {};
+    const categoryIds = new Set(asList(cfg.categories).filter(isObject).map((c) => c.id));
+    const authorIds = new Set(asList(cfg.authors).filter(isObject).map((a) => a.id));
+    const filmSrcs = Array.isArray(films)
+      ? new Set(films.map((f) => (isObject(f) ? f.src : f)).filter((s) => typeof s === 'string'))
+      : null;
+    const ids = new Map(); // post id -> label
+    const addresses = new Map(); // slug -> "“Title” (current address)"
+    const E = BLOG_ENUMS;
+
+    posts.forEach((post, i) => {
+      const fallback = `Blog post ${i + 1}`;
+      if (!isObject(post)) {
+        add(`${i}`, `${fallback} is not valid.`);
+        return;
+      }
+      const who = blank(post.title) ? fallback : `Blog post “${shortTitle(post.title)}”`;
+      const p = (key) => `${i}.${key}`;
+
+      if (blank(post.id) || !BLOG_ID.test(post.id)) add(p('id'), `${who} has a missing or invalid id.`);
+      else if (ids.has(post.id)) add(p('id'), `${who} has the same id as ${ids.get(post.id)}.`);
+      else ids.set(post.id, who);
+
+      // Addresses: the current slug and every old one are unique across all posts.
+      const claim = (slug, path, kind) => {
+        if (typeof slug !== 'string' || !BLOG_SLUG.test(slug)) {
+          add(path, `${who}: the ${kind} web address “${String(slug)}” may only use lowercase letters, digits and single hyphens.`);
+          return;
+        }
+        if (RESERVED_BLOG_SLUGS.includes(slug)) {
+          add(path, `${who}: “${slug}” is reserved for the blog's own pages — choose another web address.`);
+          return;
+        }
+        if (addresses.has(slug)) {
+          add(path, `${who}: the web address blog/${slug}/ is already used by ${addresses.get(slug)}.`);
+          return;
+        }
+        addresses.set(slug, `${who.replace(/^Blog post /, '')}${kind === 'old' ? ' (as an old address)' : ''}`);
+      };
+      claim(post.slug, p('slug'), 'current');
+      if (post.previousSlugs !== undefined) {
+        if (!Array.isArray(post.previousSlugs)) add(p('previousSlugs'), `${who}: the old addresses are not a list.`);
+        else post.previousSlugs.forEach((slug, k) => claim(slug, p(`previousSlugs.${k}`), 'old'));
+      }
+
+      if (checkEnum(post.status, E.status, p('status'), `${who}: status`, add)) {
+        if (post.status !== 'unpublished' && !isIsoWithOffset(post.publishAt)) {
+          add(p('publishAt'), `${who}: ${post.status === 'scheduled' ? 'a scheduled' : 'a published'} post needs a publish date and time with its time zone (for example 2026-11-20T09:00:00+05:30).`);
+        }
+      }
+      if (post.status === 'unpublished' && post.publishAt !== undefined && post.publishAt !== null && post.publishAt !== '' && !isIsoWithOffset(post.publishAt)) {
+        add(p('publishAt'), `${who}: the publish date “${String(post.publishAt)}” is not a valid date and time with a time zone.`);
+      }
+      if (post.updatedAt !== undefined && post.updatedAt !== null && post.updatedAt !== '' && !isIsoWithOffset(post.updatedAt)) {
+        add(p('updatedAt'), `${who}: the “Updated” date “${String(post.updatedAt)}” is not a valid date and time with a time zone.`);
+      }
+      if (post.lang !== undefined && (typeof post.lang !== 'string' || !/^[a-z]{2}(?:-[A-Za-z]{2,4})?$/.test(post.lang))) {
+        add(p('lang'), `${who}: the language “${String(post.lang)}” is not a language code such as en or hi.`);
+      }
+
+      checkEnum(post.layout, LAYOUTS, p('layout'), `${who}: layout`, add);
+      checkEnum(post.titleSize, E.titleSize, p('titleSize'), `${who}: title size`, add);
+      checkEnum(post.bodySize, E.bodySize, p('bodySize'), `${who}: text size`, add);
+      checkEnum(post.leadIn, E.leadIn, p('leadIn'), `${who}: opening style`, add);
+
+      if (blank(post.category)) add(p('category'), `${who} needs a category.`);
+      else if (!categoryIds.has(post.category)) add(p('category'), `${who}: its category “${post.category}” no longer exists — choose another.`);
+      if (blank(post.author)) add(p('author'), `${who} needs an author.`);
+      else if (!authorIds.has(post.author)) add(p('author'), `${who}: its author “${post.author}” no longer exists — choose another.`);
+      if (post.reviewer !== undefined && post.reviewer !== null && post.reviewer !== '') {
+        if (typeof post.reviewer !== 'string' || !authorIds.has(post.reviewer)) {
+          add(p('reviewer'), `${who}: its medical reviewer “${String(post.reviewer)}” is not one of the blog's authors.`);
+        }
+      }
+      if (post.reviewedAt !== undefined && post.reviewedAt !== null && post.reviewedAt !== '') {
+        if (typeof post.reviewedAt !== 'string' || !(ISO_DATE.test(post.reviewedAt) || isIsoWithOffset(post.reviewedAt))) {
+          add(p('reviewedAt'), `${who}: the review date “${String(post.reviewedAt)}” is not a valid date.`);
+        }
+      }
+
+      if (blank(post.title)) add(p('title'), `${fallback} needs a title.`);
+      else if (tagIn(post.title)) add(p('title'), `${who}: the title contains HTML code (“${tagIn(post.title)}”).`);
+      if (post.titleAccent !== undefined && post.titleAccent !== null && post.titleAccent !== '') {
+        if (typeof post.titleAccent !== 'string') add(p('titleAccent'), `${who}: the highlighted words must be text.`);
+        else if (!blank(post.title) && !accentMatches(post.title, post.titleAccent.trim())) {
+          add(p('titleAccent'), `${who}: the highlighted words “${post.titleAccent.trim()}” do not appear as whole words in the title.`);
+        }
+      }
+      if (blank(post.dek)) add(p('dek'), `${who} needs a short summary under the title.`);
+      else if (tagIn(post.dek)) add(p('dek'), `${who}: the summary contains HTML code (“${tagIn(post.dek)}”).`);
+
+      // References first: citations in the text point at them.
+      const refIds = new Set();
+      if (post.references !== undefined) {
+        if (!Array.isArray(post.references)) add(p('references'), `${who}: the references are not a list.`);
+        else post.references.forEach((ref, k) => {
+          const at = p(`references.${k}`);
+          if (!isObject(ref)) {
+            add(at, `${who}: reference ${k + 1} is not valid.`);
+            return;
+          }
+          if (blank(ref.id)) add(`${at}.id`, `${who}: reference ${k + 1} has no id.`);
+          else if (refIds.has(ref.id)) add(`${at}.id`, `${who}: two references share the id “${ref.id}”.`);
+          else refIds.add(ref.id);
+          if (blank(ref.text)) add(`${at}.text`, `${who}: reference ${k + 1} needs its title or description.`);
+          else if (tagIn(ref.text)) add(`${at}.text`, `${who}: reference ${k + 1} contains HTML code (“${tagIn(ref.text)}”).`);
+          if (ref.url !== undefined && ref.url !== null && ref.url !== '' && (typeof ref.url !== 'string' || !/^https:\/\/[^\s<>"]+$/.test(ref.url))) {
+            add(`${at}.url`, `${who}: reference ${k + 1}'s link “${String(ref.url)}” must be a full https:// address.`);
+          }
+        });
+      }
+
+      if (!isObject(post.cover)) add(p('cover'), `${who} needs a cover image.`);
+      else {
+        checkBlogImage(post.cover, p('cover'), `${who}: cover image`, add, refIds);
+        const focal = post.cover.focal;
+        if (focal !== undefined && focal !== null) {
+          const inUnit = (n) => typeof n === 'number' && n >= 0 && n <= 1;
+          if (!isObject(focal) || !inUnit(focal.x) || !inUnit(focal.y)) {
+            add(p('cover.focal'), `${who}: the cover's focus point is not valid.`);
+          }
+        }
+      }
+
+      if (post.seo !== undefined) {
+        if (!isObject(post.seo)) add(p('seo'), `${who}: the search settings are not valid.`);
+        else {
+          for (const [key, name] of [['title', 'search title'], ['description', 'search description'], ['focusKeyphrase', 'focus keyphrase']]) {
+            optionalText(post.seo, key, p(`seo.${key}`), `${who}: the ${name}`, add);
+          }
+          if (post.seo.keywords !== undefined && (!Array.isArray(post.seo.keywords) || post.seo.keywords.some((k) => typeof k !== 'string'))) {
+            add(p('seo.keywords'), `${who}: the keywords must be a list of words or phrases.`);
+          }
+        }
+      }
+      if (post.about !== undefined && (!Array.isArray(post.about) || post.about.some(blank))) {
+        add(p('about'), `${who}: the “conditions covered” list must contain condition names only.`);
+      }
+
+      if (!Array.isArray(post.blocks) || post.blocks.length < 1) {
+        add(p('blocks'), `${who} has no content yet.`);
+      } else {
+        const headings = { seenH2: false, anchors: new Set(), h2: 0 };
+        post.blocks.forEach((block, j) => {
+          checkBlock(block, p(`blocks.${j}`), `${who}, block ${j + 1}`, add, { refIds, filmSrcs, headings });
+          if (isObject(block) && block.type === 'heading' && block.level === 2) headings.h2 += 1;
+        });
+        if (post.layout === 'guide' && headings.h2 < 2) {
+          add(p('layout'), `${who}: the Guide layout builds a table of contents from main headings (H2) — add at least 2, or choose another layout.`);
+        }
+      }
+    });
+
+    // Cross-post references, once every id is known.
+    posts.forEach((post, i) => {
+      if (!isObject(post) || post.related === undefined) return;
+      const who = blank(post.title) ? `Blog post ${i + 1}` : `Blog post “${shortTitle(post.title)}”`;
+      if (!Array.isArray(post.related)) {
+        add(`${i}.related`, `${who}: the related posts are not a list.`);
+        return;
+      }
+      post.related.forEach((id, k) => {
+        if (id === post.id) add(`${i}.related.${k}`, `${who} lists itself as a related post.`);
+        else if (!ids.has(id)) add(`${i}.related.${k}`, `${who}: related post “${String(id)}” does not exist.`);
+      });
+    });
+    // Featured ids must resolve whenever sample posts are loaded (they are what
+    // the shipped config features until the owner picks real posts). Without
+    // samples, a missing id is skipped: the build drops non-live featured ids,
+    // and failing here would block the production build on sample ids.
+    if (posts.some((post) => isObject(post) && post.sample === true)) {
+      asList(cfg.featured).forEach((id, k) => {
+        if (typeof id === 'string' && !ids.has(id)) {
+          add(`config.featured.${k}`, `Blog settings: featured post “${id}” does not exist — remove it from the featured list.`);
+        }
+      });
+    }
+    return errors;
+  };
+
   // ------------------------------------------------------------------ export
 
   const messages = (detailed) => (value) => detailed(value).map((error) => error.message);
@@ -1001,6 +1613,17 @@
     validateCompanyDetailed,
     validateCompanyLocationDetailed,
     validateEligibilityDetailed,
+    validateBlogConfig: messages(validateBlogConfigDetailed),
+    validateBlogPosts: (posts, config, films) =>
+      validateBlogPostsDetailed(posts, config, films).map((error) => error.message),
+    validateBlogConfigDetailed,
+    validateBlogPostsDetailed,
+    blogHrefAllowed,
+    TINTS: Object.freeze(TINTS.slice()),
+    LAYOUTS: Object.freeze(LAYOUTS.slice()),
+    BLOCK_TYPES: Object.freeze(BLOCK_TYPES.slice()),
+    BLOCK_LABELS: Object.freeze(Object.assign({}, BLOCK_LABELS)),
+    BLOG_ENUMS: Object.freeze(Object.fromEntries(Object.entries(BLOG_ENUMS).map(([k, v]) => [k, Object.freeze(v.slice())]))),
     accentMatches,
     highlightWholeWord,
     stripHeadlineQuotes,
