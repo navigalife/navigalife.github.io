@@ -68,26 +68,53 @@ const isLocalAsset = (src) => typeof src === 'string' && /^assets\/[^?#]+$/.test
 // Load + validate. Returns null when the blog has no settings file (no blog at
 // all), else { config, posts (every post), live (published/scheduled, due) }.
 // Throws owner-facing errors (same shape as build.js validate()) on bad content.
-const loadBlog = async ({ root, rules, now = new Date(), env = process.env }) => {
+// The cross-reference check (src/blog/check-refs.js) — null until it exists.
+const loadRefChecker = () => {
+  const file = path.join(__dirname, 'check-refs.js');
+  try {
+    statSync(file);
+  } catch {
+    return null;
+  }
+  const { checkBlogRefs } = require(file);
+  return typeof checkBlogRefs === 'function' ? checkBlogRefs : null;
+};
+
+const loadBlog = async ({ root, rules, films = [], now = new Date(), env = process.env }) => {
   const dataDir = env.MV_BLOG_DATA ? path.resolve(env.MV_BLOG_DATA) : path.join(root, 'data', 'blog');
-  const config = await readJsonIfPresent(path.join(dataDir, 'config.json'));
-  if (config === undefined) return null;
+  const siteConfig = await readJsonIfPresent(path.join(dataDir, 'config.json'));
+  if (siteConfig === undefined) return null;
+  const withSamples = env.MV_BLOG_SAMPLES === '1';
   const published = list(await readJsonIfPresent(path.join(dataDir, 'posts.json')));
-  const samples = env.MV_BLOG_SAMPLES === '1'
-    ? list(await readJsonIfPresent(path.join(dataDir, 'samples.json')))
-    : [];
+  const samples = withSamples ? list(await readJsonIfPresent(path.join(dataDir, 'samples.json'))) : [];
+  // Sample-only settings (e.g. a featured list of sample posts) never reach the
+  // shipped config: merged over it only for a samples build.
+  const samplesConfig = withSamples ? await readJsonIfPresent(path.join(dataDir, 'samples.config.json')) : undefined;
+  const config = samplesConfig && typeof samplesConfig === 'object' && !Array.isArray(samplesConfig)
+    ? { ...siteConfig, ...samplesConfig }
+    : siteConfig;
   const posts = [...published, ...samples];
   const label = (file) => path.relative(root, path.join(dataDir, file)) || file;
 
   const groups = [];
   if (typeof rules.validateBlogConfig === 'function') {
-    groups.push([label('config.json'), list(rules.validateBlogConfig(config))]);
+    groups.push([
+      config === siteConfig ? label('config.json') : `${label('config.json')} + ${label('samples.config.json')}`,
+      list(rules.validateBlogConfig(config)),
+    ]);
   }
   if (typeof rules.validateBlogPosts === 'function') {
     groups.push([
       samples.length ? `${label('posts.json')} + ${label('samples.json')}` : label('posts.json'),
-      list(rules.validateBlogPosts(posts, config)),
+      list(rules.validateBlogPosts(posts, config, films)),
     ]);
+  }
+  // Files on disk, links between posts, the featured list, the site's videos.
+  const checkBlogRefs = loadRefChecker();
+  if (checkBlogRefs) {
+    groups.push(['Blog links and files', list(checkBlogRefs(posts, config, { root, films, now })).map((problem) => problem.message)]);
+  } else {
+    console.warn('Blog: src/blog/check-refs.js is missing; image, link and video references were not checked.');
   }
 
   const live = posts.filter((post) => {
@@ -122,7 +149,9 @@ const loadBlog = async ({ root, rules, now = new Date(), env = process.env }) =>
     ...live.flatMap((post) => postImageSrcs(post).map((src) => [src, `"${post.title || post.id}"`])),
     ...list(config.authors).filter((a) => a && text(a.photo)).map((a) => [a.photo, `Author ${a.name || a.id}'s photo`]),
   ];
-  for (const [src, owner] of imageRefs) {
+  // check-refs.js reports missing photos itself (same files); this stays the
+  // backstop only while it is absent, so the owner never reads one problem twice.
+  for (const [src, owner] of checkBlogRefs ? [] : imageRefs) {
     if (isLocalAsset(src) && missing(src)) {
       buildProblems.push(`${owner}: the photo ${src} is not in the site files. Upload it again or remove it.`);
     }
@@ -138,6 +167,21 @@ const loadBlog = async ({ root, rules, now = new Date(), env = process.env }) =>
   }
   return { config, posts, live };
 };
+
+// A src/blog/ source file, '' while a lane has not written it yet.
+const readOptional = async (file) => {
+  try {
+    return await fs.readFile(path.join(__dirname, file), 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') return '';
+    throw error;
+  }
+};
+
+// The one blog stylesheet (CONTRACT "CSS / JS"): landing + post + blocks, in that
+// order. Shared by the hashed assets/blog.css and the admin preview bundle.
+const BLOG_CSS_FILES = ['blog-landing.css', 'blog-post.css', 'blog-blocks.css'];
+const blogCssSource = async () => (await Promise.all(BLOG_CSS_FILES.map(readOptional))).join('\n');
 
 // Responsive variants for every blog photograph, sized per source so a 1000px
 // photo never claims 1200w/1600w/2400w candidates.
@@ -184,18 +228,12 @@ const buildBlog = async (blog, {
   );
 
   // Hashed blog stylesheet + script (CONTRACT "CSS / JS").
-  const readOptional = async (file) => {
-    try {
-      return await fs.readFile(path.join(__dirname, file), 'utf8');
-    } catch (error) {
-      if (error.code === 'ENOENT') return '';
-      throw error;
-    }
-  };
-  const [landingCss, postCss, blocksCss, readerJs, landingJs] = await Promise.all(
-    ['blog-landing.css', 'blog-post.css', 'blog-blocks.css', 'reader.js', 'landing.js'].map(readOptional),
-  );
-  const blogCss = await writeHashed('assets', 'blog', 'css', `${landingCss}\n${postCss}\n${blocksCss}`);
+  const [blogCssText, readerJs, landingJs] = await Promise.all([
+    blogCssSource(),
+    readOptional('reader.js'),
+    readOptional('landing.js'),
+  ]);
+  const blogCss = await writeHashed('assets', 'blog', 'css', blogCssText);
   const jsSource = [readerJs, landingJs].filter((source) => source.trim()).join('\n;\n');
   const blogJs = jsSource ? await writeHashed('assets', 'blog', 'js', jsSource) : '';
 
@@ -375,13 +413,20 @@ const buildBlog = async (blog, {
   // Posts (+ their share images).
   const postCtx = ctxFor('../../');
   for (const post of postCtx.posts) {
-    const png = await og.renderOgPng(post, {
-      blogName: config.name,
-      category: post.categoryObj,
-      lockupPath: path.join(root, 'assets', 'brand', 'logo-ink.png'),
-      theme,
-      root,
-    });
+    // A share card that fails to draw never fails the build: the post falls back
+    // to the site's own share image (shell + JSON-LD), with a warning.
+    let png = null;
+    try {
+      png = await og.renderOgPng(post, {
+        blogName: config.name,
+        category: post.categoryObj,
+        lockupPath: path.join(root, 'assets', 'brand', 'logo-ink.png'),
+        theme,
+        root,
+      });
+    } catch (error) {
+      console.warn(`Blog: the share image for "${post.title || post.id}" could not be drawn (${error.message}); using the site's share image.`);
+    }
     const ogImage = Buffer.isBuffer(png) ? `${siteUrl}${await writeHashed('assets/blog/og', post.slug, 'png', png)}` : '';
     const times = [
       `  <meta property="article:published_time" content="${esc(post.published.toISOString())}">\n`,
@@ -395,7 +440,7 @@ const buildBlog = async (blog, {
         title: text(post.seo && post.seo.title) || text(post.title),
         description: text(post.seo && post.seo.description) || text(post.dek),
       }),
-      jsonLd: seo.postJsonLd(postCtx, post),
+      jsonLd: seo.postJsonLd(postCtx, post, { ogImage: ogImage || siteOgAbs }),
       ogImage,
       ogImageAlt: post.title,
       ogType: 'article',
@@ -464,4 +509,4 @@ const buildBlog = async (blog, {
   };
 };
 
-module.exports = { loadBlog, buildBlog, BLOG_WIDTHS };
+module.exports = { loadBlog, buildBlog, blogCssSource, BLOG_WIDTHS };

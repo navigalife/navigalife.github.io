@@ -4,8 +4,9 @@ const { statSync } = require('node:fs');
 const path = require('node:path');
 const sharp = require('sharp');
 
-const { renderPage, renderShell, contactHrefs, phoneHref } = require('./template');
+const { renderPage, renderShell, notFoundPage, contactHrefs, phoneHref } = require('./template');
 const { loadBlog, buildBlog } = require('./blog/build-blog');
+const { writeAdminPreview } = require('./blog/admin-preview');
 // The content rules the admin runs too — one file, so the two cannot drift.
 const rules = require('../admin/content-rules.js');
 
@@ -181,6 +182,15 @@ const copyConditionMedia = async () => {
   await fs.cp(source, destination, { recursive: true });
 };
 
+// The theme the site builds with: SITE_THEME (local experiments) or the
+// owner's site-config choice. Shared with the admin preview bundle.
+const activeTheme = (themes, config) => {
+  const themeId = process.env.SITE_THEME || config.theme;
+  const theme = themes.find((candidate) => candidate.id === themeId);
+  if (!theme) throw new Error(`Unknown theme: ${themeId}`);
+  return { theme, themeId };
+};
+
 const themeCss = (theme) => {
   const declarations = (tokens) =>
     Object.entries(tokens).map(([key, value]) => `  ${key}: ${value};`).join('\n');
@@ -274,9 +284,7 @@ const validate = ({
   validateContentRules({ company, config, content, treatment, films });
   validateAssets({ testimonials, solutions, feedback, treatment, films });
 
-  const themeId = process.env.SITE_THEME || config.theme;
-  const theme = themes.find((candidate) => candidate.id === themeId);
-  if (!theme) throw new Error(`Unknown theme: ${themeId}`);
+  const { theme, themeId } = activeTheme(themes, config);
 
   if (config.productsEnabled) {
     throw new Error(
@@ -388,41 +396,112 @@ const validate = ({
   return { theme, themeId, visibleProtocols };
 };
 
-const copyAdmin = async () => {
+// Is `child` the same path as, or inside, `parent`? Both already realpath'd.
+const within = (child, parent) => child === parent || child.startsWith(parent + path.sep);
+
+// realpath of a path that may not exist yet: its deepest existing ancestor,
+// resolved through any symlinks, plus the rest of the path.
+const realpathLoose = async (target) => {
+  const rest = [];
+  let current = path.resolve(target);
+  for (;;) {
+    try {
+      return path.join(await fs.realpath(current), ...rest);
+    } catch (error) {
+      const parent = path.dirname(current);
+      if (error.code !== 'ENOENT' || parent === current) throw error;
+      rest.unshift(path.basename(current));
+      current = parent;
+    }
+  }
+};
+
+// The build wipes DIST and copyAdmin rewrites files in DIST/admin. Neither may
+// ever resolve into the admin source: a scratch tree whose admin/ was a symlink
+// to the real admin once let the ?v= rewrite land in SOURCE files.
+const assertNotAdminSource = async (target, what) => {
+  const source = path.join(ROOT, 'admin');
+  let realSource;
+  try {
+    realSource = await fs.realpath(source);
+  } catch (error) {
+    if (error.code === 'ENOENT') return;
+    throw error;
+  }
+  const real = await realpathLoose(target);
+  if (within(real, realSource) || within(realSource, real)) {
+    throw new Error(
+      `Refusing to ${what}: ${target} resolves to ${real}, which overlaps the admin source ${realSource}. `
+      + 'Writing there would edit source files. Build into a real directory outside admin/ '
+      + '(check MV_DIST and any symlinked admin/ in this tree).',
+    );
+  }
+};
+
+const copyAdmin = async ({ theme } = {}) => {
   const source = path.join(ROOT, 'admin');
   const target = path.join(DIST, 'admin');
   try {
     await fs.access(source);
-    await fs.cp(source, target, { recursive: true });
-    // Cache-bust the admin bundle. The admin ships static filenames (app.js and
-    // its relative imports, styles.css); with no version query a browser can pair
-    // a freshly deployed index.html with a stale, cached app.js. That is exactly
-    // how new nav tabs (Solutions, Voices) ended up falling through to the
-    // Appearance renderer for people whose browser still held the old app.js.
-    // The version is a content hash of the bundle, so it only changes when the
-    // code changes and otherwise leaves the browser cache intact.
-    // The bundle is every shipped admin module (local __*.html harnesses are
-    // never deployed code) plus the stylesheet — derived, not listed, so a new
-    // module can't be forgotten and paired stale.
-    const modules = (await fs.readdir(source)).filter((file) => /^[a-z][a-z0-9-]*\.js$/.test(file)).sort();
-    const bundle = [...modules, 'styles.css'];
-    const hash = crypto.createHash('sha256');
-    for (const file of bundle) hash.update(await fs.readFile(path.join(source, file)));
-    const v = hash.digest('hex').slice(0, 8);
-    const rewrite = async (file, replacer) => {
-      const filePath = path.join(target, file);
-      await fs.writeFile(filePath, replacer(await fs.readFile(filePath, 'utf8')));
-    };
-    // index.html references the entry script and stylesheet by bare filename.
-    await rewrite('index.html', (html) => html
-      .replace('src="app.js"', `src="app.js?v=${v}"`)
-      .replace('href="styles.css"', `href="styles.css?v=${v}"`));
-    // Modules import their siblings by relative path ('./gh-api.js'); version
-    // every such import in every module, so one URL per file and none stale.
-    const sibling = new RegExp(`(['"])(\\./(?:${modules.map((m) => m.slice(0, -3)).join('|')})\\.js)\\1`, 'g');
-    for (const file of modules) await rewrite(file, (js) => js.replace(sibling, `$1$2?v=${v}$1`));
   } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
+    if (error.code === 'ENOENT') return;
+    throw error;
+  }
+  // Before the copy (it would write into the source) and after it: a symlinked
+  // admin/ is copied as a symlink, so only the resolved target tells.
+  await assertNotAdminSource(target, 'copy the admin bundle');
+  // admin/preview/ in the source tree is the harness copy (CLI); the shipped one
+  // is regenerated below.
+  const localPreview = path.join(source, 'preview');
+  await fs.cp(source, target, { recursive: true, filter: (from) => from !== localPreview });
+  await assertNotAdminSource(target, 'version the admin bundle');
+  const realTarget = await fs.realpath(target);
+  // The admin preview bundle (CONTRACT "Admin preview bundle").
+  const preview = await writeAdminPreview(path.join(target, 'preview'), { theme });
+
+  // Cache-bust the admin bundle. The admin ships static filenames (app.js and
+  // its relative imports, styles.css); with no version query a browser can pair
+  // a freshly deployed index.html with a stale, cached app.js. That is exactly
+  // how new nav tabs (Solutions, Voices) ended up falling through to the
+  // Appearance renderer for people whose browser still held the old app.js.
+  // The version is a content hash of the bundle, so it only changes when the
+  // code changes and otherwise leaves the browser cache intact.
+  // The bundle is every shipped admin module (local __*.html harnesses are
+  // never deployed code) plus every stylesheet — derived, not listed, so a new
+  // file can't be forgotten and paired stale.
+  const files = (await fs.readdir(source)).sort();
+  const modules = files.filter((file) => /^[a-z][a-z0-9-]*\.js$/.test(file));
+  const styles = files.filter((file) => /^[a-z][a-z0-9-]*\.css$/.test(file));
+  const bundle = new Set([...modules, ...styles]);
+  const hash = crypto.createHash('sha256');
+  for (const file of bundle) hash.update(await fs.readFile(path.join(source, file)));
+  const v = hash.digest('hex').slice(0, 8);
+  // The preview files are generated from src/blog/, so each carries its own hash.
+  const previewV = {};
+  for (const file of Object.values(preview)) previewV[path.basename(file)] = digest(await fs.readFile(file));
+  const rewrite = async (file, replacer) => {
+    const filePath = path.join(target, file);
+    const real = await fs.realpath(filePath);
+    if (!within(real, realTarget)) {
+      throw new Error(`Refusing to version admin/${file}: it resolves outside ${realTarget} (${real}), a symlink into source files.`);
+    }
+    await fs.writeFile(filePath, replacer(await fs.readFile(filePath, 'utf8')));
+  };
+  // index.html references the entry script and every stylesheet by bare filename.
+  await rewrite('index.html', (html) => html.replace(
+    /\b(src|href)="([a-z][a-z0-9-]*\.(?:js|css))"/g,
+    (whole, attr, file) => (bundle.has(file) ? `${attr}="${file}?v=${v}"` : whole),
+  ));
+  // Modules import their siblings by relative path ('./gh-api.js'); version
+  // every such import in every module, so one URL per file and none stale. The
+  // preview assets are referenced only as the literals './preview/blog-render.js'
+  // and './preview/blog-preview.css' (CONTRACT addendum pins (2)).
+  const sibling = new RegExp(`(['"])(\\./(?:${modules.map((m) => m.slice(0, -3)).join('|')})\\.js)\\1`, 'g');
+  const previewRef = /(['"])\.\/preview\/(blog-render\.js|blog-preview\.css)\1/g;
+  for (const file of modules) {
+    await rewrite(file, (js) => js
+      .replace(sibling, `$1$2?v=${v}$1`)
+      .replace(previewRef, (whole, quote, name) => `${quote}./preview/${name}?v=${previewV[name]}${quote}`));
   }
 };
 
@@ -540,8 +619,9 @@ const build = async () => {
   });
   // The Journal (data/blog/): validated here with the rest of the content, so a
   // blog problem stops the build before dist is wiped. null = no blog settings.
-  const blog = await loadBlog({ root: ROOT, rules });
+  const blog = await loadBlog({ root: ROOT, rules, films: filmsData });
   const blogNav = blog && blog.live.length ? { label: blog.config.navLabel || 'Blog' } : null;
+  await assertNotAdminSource(DIST, 'wipe the build output');
   await fs.rm(DIST, { recursive: true, force: true });
   await fs.mkdir(DIST, { recursive: true });
 
@@ -633,7 +713,7 @@ const build = async () => {
 
   await Promise.all([
     fs.writeFile(path.join(DIST, 'index.html'), html),
-    fs.writeFile(path.join(DIST, '404.html'), html),
+    fs.writeFile(path.join(DIST, '404.html'), notFoundPage(html)),
     fs.writeFile(
       path.join(DIST, 'robots.txt'),
       `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /strategy/\nDisallow: /changes/\nSitemap: ${SITE_URL}sitemap.xml\n`,
@@ -646,7 +726,7 @@ const build = async () => {
     fs.writeFile(path.join(DIST, '.nojekyll'), ''),
     copyFonts(),
     copyConditionMedia(),
-    copyAdmin(),
+    copyAdmin({ theme }),
     copyStrategy(),
   ]);
 
@@ -659,7 +739,13 @@ const build = async () => {
   console.log(`Output: ${DIST}`);
 };
 
-build().catch((error) => {
-  console.error(error.ownerFacing ? error.message : error);
-  process.exitCode = 1;
-});
+// themeCss/activeTheme are shared with src/blog/admin-preview.js; requiring this
+// file never builds.
+module.exports = { themeCss, activeTheme };
+
+if (require.main === module) {
+  build().catch((error) => {
+    console.error(error.ownerFacing ? error.message : error);
+    process.exitCode = 1;
+  });
+}

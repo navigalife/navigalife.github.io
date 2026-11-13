@@ -1082,4 +1082,19 @@ const renderPage = ({
   });
 };
 
-module.exports = { renderPage, renderShell, contactHrefs, phoneHref, escapeHtml };
+// GitHub Pages serves the root 404.html at ANY missing address (/blog/typo/,
+// /x/y/, /changes/blog/typo/), so its relative asset paths and links would
+// resolve against the wrong directory. A <base> before any asset reference points
+// them back at the site root, and the script right after it retargets the
+// /changes/ preview mount. The base is static markup (not script-inserted) so the
+// browser's preload scanner sees it too and never fetches assets from /blog/typo/.
+// This page is the one place a root path is allowed; it never ships at /changes/.
+const MOUNT_BASE = '<base href="/">\n  <script>if(location.pathname.indexOf(\'/changes/\')===0)'
+  + 'document.getElementsByTagName(\'base\')[0].href=\'/changes/\'</script>';
+const notFoundPage = (html) => {
+  const charset = '<meta charset="utf-8">\n';
+  if (!html.includes(charset)) throw new Error('notFoundPage: <meta charset="utf-8"> not found; the 404 base script goes right after it.');
+  return html.replace(charset, `${charset}  ${MOUNT_BASE}\n`);
+};
+
+module.exports = { renderPage, renderShell, notFoundPage, contactHrefs, phoneHref, escapeHtml };
