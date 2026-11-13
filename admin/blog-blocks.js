@@ -18,7 +18,8 @@
 // API
 //   renderBlocks(blocks, opts) → html     opts = { img, depth, films, references, contactHref }
 //   renderInline(inline, opts) → html
-//   headingsOf(blocks) → [{ level, text, anchor }]   (the ids renderBlocks emits)
+//   headingsOf(blocks) → [{ level, text, anchor, kind }]   (the ids renderBlocks
+//                        emits; kind = heading | faq | takeaways, document order)
 //   plainText(post) → string             (title + dek + every block's text)
 //   readingMinutes(post) → integer ≥ 1   (~220 wpm)
 //   slugify(text) → string
@@ -73,31 +74,48 @@
 
   const headingLevel = (b) => (Number(field(b, 'level')) === 3 ? 3 : 2);
   const faqTitle = (b) => str(field(b, 'title')).trim() || 'Questions people ask';
+  const takeawaysTitle = (b) => str(field(b, 'title')).trim() || 'Key takeaways';
+  const validTakeaway = (it) => plainInline(it).trim() !== '';
+  const TAKEAWAYS_ID = 'key-takeaways';
 
   // One walk shared by headingsOf and renderBlocks, so the TOC and the page can
-  // never disagree: Map(block index → { level, text, anchor }).
+  // never disagree: Map(block index → { level, text, anchor, kind }), in document
+  // order. The first takeaways box always owns the fixed id `key-takeaways` (the
+  // TOC and any "jump to the summary" link can rely on it): the id is reserved
+  // before headings are slugged, so a heading that would also claim it (an explicit
+  // anchor, or the text "Key takeaways") takes the -2 suffix instead. A second
+  // takeaways box gets key-takeaways-2, -3 … like any other duplicate.
   const planAnchors = (blocks) => {
+    const arr = list(blocks);
     const used = new Set(RESERVED_IDS);
+    const firstTakeaways = arr.findIndex((b) => isObj(b) && field(b, 'type') === 'takeaways' && list(field(b, 'items')).some(validTakeaway));
+    if (firstTakeaways !== -1) used.add(TAKEAWAYS_ID);
     const plan = new Map();
-    list(blocks).forEach((b, index) => {
+    arr.forEach((b, index) => {
       if (!isObj(b)) return;
       const type = field(b, 'type');
-      let level;
+      let level = 2;
       let text;
+      let kind = type;
       if (type === 'heading') {
         text = plainInline(field(b, 'text')).trim();
         level = headingLevel(b);
       } else if (type === 'faq' && list(field(b, 'items')).some(validFaqItem)) {
         text = faqTitle(b);
-        level = 2;
+      } else if (type === 'takeaways' && list(field(b, 'items')).some(validTakeaway)) {
+        text = takeawaysTitle(b);
+        if (index === firstTakeaways) {
+          plan.set(index, { level, text, anchor: TAKEAWAYS_ID, kind });
+          return;
+        }
       } else return;
       if (!text) return;
-      let base = slugify(field(b, 'anchor')) || slugify(text) || 'section';
+      let base = type === 'takeaways' ? TAKEAWAYS_ID : slugify(field(b, 'anchor')) || slugify(text) || 'section';
       if (/^(?:ref|cite)-/.test(base) || /^\d/.test(base)) base = `s-${base}`;
       let anchor = base;
       for (let n = 2; used.has(anchor); n += 1) anchor = `${base}-${n}`;
       used.add(anchor);
-      plan.set(index, { level, text, anchor });
+      plan.set(index, { level, text, anchor, kind });
     });
     return plan;
   };
@@ -361,7 +379,9 @@
       const cap = inlineHtml(field(im, 'caption'), s);
       return `<figure class="b-gallery__item"${patientAttr(im)}>${imgHtml(s, s.opts, im, sizes, 'b-img')}${cap ? `<figcaption>${cap}</figcaption>` : ''}</figure>`;
     });
-    return `<figure class="b-gallery ${n === 3 ? 'b-wide' : 'b-column'}" data-count="${n}"><div class="b-gallery__grid">${items.join('')}</div>${captionHtml(field(b, 'caption'), '', s)}</figure>`;
+    // data-n, never data-count: site.js animates every [data-count] (homepage
+    // stats) by overwriting its textContent, which would wipe the gallery.
+    return `<figure class="b-gallery ${n === 3 ? 'b-wide' : 'b-column'}" data-n="${n}"><div class="b-gallery__grid">${items.join('')}</div>${captionHtml(field(b, 'caption'), '', s)}</figure>`;
   };
 
   R.imageText = (b, s) => {
@@ -383,11 +403,12 @@
     return `<aside class="b-callout b-callout--${tone} b-column" aria-label="${esc(title)}"><span class="b-callout__icon">${svg(ICONS[tone])}</span><p class="b-callout__title">${esc(title)}</p><p class="b-callout__text">${html}</p></aside>`;
   };
 
-  R.takeaways = (b, s) => {
-    const items = list(field(b, 'items')).map((it) => inlineHtml(it, s)).filter(Boolean);
+  R.takeaways = (b, s, i) => {
+    const h = s.anchors.get(i);
+    if (!h) return '';
+    const items = list(field(b, 'items')).filter(validTakeaway).map((it) => inlineHtml(it, s)).filter(Boolean);
     if (!items.length) return '';
-    const title = str(field(b, 'title')).trim() || 'Key takeaways';
-    return `<aside class="b-takeaways b-column" aria-label="${esc(title)}"><p class="b-takeaways__title">${esc(title)}</p><ul class="b-takeaways__list">${items.map((li) => `<li>${li}</li>`).join('')}</ul></aside>`;
+    return `<aside class="b-takeaways b-column" id="${esc(h.anchor)}" aria-label="${esc(h.text)}"><p class="b-takeaways__title">${esc(h.text)}</p><ul class="b-takeaways__list">${items.map((li) => `<li>${li}</li>`).join('')}</ul></aside>`;
   };
 
   R.divider = () => '<hr class="b-divider b-column">';
@@ -400,7 +421,10 @@
     const thead = header.some(Boolean) ? `<thead><tr>${header.map((h) => `<th scope="col">${h}</th>`).join('')}</tr></thead>` : '';
     const tbody = rows.length ? `<tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>` : '';
     const label = caption ? ` aria-label="${esc(caption)}"` : ' aria-label="Table"';
-    return `<div class="b-table b-column"><div class="b-table__scroll" role="region" tabindex="0"${label}><table>${caption ? `<caption>${esc(caption)}</caption>` : ''}${thead}${tbody}</table></div></div>`;
+    // The caption sits outside the scroll region so it wraps to the frame on a
+    // phone instead of scrolling away with a wide table.
+    const tag = caption ? 'figure' : 'div';
+    return `<${tag} class="b-table b-column">${caption ? `<figcaption class="b-table__caption">${esc(caption)}</figcaption>` : ''}<div class="b-table__scroll" role="region" tabindex="0"${label}><table>${thead}${tbody}</table></div></${tag}>`;
   };
 
   R.video = (b, s) => {
