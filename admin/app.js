@@ -9,6 +9,7 @@ import { applyCompanyLocation, applySeoExtras, checkCompanyFields, companyFounde
 import { createFocusKeeper, firstFocusable, focusField, linkInlineErrors, stickyInsets, uploadTargets } from './a11y.js';
 import { DataFileError } from './gh-api.js';
 import { freePath, mergeFile, renameString, sameValue, stringsIn } from './draft-merge.js';
+import { createBlogTab } from './blog-tab.js';
 
 const OWNER = 'navigalife';
 const REPO = 'navigalife.github.io';
@@ -30,6 +31,8 @@ const FILES = {
   config: 'data/site-config.json',
   themes: 'data/themes.json',
   content: 'data/content.json',
+  blogConfig: 'data/blog/config.json',
+  blogPosts: 'data/blog/posts.json',
 };
 const STAGES = [
   { key: 'before', label: 'Before therapy' },
@@ -108,8 +111,30 @@ const icon = (name) => {
     eye: '<path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/>',
     copy: '<rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
     check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+    // Added with the Blog tab (blog-tab.js and its components share this set).
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    close: '<path d="m6 6 12 12M18 6 6 18"/>',
+    back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+    undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+    redo: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+    image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 16-5-5-9 9"/>',
+    calendar: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    phone: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+    desktop: '<rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8.5 21h7M12 17v4"/>',
+    sun: '<circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/>',
+    link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+    external: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+    drag: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>',
+    more: '<circle cx="5.5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18.5" cy="12" r="1"/>',
+    edit: '<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>',
+    history: '<path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3 4v4h4"/><path d="M12 7.5V12l3 2"/>',
+    warning: '<path d="M12 3.5 2.5 20h19L12 3.5Z"/><path d="M12 10v4.5M12 17.5v.01"/>',
   };
-  return '<svg viewBox="0 0 24 24" aria-hidden="true">' + paths[name] + '</svg>';
+  // An unknown name draws nothing rather than the text "undefined".
+  return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (paths[name] || '') + '</svg>';
 };
 
 const stageKeyOf = (image) => STAGES.find((stage) => stage.label === image.stage)?.key || null;
@@ -400,7 +425,7 @@ const markDirty = (key) => {
 // beforeunload all go through it.
 
 // Which tab edits each data file, for a change whose tab was not recorded.
-const FILE_TABS = { products: 'products', protocols: 'protocols', testimonials: 'testimonials', solutions: 'solutions', treatment: 'treatment', films: 'films', feedback: 'voices', company: 'company', config: 'appearance', themes: 'appearance', content: 'page' };
+const FILE_TABS = { products: 'products', protocols: 'protocols', testimonials: 'testimonials', solutions: 'solutions', treatment: 'treatment', films: 'films', feedback: 'voices', company: 'company', config: 'appearance', themes: 'appearance', content: 'page', blogConfig: 'blog', blogPosts: 'blog' };
 const tabName = (tab) => tabNav.querySelector('[data-tab="' + tab + '"]')?.textContent.trim() || tab;
 
 // Company and Appearance values are held per tab as they are typed, so a
@@ -504,7 +529,7 @@ const unsavedTabs = () => {
   }
   return [...tabNav.querySelectorAll('[data-tab]')].map((button) => button.dataset.tab).filter((tab) => tabs.has(tab));
 };
-const hasUnsavedWork = () => Boolean(state.loaded && (state.assetChanges.size || unsavedTabs().length));
+const hasUnsavedWork = () => Boolean(state.loaded && (state.assetChanges.size || unsavedTabs().length || blogTab.hasUnsavedDraft()));
 
 // Typed Company / Appearance edits block a publish the way unsaved Page edits do.
 const unsavedFormsBlock = () => {
@@ -987,12 +1012,14 @@ const render = () => {
   else if (state.activeTab === 'company') html = renderCompany();
   else if (state.activeTab === 'traffic') html = '<div id="traffic-root"></div>';
   else if (state.activeTab === 'page') html = pageEditor.render();
+  else if (state.activeTab === 'blog') html = '';
   else html = renderAppearance();
   focusKeeper.hold();
   editorRoot.innerHTML = html;
   filmsEditor.mount(editorRoot);
   if (!state.editor && state.activeTab === 'traffic') mountTraffic(editorRoot.querySelector('#traffic-root'), sessionToken());
   if (!state.editor && state.activeTab === 'page') pageEditor.mount();
+  if (!state.editor && state.activeTab === 'blog') blogTab.mount(editorRoot);
   applyThemeTokens();
   afterRender();
 };
@@ -1367,6 +1394,16 @@ const editorContext = {
 };
 const therapyEditor = createTherapyEditor(editorContext);
 const filmsEditor = createFilmsEditor(editorContext);
+// The Blog tab (blog-tab.js) keeps its own DOM and events; it reaches the shared
+// draft through these helpers and commits through publish() below.
+const blogTab = createBlogTab({
+  state, h, icon, markDirty, showStatus, stageBlob, committedAssetUrl, renderUnsaved, apiBase, sessionToken,
+  clearDirty: (key) => { state.dirty.delete(key); dirtyTabs.delete(key); renderUnsaved(); },
+  // Only a still-staged file is dropped; a committed photo is left in the repo.
+  unstageAsset: (path) => { const staged = state.assetChanges.get(path); if (staged && !staged.delete) unstageOrDeleteAsset(path); },
+  otherUnsavedTabs: () => unsavedTabs().filter((tab) => tab !== 'blog').map(tabName),
+  publish: (options) => publish(options),
+});
 
 const uploadSolutionImages = async (files) => {
   syncEditorFromForm();
@@ -1737,14 +1774,20 @@ const pollActions = async (commitSha, note = '') => {
 
 const CONFLICT_ACTION = { action: 'reload-reapply', actionLabel: 'Load their changes, keep mine' };
 
-const publish = async () => {
-  if (state.publishing) return;
-  if (state.editor) return showStatus('Open editor not saved', 'Save or cancel the open editor first.');
+// Resolves true once the commit landed, false when nothing was published
+// (blog-tab.js rolls its staged post back on false).
+const publish = async (options) => {
+  if (state.publishing) return false;
+  if (state.editor) {
+    showStatus('Open editor not saved', 'Save or cancel the open editor first.');
+    return false;
+  }
+  const message = typeof options?.message === 'string' && options.message.trim() ? options.message.trim() : 'Update site content from admin';
   try {
     validateDraft(state.draft.testimonials);
   } catch (error) {
     showStatus('Cannot publish yet', h(error.message));
-    return;
+    return false;
   }
   // Pre-publish gate: unsaved Company / Appearance / Page edits, then the
   // shared content rules for every changed data file they cover
@@ -1753,10 +1796,14 @@ const publish = async () => {
   const blocked = unsavedFormsBlock() || pageEditor.publishBlock();
   if (blocked) {
     const canOpen = tabNav.querySelector('[data-tab="' + blocked.tab + '"]');
-    return showStatus(blocked.title, blocked.message, canOpen ? { action: 'open-tab:' + blocked.tab, actionLabel: 'Open the ' + blocked.tabName + ' tab' } : {});
+    showStatus(blocked.title, blocked.message, canOpen ? { action: 'open-tab:' + blocked.tab, actionLabel: 'Open the ' + blocked.tabName + ' tab' } : {});
+    return false;
   }
   const sent = collectChanges();
-  if (!sent.changes.length) return showStatus('Nothing to publish', 'Make a content change first.');
+  if (!sent.changes.length) {
+    showStatus('Nothing to publish', 'Make a content change first.');
+    return false;
+  }
   state.publishing = true;
   pollGeneration += 1;
   renderUnsaved();
@@ -1764,7 +1811,7 @@ const publish = async () => {
   barPublishButton.textContent = 'Publishing…';
   showStatus('Publishing…', 'Sending your changes to GitHub. Keep this tab open until it says Published.');
   try {
-    const commit = await state.api.publish(sent.changes, state.baseSha, 'Update site content from admin');
+    const commit = await state.api.publish(sent.changes, state.baseSha, message);
     state.baseSha = commit.sha;
     settleCommitted(sent);
     renderUnsaved();
@@ -1773,6 +1820,7 @@ const publish = async () => {
       : '';
     showStatus('Published', 'Your changes are saved. The site is rebuilding — usually a minute or two.' + later);
     pollActions(commit.sha, later);
+    return true;
   } catch (error) {
     if (error instanceof BranchConflictError) {
       showStatus('Someone else published since you opened the admin', 'Nothing of yours was published yet, and your changes are safe here. Load their changes first; yours will be kept on top.', CONFLICT_ACTION);
@@ -1785,6 +1833,7 @@ const publish = async () => {
     barPublishButton.textContent = 'Save & Publish';
     renderUnsaved();
   }
+  return false;
 };
 
 // Main moved under the admin. Load it, then carry over only what the owner
@@ -1948,6 +1997,7 @@ tabNav.addEventListener('click', (event) => {
 });
 
 editorRoot.addEventListener('click', async (event) => {
+  if (blogTab.owns(event.target)) return;
   const button = event.target.closest('[data-action]');
   if (!button) return;
   focusKeeper.plan(focusTargets(button));
@@ -1962,6 +2012,7 @@ editorRoot.addEventListener('click', async (event) => {
 
 editorRoot.addEventListener('submit', (event) => {
   event.preventDefault();
+  if (blogTab.owns(event.target)) return;
   try {
     if (therapyEditor.handleSubmit(event.target) || filmsEditor.handleSubmit(event.target)) return;
     if (event.target.id === 'product-form' || event.target.id === 'protocol-form' || event.target.id === 'testimonial-form' || event.target.id === 'solution-form') saveEditor();
@@ -1973,6 +2024,7 @@ editorRoot.addEventListener('submit', (event) => {
 });
 
 editorRoot.addEventListener('change', async (event) => {
+  if (blogTab.owns(event.target)) return;
   if (event.target.name === 'hours' && event.target.closest('#company-form')) {
     showHoursReading(event.target, true);
     return;
@@ -2010,6 +2062,7 @@ editorRoot.addEventListener('error', (event) => {
 }, true);
 
 editorRoot.addEventListener('input', (event) => {
+  if (blogTab.owns(event.target)) return;
   if (event.target.name === 'hours' && event.target.closest('#company-form')) showHoursReading(event.target, false);
   if (state.editor?.kind === 'products' && event.target.name === 'name') {
     state.editor.buffer.name = event.target.value.trim();

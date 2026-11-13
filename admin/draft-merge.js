@@ -37,6 +37,7 @@ const LISTS = {
   films: { key: 'src', file: 'Videos', name: (item) => item.caption || fileName(item.src) },
   feedback: { key: 'src', file: 'Voices', name: (item) => 'the photo ' + fileName(item.src) },
   treatment: { match: 'photos', file: 'In therapy', name: (item) => item.label || item.location || 'a patient' },
+  blogPosts: { key: 'id', file: 'Blog posts', name: (item) => (item.title ? '“' + item.title + '”' : item.slug || item.id) },
 };
 
 // Page tab section names (page-editor.js SECTIONS) and owner words for fields.
@@ -181,7 +182,45 @@ const mergeList = (spec, base, ours, theirs, conflicts) => {
   return order.map((key) => kept.get(key));
 };
 
-const FILE_NAMES = { content: 'Page text', config: 'Site settings', company: 'Company' };
+// Blog settings (data/blog/config.json): its lists merge item by item like the
+// files above (featured is an ordered list of post ids), the search listing per
+// field, and every other setting (name, intro …) as one value.
+const BLOG_CONFIG_LISTS = {
+  categories: { key: 'id', file: 'Blog settings (categories)', name: (item) => item.name || item.id },
+  authors: { key: 'id', file: 'Blog settings (authors)', name: (item) => item.name || item.id },
+  redirects: { key: 'from', file: 'Blog settings (redirects)', name: (item) => 'from ' + item.from },
+  featured: { key: 'id', file: 'Blog settings (featured posts)', name: (item) => item.id, ids: true },
+};
+const BLOG_CONFIG_WORDS = { name: 'blog name', navLabel: 'menu label', intro: 'intro text', seo: 'search listing' };
+const blogConfigLabel = (path) => 'Blog settings: ' + (path[1] ? 'search listing ' + words(path[1]) : BLOG_CONFIG_WORDS[path[0]] || words(path[0]));
+
+const mergeBlogConfig = (base, ours, theirs, conflicts) => {
+  const taken = {};
+  for (const key of new Set([...Object.keys(theirs), ...Object.keys(ours), ...Object.keys(base)])) {
+    const spec = BLOG_CONFIG_LISTS[key];
+    if (spec && [base, ours, theirs].every((side) => Array.isArray(side[key]))) {
+      const wrap = (list) => (spec.ids ? list.map((id) => (typeof id === 'string' ? { id } : id)) : list);
+      const merged = mergeList(spec, wrap(base[key]), wrap(ours[key]), wrap(theirs[key]), conflicts);
+      if (merged !== null) {
+        taken[key] = spec.ids ? merged.map((item) => item.id) : merged;
+        continue;
+      }
+    }
+    if (key === 'seo' && [base, ours, theirs].every((side) => isObject(side[key]))) {
+      taken[key] = mergeObject({ label: blogConfigLabel }, base[key], ours[key], theirs[key], 1, [key], conflicts);
+      continue;
+    }
+    const outcome = pick(base[key], ours[key], theirs[key]);
+    if (outcome.conflict) conflicts.push(blogConfigLabel([key]));
+    if (outcome.value !== undefined) taken[key] = outcome.value;
+  }
+  // Main's key order, then anything only the owner has.
+  const result = {};
+  for (const key of [...Object.keys(theirs), ...Object.keys(ours)]) if (key in taken && !(key in result)) result[key] = taken[key];
+  return result;
+};
+
+const FILE_NAMES = { content: 'Page text', config: 'Site settings', company: 'Company', blogConfig: 'Blog settings' };
 
 // Merge one data file. Returns { value, conflicts: [owner-readable strings] }.
 export const mergeFile = (fileKey, base, ours, theirs) => {
@@ -191,6 +230,7 @@ export const mergeFile = (fileKey, base, ours, theirs) => {
   if (sameValue(theirs, base) || sameValue(ours, theirs)) return { value: ours, conflicts };
   let value = null;
   if (LISTS[fileKey]) value = mergeList(LISTS[fileKey], base, ours, theirs, conflicts);
+  else if (fileKey === 'blogConfig' && isObject(base) && isObject(ours) && isObject(theirs)) value = mergeBlogConfig(base, ours, theirs, conflicts);
   else if (OBJECTS[fileKey] && isObject(base) && isObject(ours) && isObject(theirs)) {
     value = mergeObject(OBJECTS[fileKey], base, ours, theirs, OBJECTS[fileKey].depth, [], conflicts);
   }
