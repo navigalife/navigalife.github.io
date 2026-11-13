@@ -95,6 +95,10 @@
 .bm .bm-row__name{overflow:hidden;font-size:.9375rem;text-overflow:ellipsis;white-space:nowrap}
 .bm .bm-row__meta{display:flex;min-width:0;flex-wrap:wrap;align-items:center;gap:4px 8px;color:var(--ink-muted);font-size:.8125rem;line-height:1.35}
 .bm .bm-row__meta>span:first-child{overflow-wrap:anywhere}
+/* Placeholders here echo the value used when a field is left empty (the blog
+   name, the introduction); dimmer than the admin default so they never read as
+   filled in. ~3.8:1 light, ~4.9:1 dark on the input ground. */
+.bm .bm-settings ::placeholder{color:color-mix(in srgb,var(--ink-muted) 72%,var(--bg));opacity:1}
 .bm .bm-row__flag{display:none;flex:none;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--alert) 10%,transparent);color:var(--alert);font-size:.6875rem;font-weight:600;white-space:nowrap}
 .bm .bm-row.has-error .bm-row__flag{display:inline-flex}
 .bm .bm-row__chev{display:inline-grid;flex:none;width:24px;height:24px;place-items:center;color:var(--ink-muted);transition:transform 200ms var(--bm-ease)}
@@ -165,6 +169,11 @@
 .bm .bm-dialog__actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin-top:24px}
 .bm .bm-dialog .button--danger{background:var(--alert);color:var(--surface);border-color:var(--alert)}
 .bm .bm-dialog .button--danger:hover{background:color-mix(in srgb,var(--alert) 88%,var(--ink))}
+.bm .bm-dialog__posts{list-style:none;margin:0;padding:0;max-height:min(40vh,320px);overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.bm .bm-dialog__posts li{display:grid;gap:3px;padding:11px 14px;border-top:1px solid var(--line)}
+.bm .bm-dialog__posts li:first-child{border-top:0}
+.bm .bm-dialog__post{color:var(--ink);font-weight:600;line-height:1.35;overflow-wrap:anywhere}
+.bm .bm-dialog__role{color:var(--ink-muted);font-size:.8125rem;line-height:1.35}
 @keyframes bm-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 /* ------------------------------------------------------- settings: narrow */
@@ -175,6 +184,13 @@
   .bm .bm-section__head .button{align-self:flex-start}
   .bm .bm-row__bar{grid-template-columns:40px minmax(0,1fr) auto;gap:2px;padding:6px 6px 6px 2px}
   .bm .bm-grip{width:40px}
+  .bm [data-row="authors"] .bm-row__bar{grid-template-columns:minmax(0,1fr);padding-left:6px}
+  .bm [data-row="authors"] .bm-grip-space{display:none}
+  .bm .bm-row__meta{flex-direction:column;align-self:stretch;align-items:flex-start;gap:1px}
+  .bm .bm-chip--row{display:block;min-height:0;line-height:21px;white-space:nowrap}
+  .bm .bm-row__meta .bm-dot{display:none}
+  .bm .bm-row__meta>span{max-width:100%}
+  .bm .bm-row__meta>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal}
   .bm .bm-row__toggle{gap:8px;padding:6px}
   .bm .bm-row__actions{gap:2px}
   .bm .bm-row__flag{display:none!important}

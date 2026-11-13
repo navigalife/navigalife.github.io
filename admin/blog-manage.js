@@ -5,9 +5,11 @@
 // file touches admin state, publishes, or calls GitHub except the alert's
 // two workflow calls through `gh`.
 //
-//   mountBlogSettings(root, { getConfig, onChange, onMovePosts, posts, stageAsset, h, icon })
+//   mountBlogSettings(root, { getConfig, onChange, onMovePosts, posts, stageAsset, unstageAsset, h, icon })
 //     → { refresh(), destroy() }      onChange(config) gets the WHOLE new config.
+//     stageAsset(file, { purpose: 'author' }) → Promise<{ src }>; unstageAsset(src) is optional.
 //   mountCalendar(root, { posts, onOpen }) → { refresh(posts), destroy() }
+//   `posts` (both mounts) is an array or a zero-arg getter returning one.
 //   mountScheduleAlert(root, { gh })     → { destroy() }
 //
 // All styling lives in blog-manage.css under the `.bm` root class, which each
@@ -74,6 +76,10 @@ const listOf = (value) => {
 const isLive = (post, now = Date.now()) => (post.status === 'published' || post.status === 'scheduled')
   && Number.isFinite(Date.parse(post.publishAt)) && Date.parse(post.publishAt) <= now;
 const canFeature = (post) => post.status === 'published' || post.status === 'scheduled';
+const statusLabel = (post) => {
+  if (post.status === 'published' || post.status === 'scheduled') return isLive(post) ? 'Published' : 'Scheduled';
+  return post.status === 'unpublished' ? 'Unpublished' : 'Draft';
+};
 const reducedMotion = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 let mountCount = 0;
@@ -170,23 +176,40 @@ const enableDrag = (list, { onDrop }) => {
 };
 
 // ======================================================== mountBlogSettings
-export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, posts, stageAsset, h, icon } = {}) {
+export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, posts, stageAsset, unstageAsset, h, icon } = {}) {
   const esc = typeof h === 'function' ? h : escapeHtml;
   const ico = iconFor(typeof icon === 'function' ? icon : null);
   const pid = `bm${(mountCount += 1)}`;
   root.classList.add('bm');
 
   let config;
-  const baseSlugs = new Map(); // category id → slug when first seen (the published address)
+  const baseSlugs = new Map(); // 'categories:<id>' / 'authors:<id>' → slug when first seen (the published address)
+  const baseKey = (list, id) => `${list}:${id}`;
   const followName = new Set(); // ids whose slug still follows the name (new this session, slug untouched)
   const quiet = new Set(); // new rows: no "needs a name" nag until the owner leaves them
   const open = new Set();
-  const photoUrls = new Map(); // staged author photo path → object URL
+  // Author photos. A photo is either in the base tree (a src from the loaded
+  // config — never unstaged here) or staged by this mount (src returned by
+  // stageAsset). Legal moves: none|base|staged → staged (choose a file),
+  // staged → none (remove, or the author is deleted). Leaving the staged state
+  // calls the optional unstageAsset(src); base-tree files are the host's business.
+  const photoUrls = new Map(); // staged src → object URL of the blob handed to stageAsset
+  const staged = new Set(); // srcs staged by this mount and still referenced
+  const unstage = (src) => {
+    if (!src || !staged.has(src)) return;
+    staged.delete(src);
+    const url = photoUrls.get(src);
+    if (url) URL.revokeObjectURL(url);
+    photoUrls.delete(src);
+    if (typeof unstageAsset !== 'function') return;
+    Promise.resolve().then(() => unstageAsset(src)).catch((error) => console.warn('[blog settings] unstageAsset failed', error));
+  };
   let dragOffs = [];
 
   const allPosts = () => listOf(posts);
   const postsIn = (id) => allPosts().filter((post) => post.category === id);
   const authoredBy = (id) => allPosts().filter((post) => post.author === id || post.reviewer === id);
+  const postsOf = (list, id) => (list === 'categories' ? postsIn(id) : authoredBy(id));
 
   const load = () => {
     const raw = typeof getConfig === 'function' ? getConfig() : null;
@@ -195,8 +218,10 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       if (!Array.isArray(config[key])) config[key] = [];
     }
     if (!config.seo || typeof config.seo !== 'object') config.seo = { title: '', description: '' };
-    for (const cat of config.categories) {
-      if (cat && cat.id && !baseSlugs.has(cat.id)) baseSlugs.set(cat.id, cat.slug);
+    for (const list of ['categories', 'authors']) {
+      for (const item of config[list]) {
+        if (item && item.id && !baseSlugs.has(baseKey(list, item.id))) baseSlugs.set(baseKey(list, item.id), item.slug);
+      }
     }
   };
 
@@ -235,6 +260,10 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
         ${field({ label: 'Search description', path: 'seo.description', value: config.seo.description, area: true, rows: 3, placeholder: config.intro || '', max: 160, help: 'Leave empty to use the introduction. Google shows about 155 characters.' })}
       </div></div>
     </section>`;
+
+  const slugHelp = (list, id) => (baseSlugs.get(baseKey(list, id)) && postsOf(list, id).some((post) => isLive(post))
+    ? 'Changing it sends the old address to the new one.'
+    : 'Filled in from the name. Lowercase letters, digits and hyphens.');
 
   const tintField = (cat, i) => {
     const name = cat.name || 'Category';
@@ -282,7 +311,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       <div class="bm-row__body" id="${pid}-cat-${esc(cat.id)}"${open.has(cat.id) ? '' : ' hidden'}>
         <div class="bm-grid">
           ${field({ label: 'Name', path: `categories.${i}.name`, value: cat.name, attrs: 'data-role="name"' })}
-          ${field({ label: 'Web address', path: `categories.${i}.slug`, value: cat.slug, affix: 'blog/category/', attrs: 'data-role="slug" spellcheck="false" autocapitalize="off"', help: baseSlugs.get(cat.id) && postsIn(cat.id).some((post) => isLive(post)) ? 'Changing it sends the old address to the new one.' : 'Filled in from the name. Lowercase letters, digits and hyphens.' })}
+          ${field({ label: 'Web address', path: `categories.${i}.slug`, value: cat.slug, affix: 'blog/category/', attrs: 'data-role="slug" spellcheck="false" autocapitalize="off"', help: slugHelp('categories', cat.id) })}
           ${field({ label: 'Introduction', path: `categories.${i}.intro`, value: cat.intro, area: true, rows: 3, full: true, help: 'Opens the category’s page on the blog.' })}
           ${field({ label: 'Search description', path: `categories.${i}.metaDescription`, value: cat.metaDescription, area: true, rows: 2, full: true, max: 160, placeholder: cat.intro || '', help: 'What Google shows under the category page. Leave empty to use the introduction.' })}
           ${tintField(cat, i)}
@@ -296,7 +325,8 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
   };
 
   const avatar = (author, size = '') => {
-    const src = author.photo ? (photoUrls.get(author.photo) || `../${author.photo}`) : '';
+    const photo = String(author.photo || '');
+    const src = photoUrls.get(photo) || (photo && !photo.startsWith('draft:') ? `../${photo}` : '');
     const initials = String(author.name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w.charAt(0)).join('').toUpperCase() || '?';
     return `<span class="bm-avatar${size}" aria-hidden="true">${src ? `<img src="${esc(src)}" alt="" loading="lazy">` : esc(initials)}</span>`;
   };
@@ -317,7 +347,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
         <p class="bm-note">Role, credentials and photo appear on the site only once you fill them in.</p>
         <div class="bm-grid">
           ${field({ label: 'Name', path: `authors.${i}.name`, value: author.name, attrs: 'data-role="name"' })}
-          ${field({ label: 'Web address', path: `authors.${i}.slug`, value: author.slug, affix: 'blog/author/', attrs: 'data-role="slug" spellcheck="false" autocapitalize="off"' })}
+          ${field({ label: 'Web address', path: `authors.${i}.slug`, value: author.slug, affix: 'blog/author/', attrs: 'data-role="slug" spellcheck="false" autocapitalize="off"', help: slugHelp('authors', author.id) })}
           ${field({ label: 'Role', path: `authors.${i}.role`, value: author.role, placeholder: 'e.g. Consultant vascular surgeon' })}
           ${field({ label: 'Credentials', path: `authors.${i}.credentials`, value: author.credentials, placeholder: 'e.g. MBBS, MS (General Surgery)' })}
           ${field({ label: 'Bio', path: `authors.${i}.bio`, value: author.bio, area: true, rows: 3, full: true, help: 'Two or three sentences for the author’s page and the end of their posts.' })}
@@ -327,7 +357,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
               ${avatar(author, ' bm-avatar--lg')}
               <div class="bm-photo__controls">
                 <div class="bm-photo__buttons">
-                  <label class="button button--quiet bm-upload">${ico('photo')}<span>${author.photo ? 'Replace photo' : 'Choose photo'}</span><input type="file" accept="image/*" class="bm-vh" data-act="photo"></label>
+                  ${typeof stageAsset === 'function' ? `<label class="button button--quiet bm-upload">${ico('photo')}<span>${author.photo ? 'Replace photo' : 'Choose photo'}</span><input type="file" accept="image/*" class="bm-vh" data-act="photo"></label>` : ''}
                   ${author.photo ? '<button type="button" class="button button--text" data-act="photo-remove">Remove</button>' : ''}
                 </div>
                 <p class="field-help" data-photo-status role="status">A clear head-and-shoulders photo. Any size; it is resized here before upload.</p>
@@ -539,24 +569,30 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
     if (typeof onChange === 'function') onChange(structuredClone(config));
   };
 
-  // ------------------------------------------------------- category slugs
+  // ------------------------------------------- category and author slugs
   const catUrl = (slug) => `blog/category/${slug}/`;
-  // Keeps config.redirects pointing every old address of this category at its
-  // current one: redirects into the previous address follow it, a redirect that
-  // now points at itself (renamed back) is dropped, and a category with live
-  // posts gets one from its published address.
-  const retarget = (cat, prev) => {
-    const next = cat.slug;
-    if (prev === next) return;
+  const urlOf = (list, slug) => (list === 'categories' ? catUrl(slug) : `blog/author/${slug}/`);
+  // Points every redirect into `fromUrl` at `toUrl` (chains collapse) and drops
+  // any redirect that now points at itself (renamed back).
+  const follow = (fromUrl, toUrl) => {
     for (const redirect of config.redirects) {
-      if (redirect && redirect.to === catUrl(prev)) redirect.to = catUrl(next);
+      if (redirect && redirect.to === fromUrl) redirect.to = toUrl;
     }
     config.redirects = config.redirects.filter((redirect) => !(redirect && redirect.from === redirect.to));
-    const base = baseSlugs.get(cat.id);
-    const hasLive = postsIn(cat.id).some((post) => isLive(post));
-    if (base && base !== next && hasLive && !config.redirects.some((redirect) => redirect && redirect.from === catUrl(base))) {
-      config.redirects.push({ from: catUrl(base), to: catUrl(next) });
-    }
+  };
+  const addRedirect = (fromUrl, toUrl) => {
+    if (fromUrl === toUrl || config.redirects.some((redirect) => redirect && redirect.from === fromUrl)) return;
+    config.redirects.push({ from: fromUrl, to: toUrl });
+  };
+  // Keeps config.redirects pointing every old address of this category or
+  // author at its current one; one with live posts gets a redirect from its
+  // published address.
+  const retarget = (list, item, prev) => {
+    const next = item.slug;
+    if (prev === next) return;
+    follow(urlOf(list, prev), urlOf(list, next));
+    const base = baseSlugs.get(baseKey(list, item.id));
+    if (base && base !== next && postsOf(list, item.id).some((post) => isLive(post))) addRedirect(urlOf(list, base), urlOf(list, next));
   };
 
   const syncRowLabels = (row, list, item) => {
@@ -624,7 +660,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       if (el.value !== value) el.value = value;
       followName.delete(item.id);
       item.slug = value;
-      if (list === 'categories') retarget(item, prev);
+      retarget(list, item, prev);
     } else {
       setAt(path, value);
       if (el.dataset.role === 'name' && item && followName.has(item.id)) {
@@ -632,7 +668,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
         item.slug = slugify(value);
         const slugInput = row?.querySelector('[data-role="slug"]');
         if (slugInput) slugInput.value = item.slug;
-        if (list === 'categories') retarget(item, prev);
+        retarget(list, item, prev);
       }
     }
 
@@ -682,12 +718,15 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
   };
 
   // In-page confirmation. Resolves with the dialog's form data, or null.
+  // `ok: null` makes it a notice with a single `cancel` button.
   const confirmDialog = ({ title, body, ok, cancel = 'Keep it' }) => new Promise((resolve) => {
     const dialog = wrap.querySelector('.bm-dialog');
     const opener = document.activeElement;
     dialog.querySelector('[data-dialog-title]').textContent = title;
     dialog.querySelector('[data-dialog-body]').innerHTML = body;
-    dialog.querySelector('[data-dialog-ok]').innerHTML = `${ico('trash')}${esc(ok)}`;
+    const okButton = dialog.querySelector('[data-dialog-ok]');
+    okButton.hidden = !ok;
+    okButton.innerHTML = ok ? `${ico('trash')}${esc(ok)}` : '';
     dialog.querySelector('[data-dialog-cancel]').textContent = cancel;
     dialog.returnValue = '';
     const done = () => {
@@ -727,12 +766,19 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       cancel: 'Keep category',
     });
     if (!answer) return;
-    if (count) {
-      if (!answer.to || !others.some((c) => c.id === answer.to)) return;
-      if (typeof onMovePosts === 'function') await onMovePosts(id, answer.to);
-    }
+    const target = count ? others.find((c) => c.id === answer.to) : null;
+    if (count && !target) return;
+    // Read before the move: with a `posts` getter, the moved posts leave this category.
+    const hadLive = postsIn(id).some((post) => isLive(post));
+    if (count && typeof onMovePosts === 'function') await onMovePosts(id, target.id);
     const index = config.categories.findIndex((c) => c.id === id);
     if (index < 0) return;
+    if (target) {
+      // Its addresses now lead to the category its posts moved to.
+      const base = baseSlugs.get(baseKey('categories', id));
+      follow(catUrl(cat.slug), catUrl(target.slug));
+      if (hadLive) addRedirect(catUrl(base || cat.slug), catUrl(target.slug));
+    }
     config.categories.splice(index, 1);
     open.delete(id);
     quiet.delete(id);
@@ -748,20 +794,34 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
     const id = row.dataset.id;
     const author = config.authors.find((a) => a.id === id);
     if (!author) return;
+    const name = author.name || 'this author';
+    const named = authoredBy(id);
+    if (named.length) {
+      rowNote(row, '');
+      const shown = named.slice(0, 8);
+      const more = named.length - shown.length;
+      await confirmDialog({
+        title: `“${name}” can’t be deleted yet`,
+        body: `<p>${named.length === 1 ? 'This post names them' : `These ${named.length} posts name them`}. Give ${named.length === 1 ? 'it' : 'each one'} another author or reviewer first, then delete.</p>
+          <ul class="bm-dialog__posts">${shown.map((post) => `<li><span class="bm-dialog__post">${esc(post.title || 'Untitled post')}</span><span class="bm-dialog__role">${[
+            post.author === id ? 'Author' : '',
+            post.reviewer === id ? 'Reviewer' : '',
+          ].filter(Boolean).join(' and ')} · ${esc(statusLabel(post))}</span></li>`).join('')}</ul>
+          ${more ? `<p>And ${plural(more, 'more post')}.</p>` : ''}`,
+        ok: null,
+        cancel: 'OK',
+      });
+      return;
+    }
     if (config.authors.length < 2) {
       rowNote(row, 'The blog needs at least one author.');
       return;
     }
-    const count = authoredBy(id).length;
-    if (count) {
-      rowNote(row, `${plural(count, 'post')} name this author. Give ${count === 1 ? 'it' : 'them'} another author first.`);
-      return;
-    }
-    const name = author.name || 'this author';
     const answer = await confirmDialog({ title: `Delete “${name}”?`, body: '<p>No posts name this author, so nothing else changes.</p>', ok: 'Delete author', cancel: 'Keep author' });
     if (!answer) return;
     const index = config.authors.findIndex((a) => a.id === id);
     if (index < 0) return;
+    unstage(config.authors[index].photo);
     config.authors.splice(index, 1);
     open.delete(id);
     quiet.delete(id);
@@ -809,14 +869,27 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       const result = await intakeImage(file, { maxEdge: 800, onProgress: (p) => say(p.label || 'Preparing the photo…') });
       const author = config.authors.find((a) => a.id === id);
       if (!author) return;
+      if (typeof stageAsset !== 'function') throw new Error('Photos can’t be added here.');
       const slug = slugify(author.slug) || slugify(author.name) || author.id.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const ext = result.type === 'image/jpeg' ? 'jpg' : 'webp';
-      const path = `assets/blog/authors/${slug}.${ext}`;
-      if (typeof stageAsset === 'function') await stageAsset(path, result.blob);
-      const previous = photoUrls.get(path);
-      if (previous) URL.revokeObjectURL(previous);
-      photoUrls.set(path, URL.createObjectURL(result.blob));
-      author.photo = path;
+      const resized = new File([result.blob], `${slug}.${ext}`, { type: result.type || result.blob.type });
+      say('Uploading…');
+      const out = await stageAsset(resized, { purpose: 'author' });
+      const src = typeof out === 'string' ? out : out?.src;
+      if (!src || typeof src !== 'string') throw new Error('The photo couldn’t be added. Try again.');
+      // The author may have been deleted while the photo uploaded.
+      const current = config.authors.find((a) => a.id === id);
+      const previous = current ? current.photo : '';
+      const url = URL.createObjectURL(result.blob);
+      if (photoUrls.has(src)) URL.revokeObjectURL(photoUrls.get(src));
+      photoUrls.set(src, url);
+      staged.add(src);
+      if (!current) {
+        unstage(src);
+        return;
+      }
+      if (previous !== src) unstage(previous);
+      current.photo = src;
       emit();
       render();
       const fresh = wrap.querySelector(`[data-row="authors"][data-id="${CSS.escape(id)}"]`);
@@ -852,6 +925,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       case 'photo-remove': {
         const author = config.authors[index];
         if (!author) break;
+        unstage(author.photo);
         author.photo = '';
         emit();
         render();
@@ -929,6 +1003,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       for (const off of dragOffs) off();
       for (const url of photoUrls.values()) URL.revokeObjectURL(url);
       photoUrls.clear();
+      staged.clear();
       wrap.remove();
       if (!root.querySelector('.bm-settings, .bm-cal, .bm-alert-wrap')) root.classList.remove('bm');
     },
