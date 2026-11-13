@@ -52,12 +52,11 @@
 
 /* ---- list view: header */
 .bt-head{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"kick kick" "title new" "intro intro" "tabs tabs";align-items:center;column-gap:32px;margin-bottom:24px;border-bottom:1px solid var(--line)}
-.bt-head__text,.bt-head__actions{display:contents}
 .bt-head .auth-kicker{grid-area:kick;margin:0 0 10px}
 .bt-head h1{grid-area:title;margin:0;font-size:2.375rem;letter-spacing:-.035em;line-height:1.05}
-.bt-head__text p:last-child{grid-area:intro;max-width:92ch;margin:10px 0 0;color:var(--ink-muted);font-size:.9375rem;line-height:1.55}
-.bt-head__actions>.button{grid-area:new;justify-self:end}
-.bt-head__actions .button svg{width:18px;height:18px;margin:0 2px 0 -2px}
+.bt-head .bt-head__intro{grid-area:intro;max-width:92ch;margin:10px 0 0;color:var(--ink-muted);font-size:.9375rem;line-height:1.55}
+.bt-head .bt-head__new{grid-area:new;justify-self:end}
+.bt-head__new svg{width:18px;height:18px;margin:0 2px 0 -2px}
 .bt-head .bt-seg{grid-area:tabs;margin-top:26px}
 
 /* ---- list view: filters (one quiet line of status + search, one of categories) */
@@ -97,7 +96,7 @@
    here is the whole list column (at 1440 it ate the 200px and blanked the art). */
 .bt-empty .bt-art{width:200px;margin-bottom:22px;padding:24px 22px}
 .bt-empty h2{margin:0;font-size:1.75rem}
-.bt-empty p:not(.auth-kicker){max-width:44ch;margin:6px 0 20px;color:var(--ink-muted)}
+.bt-empty p{max-width:44ch;margin:6px 0 20px;color:var(--ink-muted)}
 .bt-managed{min-width:0}
 
 /* ---- layout picker + schematics (bt-art: a-kick, a-title, a-img, a-line …) */

@@ -97,8 +97,9 @@
 .bm .bm-row__meta>span:first-child{overflow-wrap:anywhere}
 /* Placeholders here echo the value used when a field is left empty (the blog
    name, the introduction); dimmer than the admin default so they never read as
-   filled in. ~3.8:1 light, ~4.9:1 dark on the input ground. */
-.bm .bm-settings ::placeholder{color:color-mix(in srgb,var(--ink-muted) 72%,var(--bg));opacity:1}
+   filled in, but still AA: 85% keeps 5.2:1 light, 5.6:1 dark on the input ground
+   (72% measured 3.8:1 light). Typed text is 13.5:1, so the gap stays visible. */
+.bm .bm-settings ::placeholder{color:color-mix(in srgb,var(--ink-muted) 85%,var(--bg));opacity:1}
 .bm .bm-row__flag{display:none;flex:none;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--alert) 10%,transparent);color:var(--alert);font-size:.6875rem;font-weight:600;white-space:nowrap}
 .bm .bm-row.has-error .bm-row__flag{display:inline-flex}
 .bm .bm-row__chev{display:inline-grid;flex:none;width:24px;height:24px;place-items:center;color:var(--ink-muted);transition:transform 200ms var(--bm-ease)}

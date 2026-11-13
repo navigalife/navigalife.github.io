@@ -761,8 +761,8 @@ export const createPageEditor = ({ state, root, h, icon, markDirty, showStatus, 
     { file: 'films', tab: 'films', name: 'Videos', check: (draft) => rules.validateFilms(draft.films) },
     { file: 'company', tab: 'company', name: 'Company', check: (draft) => rules.validateCompanyLocation(draft.company) },
     { file: 'config', tab: 'appearance', name: 'Appearance', check: (draft) => rules.validateSeo(draft.config.seo) },
-    { file: 'blogPosts', tab: 'blog', name: 'Blog', check: (draft) => rules.validateBlogPosts(draft.blogPosts, draft.blogConfig, draft.films) },
-    { file: 'blogConfig', tab: 'blog', name: 'Blog', check: (draft) => rules.validateBlogConfig(draft.blogConfig) },
+    { file: 'blogPosts', tab: 'blog', name: 'Blog posts', check: (draft) => rules.validateBlogPosts(draft.blogPosts, draft.blogConfig, draft.films) },
+    { file: 'blogConfig', tab: 'blog', name: 'Blog settings', check: (draft) => rules.validateBlogConfig(draft.blogConfig) },
   ];
   const PER_GROUP = 3;
   const publishBlock = () => {

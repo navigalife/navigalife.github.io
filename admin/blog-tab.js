@@ -359,11 +359,15 @@ export const createBlogTab = (ctx) => {
     : '<span class="bt-status" data-status="' + h(status) + '"><span>' + h(STATUS[status] || 'Draft') +
       (status === 'scheduled' && validTime(publishAt) ? '<span class="bt-status__when"> · ' + h(whenIst(publishAt)) + '</span>' : '') + '</span></span>');
 
-  const toolbar = () => '<div class="bt-head"><div class="bt-head__text"><p class="auth-kicker">' + h(config().name || 'Blog') + '</p><h1>Blog</h1>' +
-    '<p>Write, schedule and publish articles. A post stays a private draft until you publish it.</p></div>' +
-    '<div class="bt-head__actions"><div class="bt-seg" role="group" aria-label="Blog views">' +
+  // DOM order = reading order (WCAG 2.4.3): kicker, title, then New post (it sits on
+  // the title's row), the intro, then the view tabs right above the filters. The
+  // grid areas in blog-admin.css place each child; there are no wrappers to reorder.
+  const toolbar = () => '<div class="bt-head"><p class="auth-kicker">' + h(config().name || 'Blog') + '</p><h1>Blog</h1>' +
+    '<button class="button button--primary bt-head__new" type="button" data-bt="new">' + icon('plus') + 'New post</button>' +
+    '<p class="bt-head__intro">Write, schedule and publish articles. A post stays a private draft until you publish it.</p>' +
+    '<div class="bt-seg" role="group" aria-label="Blog views">' +
     VIEWS.map(([view, label]) => '<button type="button" data-bt="view" data-value="' + view + '" aria-pressed="' + String(tab.view === view) + '">' + label + '</button>').join('') +
-    '</div><button class="button button--primary" type="button" data-bt="new">' + icon('plus') + 'New post</button></div></div>';
+    '</div></div>';
 
   // ---------------------------------------------------------------- list view
 
@@ -409,8 +413,8 @@ export const createBlogTab = (ctx) => {
     return '<ul class="bt-rows" data-testid="blog-list">' + rows.map(rowHtml).join('') + '</ul>';
   };
 
-  const emptyHtml = () => '<div class="bt-empty">' + layoutArt('editorial') +
-    '<p class="auth-kicker">' + h(config().name || 'The journal') + '</p><h2>Write the first article</h2>' +
+  // No kicker here: the page head right above already names the journal.
+  const emptyHtml = () => '<div class="bt-empty">' + layoutArt('editorial') + '<h2>Write the first article</h2>' +
     '<p>Choose a layout, write in plain words, and add photos straight from your phone. It stays a private draft until you publish it.</p>' +
     '<button class="button button--primary" type="button" data-bt="new">' + icon('plus') + 'Start a post</button></div>';
 
@@ -800,7 +804,13 @@ export const createBlogTab = (ctx) => {
     const editor = c.handles.editor;
     actions.querySelector('[data-bt="undo"]').disabled = !editor || !call(editor, 'canUndo');
     actions.querySelector('[data-bt="redo"]').disabled = !editor || !call(editor, 'canRedo');
-    for (const button of actions.querySelectorAll('[data-bt]:not(.bt-undo)')) if (busy) button.disabled = true;
+    // Set both ways: the markup above is only rewritten when it changes, so a
+    // button disabled while busy must be re-enabled here (else a failed publish
+    // leaves "Publish changes" dead until the post is reopened).
+    for (const [action, , , disabled] of actionsFor(c)) {
+      const button = actions.querySelector('[data-bt="' + action + '"]');
+      if (button) button.disabled = busy || Boolean(disabled);
+    }
   };
 
   const option = (value, label, selected) => '<option value="' + h(value) + '"' + (selected ? ' selected' : '') + '>' + h(label) + '</option>';
@@ -1166,7 +1176,12 @@ export const createBlogTab = (ctx) => {
       next = clone(c.post);
       next.id = c.id;
       if (!next.slug) next.slug = slugify(next.title);
-      const previous = new Set(Array.isArray(next.previousSlugs) ? next.previousSlugs : []);
+      // Redirect baseline = the committed record, not this draft's copy. posts() is
+      // what the last successful publish committed (a failed one rolls back to it),
+      // so every address it ever had carries forward even when the draft is older
+      // than that publish (a leftover draft, or one saved on another device).
+      const arr = (value) => (Array.isArray(value) ? value : []);
+      const previous = new Set([...arr(live?.previousSlugs), ...arr(next.previousSlugs)]);
       if (live && everLive(live) && live.slug && live.slug !== next.slug) previous.add(live.slug);
       previous.delete(next.slug);
       next.previousSlugs = [...previous].filter(Boolean);

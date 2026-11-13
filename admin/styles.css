@@ -224,6 +224,9 @@ label.row-action{position:relative}
    drawing surface (drag blur boxes) so it fits the screenshot's own aspect. */
 .redact-dialog{width:min(94vw,720px);padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
 .redact-dialog::backdrop{background:color-mix(in srgb,var(--ink) 55%,transparent)}
+/* --ink is light in dark mode, so its scrim greys the page out; dim with the page
+   ground instead (as blog-manage.css .bm-dialog does). Light mode keeps --ink. */
+[data-theme="dark"] .crop-dialog::backdrop,[data-theme="dark"] .redact-dialog::backdrop{background:color-mix(in srgb,var(--bg) 72%,transparent)}
 .redact-dialog form{padding:22px}
 .redact-hint{margin:0 0 14px;color:var(--ink-muted);font-size:.82rem;line-height:1.5}
 .redact-stage{display:grid;place-items:center;max-height:62vh;overflow:auto;padding:8px;border-radius:8px;background:var(--surface-2)}

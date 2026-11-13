@@ -112,7 +112,10 @@
 
 /* ---- Google result mock (Google's own type + colours) ---- */
 .bseo .bseo-serp-wrap{padding:18px 20px;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
-.bseo .bseo-serp{--serp-link:#1a0dab;--serp-text:#474747;--serp-ink:#202124;--serp-url:#4d5156;max-width:600px;font-family:Arial,Helvetica,sans-serif}
+/* Every mock (Google result, WhatsApp chat, X card label) sets in the same stand-in
+   for the apps' own UI type, never the admin's Instrument Sans. */
+.bseo .bseo-serp,.bseo .bseo-wa__chat,.bseo .bseo-x__label{font-family:Arial,Helvetica,sans-serif}
+.bseo .bseo-serp{--serp-link:#1a0dab;--serp-text:#474747;--serp-ink:#202124;--serp-url:#4d5156;max-width:600px}
 [data-theme="dark"] .bseo .bseo-serp{--serp-link:#99c3ff;--serp-text:#bfbfbf;--serp-ink:#e8eaed;--serp-url:#bdc1c6}
 .bseo .bseo-serp[data-device="desktop"]{width:600px;max-width:none;zoom:var(--serp-zoom,1)}
 .bseo .bseo-serp[data-device="mobile"]{max-width:360px}
