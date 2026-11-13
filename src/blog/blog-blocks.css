@@ -31,7 +31,7 @@
 .cite-sep{margin-inline:-.1em;color:var(--ink-muted)}
 
 /* ---------- headings ---------- */
-.b-heading{--hs:1.875;--ht:2.75em;--hb:.7em;position:relative;clear:both;max-width:none;margin-block:calc(var(--ht) / var(--hs)) calc(var(--hb) / var(--hs));color:var(--ink);font-family:"Fraunces",Georgia,serif;font-size:calc(var(--hs) * 1em);font-weight:600;line-height:1.14;letter-spacing:-.022em;text-wrap:balance;scroll-margin-top:110px}
+.b-heading{--hs:1.875;--ht:2.75em;--hb:.7em;position:relative;clear:both;max-width:none;margin-block:calc(var(--ht) / var(--hs)) calc(var(--hb) / var(--hs));color:var(--ink);font-family:"Fraunces",Georgia,serif;font-size:calc(var(--hs) * 1em);font-weight:600;line-height:1.14;letter-spacing:-.022em;text-wrap:balance}
 .b-h2.b-h--S{--hs:1.5}
 .b-h2.b-h--L{--hs:2.3}
 .b-h3{--hs:1.36;--ht:2.1em;--hb:.55em;line-height:1.24;letter-spacing:-.012em}
@@ -128,7 +128,7 @@
 .b-callout--note .b-callout__title{color:var(--ink-muted)}
 
 /* ---------- takeaways ---------- */
-.b-takeaways{clear:both;margin-block:2.5em;scroll-margin-top:110px;padding:1.6em 1.75em 1.25em;border-radius:22px;background:var(--surface);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 92%,transparent),0 26px 60px -44px color-mix(in srgb,var(--ink) 45%,transparent)}
+.b-takeaways{clear:both;margin-block:2.5em;padding:1.6em 1.75em 1.25em;border-radius:22px;background:var(--surface);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 92%,transparent),0 26px 60px -44px color-mix(in srgb,var(--ink) 45%,transparent)}
 .b-takeaways__title{display:flex;align-items:center;gap:.65em;max-width:none;margin:0 0 .45em;color:var(--ink);font-family:"Fraunces",Georgia,serif;font-size:1.3em;font-weight:600;line-height:1.25;letter-spacing:-.015em}
 .b-takeaways__title::before{content:"";width:.36em;height:.36em;flex:none;border-radius:1.5px;background:var(--accent);box-shadow:0 0 0 .2em color-mix(in srgb,var(--accent) 14%,transparent);transform:rotate(45deg)}
 .b-takeaways__list{margin:0;padding:0;list-style:none}
@@ -143,6 +143,12 @@
 /* ---------- table ---------- */
 .b-table{clear:both;margin-block:2.25em;overflow:hidden;border:1px solid color-mix(in srgb,var(--line) 95%,transparent);border-radius:16px;background:var(--surface)}
 .b-table__scroll{overflow-x:auto;background:linear-gradient(90deg,var(--surface) 35%,color-mix(in srgb,var(--surface) 0%,transparent)) left/2.5em 100% no-repeat local,linear-gradient(270deg,var(--surface) 35%,color-mix(in srgb,var(--surface) 0%,transparent)) right/2.5em 100% no-repeat local,linear-gradient(90deg,color-mix(in srgb,var(--ink) 14%,transparent),transparent) left/.9em 100% no-repeat scroll,linear-gradient(270deg,color-mix(in srgb,var(--ink) 14%,transparent),transparent) right/.9em 100% no-repeat scroll,var(--surface);-webkit-overflow-scrolling:touch}
+/* The figure clips the scroller to its radius, so a ring on the scroller is cut
+   off: the figure wears the scroller's focus ring instead. */
+@supports selector(:has(*)){
+  .b-table:has(>.b-table__scroll:focus-visible){outline:3px solid var(--focus);outline-offset:4px}
+  .b-table__scroll:focus-visible{outline:none}
+}
 .b-table table{width:100%;border-collapse:collapse;font-size:.9em;line-height:1.5;font-variant-numeric:tabular-nums}
 .b-table__caption{margin:0;padding:1.05em 1.35rem .2em;color:var(--ink);font-family:"Fraunces",Georgia,serif;font-size:.97em;font-weight:600;line-height:1.35;letter-spacing:-.01em;text-wrap:balance}
 .b-table th{padding:.95em 1.35rem .75em;border-bottom:1px solid color-mix(in srgb,var(--ink) 24%,var(--line));color:var(--ink-muted);font-size:.74em;font-weight:600;letter-spacing:.12em;text-align:left;text-transform:uppercase;white-space:nowrap}
@@ -164,7 +170,7 @@
 
 /* ---------- FAQ (native <details>; animated where ::details-content exists) ---------- */
 .b-faq{clear:both;margin-block:2.75em;interpolate-size:allow-keywords}
-.b-faq__title{max-width:none;margin:0 0 .45em;color:var(--ink);font-family:"Fraunces",Georgia,serif;font-size:1.875em;font-weight:600;line-height:1.14;letter-spacing:-.022em;text-wrap:balance;scroll-margin-top:110px}
+.b-faq__title{max-width:none;margin:0 0 .45em;color:var(--ink);font-family:"Fraunces",Georgia,serif;font-size:1.875em;font-weight:600;line-height:1.14;letter-spacing:-.022em;text-wrap:balance}
 .b-faq__list{border-top:1px solid color-mix(in srgb,var(--ink) 20%,var(--line))}
 .b-faq__item{border-bottom:1px solid color-mix(in srgb,var(--line) 90%,transparent)}
 .b-faq__item summary{display:flex;align-items:center;justify-content:space-between;gap:1.25em;padding:1.05em 0;color:var(--ink);font-size:1.04em;font-weight:600;line-height:1.42;list-style:none;cursor:pointer}

@@ -112,7 +112,9 @@
   // the format. The last frame is the authored text itself, never a reformat,
   // and the frames before it group digits the way the owner did: lakh grouping
   // (1,00,000) counts up in en-IN, anything else in en-US.
-  const counters = [...document.querySelectorAll('[data-count]')];
+  // Scoped to the homepage hero stats: a bare [data-count] selector once
+  // rewrote blog gallery counters to "0".
+  const counters = [...document.querySelectorAll('.hero__stat-value[data-count]')];
   if (counters.length) {
     const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const parse = (text) => {

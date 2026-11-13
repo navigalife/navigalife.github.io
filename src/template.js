@@ -668,7 +668,7 @@ ${extraCss.map((href) => `  <link rel="stylesheet" href="${depth}${href}">\n`).j
 
   ${chatbot}
 
-  <noscript><p class="noscript">${escapeHtml(noscript)}</p></noscript>
+  ${noscript ? `<noscript><p class="noscript">${escapeHtml(noscript)}</p></noscript>` : ''}
   <script src="${depth}${jsPath}" defer></script>
 ${extraJs.map((src) => `  <script src="${depth}${src}" defer></script>\n`).join('')}</body>
 </html>`;

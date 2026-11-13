@@ -338,6 +338,9 @@ const buildBlog = async (blog, {
     const ctx = {
       depth,
       siteUrl,
+      // Absolute URL of the site's default share image: seo.js uses it as the
+      // JSON-LD image fallback when a post has neither a share card nor a cover.
+      siteOgImage: siteOgImage ? `${siteUrl}${siteOgImage}` : '',
       blog: config,
       company,
       content,
@@ -395,7 +398,9 @@ const buildBlog = async (blog, {
     extraJs: blogJs ? [blogJs] : [],
     lightDefault: true,
     blogCurrent: true,
-    noscript: 'Theme controls require JavaScript. Every article reads in full without it.',
+    // No no-JS notice on blog pages: every page reads in full without JS, and the
+    // site's fixed notice card sat over the article's bottom-right corner.
+    noscript: '',
   });
 
   // Landing.
@@ -440,7 +445,9 @@ const buildBlog = async (blog, {
         title: text(post.seo && post.seo.title) || text(post.title),
         description: text(post.seo && post.seo.description) || text(post.dek),
       }),
-      jsonLd: seo.postJsonLd(postCtx, post, { ogImage: ogImage || siteOgAbs }),
+      // Only a card that was actually drawn goes in as the post's share image;
+      // the site default is seo.js's fallback (ctx.siteOgImage), never first.
+      jsonLd: seo.postJsonLd(postCtx, post, ogImage ? { ogImage } : {}),
       ogImage,
       ogImageAlt: post.title,
       ogType: 'article',
