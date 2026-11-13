@@ -93,6 +93,17 @@ const ownWords = (message) => {
   return match[1].trim() ? rest.charAt(0).toUpperCase() + rest.slice(1) : 'This post ' + rest;
 };
 
+// The type settings validateBlogPosts requires on every post (CONTRACT addendum 4).
+// A new post starts with them; a post from before they existed (an older D1 draft,
+// a restored revision) gets the same values filled in when it is opened.
+const styleDefaults = (layout) => ({ titleSize: 'L', bodySize: 'M', leadIn: layout === 'guide' ? 'none' : 'dropcap' });
+const withStyle = (post) => {
+  if (!isObject(post)) return post;
+  const out = { ...post };
+  for (const [key, value] of Object.entries(styleDefaults(post.layout))) if (out[key] == null) out[key] = value;
+  return out;
+};
+
 const blankPost = (layout, config) => ({
   id: 'p_' + randomId(6),
   slug: '',
@@ -105,9 +116,7 @@ const blankPost = (layout, config) => ({
   title: '',
   titleAccent: '',
   dek: '',
-  titleSize: 'L',
-  bodySize: 'M',
-  leadIn: layout === 'guide' ? 'none' : 'dropcap',
+  ...styleDefaults(layout),
   cover: { src: '', alt: '', caption: '', credit: '', focal: { x: 0.5, y: 0.5 }, patient: false },
   author: (config.authors || [])[0]?.id || '',
   reviewer: null,
@@ -174,6 +183,18 @@ export const createBlogTab = (ctx) => {
   const categories = () => (Array.isArray(config().categories) ? config().categories.filter(isObject) : []);
   const authors = () => (Array.isArray(config().authors) ? config().authors.filter(isObject) : []);
   const categoryById = (id) => categories().find((category) => category.id === id);
+  // The preview's call-to-action hrefs, from the company draft exactly as the build
+  // makes ctx.contactHref (src/template.js contactHrefs), at the blog's depth '../'.
+  const contactHref = () => {
+    const company = isObject(state.draft.company) ? state.draft.company : {};
+    const message = String(state.draft.content?.cta?.message || '');
+    const dial = (value) => (typeof rules?.readPhone === 'function' ? rules.readPhone(value).number : '');
+    return {
+      whatsapp: company.whatsapp ? 'https://wa.me/' + dial(company.whatsapp).replace('+', '') + '?text=' + encodeURIComponent(message) : '',
+      call: company.phone ? 'tel:' + dial(company.phone) : '',
+      contact: '../#contact',
+    };
+  };
 
   // posts.json entries merged with the private drafts (same id = edits to a live post).
   const entries = () => {
@@ -187,7 +208,14 @@ export const createBlogTab = (ctx) => {
     return [...map.values()].map((entry) => ({ ...entry, post: draftPosts.get(entry.id)?.post || entry.live || null }));
   };
   const statusOf = (entry) => (entry.live ? entry.live.status : 'draft');
+  // Sort key: a post scheduled ahead sorts by its date, so upcoming posts lead.
   const updatedOf = (entry) => Math.max(entry.draft?.updated_at || 0, Date.parse(entry.live?.updatedAt || '') || 0, Date.parse(entry.live?.publishAt || '') || 0);
+  // The row's date line: the last real change. A publish date still ahead is not
+  // one (it would read "Updated 16 Nov" on the 13th; the status already shows it).
+  const touchedOf = (entry) => {
+    const publishAt = Date.parse(entry.live?.publishAt || '') || 0;
+    return Math.max(entry.draft?.updated_at || 0, Date.parse(entry.live?.updatedAt || '') || 0, publishAt <= Date.now() ? publishAt : 0);
+  };
   const titleOf = (entry) => String(entry.post?.title || entry.draft?.title || '').trim();
   // Every post the components should know about: live ones as published, plus drafts.
   const allPosts = () => entries().map((entry) => {
@@ -324,8 +352,12 @@ export const createBlogTab = (ctx) => {
     (extra.tint ? '<span class="bt-dot" aria-hidden="true"></span>' : '') + h(label) +
     (extra.count != null ? '<span class="bt-chip__n">' + extra.count + '</span>' : '') + '</button>';
   const tintChip = (category) => '<span class="bt-tint" data-tint="' + h(category.tint || 'slate') + '">' + h(category.name) + '</span>';
-  const statusChip = (status, publishAt) => '<span class="bt-status" data-status="' + h(status) + '">' +
-    h(STATUS[status] || 'Draft') + (status === 'scheduled' && validTime(publishAt) ? '<span class="bt-status__when"> · ' + h(whenIst(publishAt)) + '</span>' : '') + '</span>';
+  // `publishedOn` (a list row of a live post with no pending edits): the status and
+  // its date are one line, "● Published 4 Nov", read once by a screen reader.
+  const statusChip = (status, publishAt, publishedOn = '') => (publishedOn
+    ? '<span class="bt-status bt-status--dated" data-status="published">Published ' + h(publishedOn) + '</span>'
+    : '<span class="bt-status" data-status="' + h(status) + '"><span>' + h(STATUS[status] || 'Draft') +
+      (status === 'scheduled' && validTime(publishAt) ? '<span class="bt-status__when"> · ' + h(whenIst(publishAt)) + '</span>' : '') + '</span></span>');
 
   const toolbar = () => '<div class="bt-head"><div class="bt-head__text"><p class="auth-kicker">' + h(config().name || 'Blog') + '</p><h1>Blog</h1>' +
     '<p>Write, schedule and publish articles. A post stays a private draft until you publish it.</p></div>' +
@@ -347,15 +379,16 @@ export const createBlogTab = (ctx) => {
     const status = statusOf(entry);
     const post = entry.post || {};
     const category = categoryById(post.category);
-    const updated = updatedOf(entry);
+    const updated = touchedOf(entry);
     const title = titleOf(entry);
+    const publishedOn = status === 'published' && !entry.draft && updated ? shortDate(updated) : '';
     return '<li><button class="bt-row" type="button" data-bt="open" data-id="' + h(entry.id) + '">' + thumb(entry) +
       '<span class="bt-row__body"><span class="bt-row__title' + (title ? '' : ' bt-row__title--empty') + '">' + h(title || 'Untitled post') + '</span>' +
       '<span class="bt-row__meta">' + (category ? tintChip(category) : '') +
       (post.slug ? '<span class="bt-row__slug">blog/' + h(post.slug) + '/</span>' : '') + '</span></span>' +
-      '<span class="bt-row__side">' + statusChip(status, entry.live?.publishAt) +
+      '<span class="bt-row__side">' + statusChip(status, entry.live?.publishAt, publishedOn) +
       (entry.live && entry.draft ? '<span class="bt-edits">Unpublished edits</span>' : '') +
-      (updated ? '<span class="bt-row__date">' + (status === 'published' && !entry.draft ? 'Published ' : 'Updated ') + h(shortDate(updated)) + '</span>' : '') +
+      (updated && !publishedOn ? '<span class="bt-row__date">Updated ' + h(shortDate(updated)) + '</span>' : '') +
       '</span></button></li>';
   };
 
@@ -494,16 +527,23 @@ export const createBlogTab = (ctx) => {
   // Blog settings photos (authors) are committed files, not drafts: they are
   // staged straight into the next publish. The pinned form is
   // stageAsset(file, { purpose }) → { src }; an older (path, blob) call still works.
+  // blog-manage.js has already resized the photo and named it <author-slug>.<ext>,
+  // so the blob is staged as it is, at assets/blog/authors/<author-slug>.<ext>.
+  // The same author uploading again lands on the same path, and the newer bytes
+  // replace the staged ones (app.js stageEncoded keys staged files by path).
   const stageAsset = async (file, options) => {
     if (typeof file === 'string') {
       await ctx.stageBlob(file, options);
       return { src: file };
     }
     const purpose = /^[a-z]+$/.test(options?.purpose || '') ? options.purpose : 'author';
-    const out = await intakeImage(file, { maxEdge: 800 });
-    const ext = out.type === 'image/webp' ? 'webp' : out.type === 'image/png' ? 'png' : 'jpg';
-    const src = 'assets/blog/' + (purpose === 'author' ? 'authors' : purpose) + '/' + purpose + '-' + randomId(8) + '.' + ext;
-    await ctx.stageBlob(src, out.blob);
+    const named = /^(.+)\.([a-z0-9]+)$/i.exec(String(file?.name || ''));
+    const stem = named ? named[1].toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) : '';
+    const nameExt = named ? named[2].toLowerCase().replace(/^jpeg$/, 'jpg') : '';
+    const typeExt = file?.type === 'image/webp' ? 'webp' : file?.type === 'image/png' ? 'png' : 'jpg';
+    const ext = ['webp', 'jpg', 'png'].includes(nameExt) ? nameExt : typeExt;
+    const src = 'assets/blog/' + (purpose === 'author' ? 'authors' : purpose) + '/' + (stem || purpose + '-' + randomId(8)) + '.' + ext;
+    await ctx.stageBlob(src, file);
     return { src };
   };
 
@@ -631,7 +671,7 @@ export const createBlogTab = (ctx) => {
   };
 
   const replacePost = async (c, post, { version = c.version, hasDraft = c.hasDraft, assets = [] } = {}) => {
-    c.post = { ...clone(post), id: c.id };
+    c.post = { ...withStyle(clone(post)), id: c.id };
     c.version = version;
     c.hasDraft = hasDraft;
     await prefetchAssets(c.id, assets);
@@ -870,7 +910,7 @@ export const createBlogTab = (ctx) => {
       h,
       icon,
     }, 'The SEO panel', wanted).then((handle) => { c.handles.seo = handle; });
-    mountPart('seo', 'mountPostPreview', part('preview'), { getPost, config: config(), films: films(), resolveSrc, allPosts, controls: false }, 'The preview', wanted).then((handle) => {
+    mountPart('seo', 'mountPostPreview', part('preview'), { getPost, config: config(), films: films(), resolveSrc, allPosts, controls: false, contactHref: contactHref() }, 'The preview', wanted).then((handle) => {
       c.handles.preview = handle;
       call(handle, 'setMode', { ...c.mode });
     });
@@ -944,7 +984,7 @@ export const createBlogTab = (ctx) => {
       }
     }
     if (cur !== c) return;
-    if (!c.post) c.post = clone(c.live);
+    c.post = withStyle(c.post || clone(c.live));
     c.post.id = id;
     paintPost();
     document.querySelector('#admin-main')?.scrollTo?.(0, 0);

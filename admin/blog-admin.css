@@ -28,7 +28,7 @@
 .bt-chip[aria-pressed="true"]{border-color:color-mix(in srgb,var(--primary) 40%,transparent);background:var(--primary-soft);color:var(--primary);font-weight:600}
 .bt-chip[data-tint][aria-pressed="true"]{border-color:color-mix(in srgb,var(--t-ink) 28%,transparent);background:var(--t);color:var(--t-ink)}
 .bt-chip:focus-visible,.bt-row:focus-visible,.bt-layout:focus-visible,.bt-back:focus-visible,.bt-seg button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
-.bt-chip__n{margin-left:-2px;color:inherit;font-size:.75rem;font-variant-numeric:tabular-nums;font-weight:500;opacity:.6}
+.bt-chip__n{margin-left:-2px;color:inherit;font-size:.75rem;font-variant-numeric:tabular-nums;font-weight:400}
 .bt-dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--t-ink)}
 /* The row's category label is the site's own chip (blog-landing.css .blog-chip). */
 .bt-tint{display:inline-flex;align-items:center;min-height:24px;padding:3px 10px 2px;border-radius:999px;background:var(--t);color:var(--t-ink);font-size:.6875rem;font-weight:600;letter-spacing:.12em;line-height:17px;text-transform:uppercase;white-space:nowrap}
@@ -38,12 +38,13 @@
 .bt-status[data-status="scheduled"]::before{background:var(--accent)}
 .bt-status[data-status="unpublished"]::before{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ink-muted)}
 .bt-status__when{color:var(--ink-muted);font-weight:500}
-.bt-edits{color:var(--accent);font-size:.75rem;font-weight:600;white-space:nowrap}
+.bt-edits{color:color-mix(in srgb,var(--accent) 84%,var(--ink));font-size:.75rem;font-weight:600;white-space:nowrap}
 /* Blog views (Posts / Calendar / Settings): quiet tabs that sit on the header rule. */
 .bt-seg{display:flex;gap:30px;min-width:0}
 .bt-seg button{position:relative;min-height:46px;padding:0;border:0;border-radius:0;background:none;color:var(--ink-muted);font:inherit;font-size:.9375rem;font-weight:500;cursor:pointer;transition:color 200ms var(--bt-ease)}
 .bt-seg button::after,.bt-panes .bt-chip::after{content:"";position:absolute;right:0;bottom:-1px;left:0;height:2px;border-radius:2px 2px 0 0;background:var(--ink);transform:scaleX(0);transform-origin:left;transition:transform 200ms var(--bt-ease)}
 .bt-seg button:hover{color:var(--ink)}
+.bt-seg button:focus-visible{border-radius:6px;outline-offset:4px}
 .bt-seg button[aria-pressed="true"]{color:var(--ink)}
 .bt-seg button[aria-pressed="true"]::after,.bt-panes .bt-chip[aria-pressed="true"]::after{transform:none}
 .bt-placeholder{display:grid;gap:4px;padding:28px;border:1px dashed var(--line);border-radius:12px;color:var(--ink-muted);font-size:.875rem;text-align:center}
@@ -88,11 +89,8 @@
 .bt-row__slug{overflow:hidden;max-width:100%;color:var(--ink-muted);font-size:.8125rem;text-overflow:ellipsis;white-space:nowrap}
 .bt-row__side{display:grid;justify-items:end;align-content:center;gap:6px;min-width:120px;text-align:right}
 .bt-row__date{color:var(--ink-muted);font-size:.8125rem;font-variant-numeric:tabular-nums;white-space:nowrap}
-/* Live with no pending edits: the date line already reads "Published 4 Nov", so the
-   status keeps only its dot and the two read as one line. (Interim — the clean fix
-   is in blog-tab.js rowHtml; see the lane report.) */
-.bt-row__side:has(.bt-status[data-status="published"]):has(.bt-row__date):not(:has(.bt-edits)){grid-auto-flow:column;align-items:center;gap:9px}
-.bt-row__side:has(.bt-row__date):not(:has(.bt-edits)) .bt-status[data-status="published"]{gap:0;font-size:0}
+/* Live with no pending edits: one line, the dot then "Published 4 Nov" in the date's voice. */
+.bt-status--dated{gap:9px;color:var(--ink-muted);font-weight:400;font-variant-numeric:tabular-nums}
 .bt-none,.bt-empty{display:grid;justify-items:center;gap:6px;padding:64px 20px;text-align:center}
 .bt-none p{margin:0 0 10px;color:var(--ink-muted)}
 .bt-empty .bt-art{width:200px;margin-bottom:22px}
