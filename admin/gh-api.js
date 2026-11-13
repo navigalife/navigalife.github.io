@@ -193,6 +193,52 @@ export class GhApi {
     });
   }
 
+  // A workflow's state: 'active', 'disabled_inactivity' (GitHub switches a
+  // scheduled workflow off after 60 days without repo activity),
+  // 'disabled_manually', … A workflow file that does not exist is 'missing'.
+  async workflowState(file) {
+    try {
+      const workflow = await this.request(this.repoPath(`/actions/workflows/${encodeURIComponent(file)}`));
+      return String(workflow?.state || 'unknown');
+    } catch (error) {
+      if (error instanceof ApiError && !(error instanceof AuthError) && error.status === 404) return 'missing';
+      throw error;
+    }
+  }
+
+  async enableWorkflow(file) {
+    await this.request(this.repoPath(`/actions/workflows/${encodeURIComponent(file)}/enable`), { method: 'PUT' });
+  }
+
+  // Commits on the admin's branch that touched `path`, newest first.
+  async listCommits(path, { perPage = 30 } = {}) {
+    const query = new URLSearchParams({ path, sha: this.branch, per_page: String(perPage) });
+    const commits = await this.request(this.repoPath(`/commits?${query}`));
+    return (Array.isArray(commits) ? commits : []).map((item) => ({
+      sha: item.sha,
+      date: item.commit?.committer?.date || item.commit?.author?.date || '',
+      message: String(item.commit?.message || '').split('\n')[0],
+      author: item.commit?.author?.name || item.author?.login || '',
+    }));
+  }
+
+  // A file's text as it was at `ref` (a commit sha, branch or tag). The contents
+  // API inlines files up to 1 MB; above that it returns `encoding: 'none'` with
+  // empty content, so the text comes from the blob API (good to 100 MB).
+  async getFileAt(path, ref) {
+    const query = new URLSearchParams({ ref });
+    const file = await this.request(this.repoPath(`/contents/${refPath(path)}?${query}`));
+    if (!file || Array.isArray(file) || (file.type && file.type !== 'file')) {
+      throw new ApiError(`${path} is not a file at ${String(ref).slice(0, 7)}.`, 422, file);
+    }
+    if (file.encoding === 'base64' && typeof file.content === 'string' && (file.content || !file.size)) {
+      return base64ToUtf8(file.content);
+    }
+    const blob = await this.request(this.repoPath(`/git/blobs/${encodeURIComponent(file.sha)}`));
+    if (blob?.encoding === 'base64') return base64ToUtf8(blob.content || '');
+    return String(blob?.content ?? '');
+  }
+
   static jsonChange(path, value) {
     return { path, content: `${JSON.stringify(value, null, 2)}\n`, encoding: 'utf-8' };
   }
