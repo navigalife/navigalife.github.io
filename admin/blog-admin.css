@@ -93,7 +93,9 @@
 .bt-status--dated{gap:9px;color:var(--ink-muted);font-weight:400;font-variant-numeric:tabular-nums}
 .bt-none,.bt-empty{display:grid;justify-items:center;gap:6px;padding:64px 20px;text-align:center}
 .bt-none p{margin:0 0 10px;color:var(--ink-muted)}
-.bt-empty .bt-art{width:200px;margin-bottom:22px}
+/* Fixed padding: .bt-art's 12%/11% resolves against the containing block, which
+   here is the whole list column (at 1440 it ate the 200px and blanked the art). */
+.bt-empty .bt-art{width:200px;margin-bottom:22px;padding:24px 22px}
 .bt-empty h2{margin:0;font-size:1.75rem}
 .bt-empty p:not(.auth-kicker){max-width:44ch;margin:6px 0 20px;color:var(--ink-muted)}
 .bt-managed{min-width:0}
@@ -223,8 +225,13 @@
   .bt-head .bt-seg{gap:26px;margin-top:20px}
   .bt-filters{gap:10px}
   .bt-search{flex-basis:100%}
-  /* Filter chips: one swipeable line each instead of a wrapped block. */
-  .bt-list .bt-chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent)}
+  /* Filter chips: one swipeable line each instead of a wrapped block. The 6px
+     padding/negative margin gives the 3px+2px focus ring room inside the
+     scroller's clip without moving a chip; the 40px end padding lets the last
+     chip scroll clear of the right-edge fade, and scroll-padding does the same
+     for a chip reached by Tab. */
+  .bt-list .bt-chips{flex-wrap:nowrap;overflow-x:auto;margin:-6px;padding:6px 40px 6px 6px;scroll-padding-inline:6px 40px;scrollbar-width:none;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 34px),transparent calc(100% - 6px));mask-image:linear-gradient(to right,#000 calc(100% - 34px),transparent calc(100% - 6px))}
+  .bt-list .bt-chips--cats{margin-bottom:12px}
   .bt-list .bt-chips::-webkit-scrollbar{display:none}
   .bt-list .bt-chip{flex:none}
   .bt-filters>.bt-chips{flex:1 1 100%}
@@ -232,7 +239,8 @@
   .bt-thumb{grid-row:span 2;width:72px;border-radius:5px}
   .bt-row__title{font-size:1.0625rem}
   .bt-row__body{gap:8px}
-  .bt-row__side{grid-column:2;grid-auto-flow:column;justify-content:start;justify-items:start;gap:12px;min-width:0;text-align:left}
+  /* Status, "Unpublished edits", date: wrap rather than run off a 390 screen. */
+  .bt-row__side{grid-column:2;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;min-width:0;text-align:left}
   .bt-picker .editor-header{position:relative;display:block}
   .bt-picker .editor-header h1{font-size:1.75rem}
   .bt-picker .editor-header>.button{position:absolute;top:-8px;right:0;min-height:40px;padding-inline:14px;font-size:.875rem}
