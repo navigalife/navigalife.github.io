@@ -277,3 +277,10 @@ Build: `MV_DIST=/tmp/mv-<lane>/dist MV_BLOG_SAMPLES=1 node src/build.js` (never 
   reviewer, publishAt (IST) = W5a.
 - Admin rule modules load as `import './content-rules.js'` side effect →
   `globalThis.MediVascContentRules` (same for blog-blocks.js, blog-checks.js).
+
+### Addendum pins (2)
+- `mountBlogSettings(root, { …, onMovePosts(fromCategoryId, toCategoryId) })` — W5d calls it when
+  a category with posts is deleted; W5a implements it (rewrites `category` on those posts).
+- Preview assets are referenced from admin modules ONLY as the exact string literals
+  `'./preview/blog-render.js'` and `'./preview/blog-preview.css'` (resolve with
+  `new URL(<literal>, import.meta.url)`); V4's copyAdmin versions those literals with `?v=`.
