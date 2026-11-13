@@ -20,7 +20,7 @@
   --ease:cubic-bezier(.22,1,.36,1);
   --pad:clamp(20px,4.5vw,48px);
   --gap:clamp(40px,3.6vw,60px);
-  --rail-w:clamp(248px,19vw,290px);
+  --rail-w:clamp(260px,19vw,290px);
   --toc-w:clamp(196px,15vw,228px);
   --wide:1180px;
   --body-fs:1.1875rem;
@@ -49,6 +49,7 @@
   --head:2 / -2;
   --wide-w:min(var(--wide),100cqw - 2 * var(--pad));
   --wide-ml:calc((var(--m) - var(--wide-w)) / 2);
+  --cover-w:min(var(--wide),100cqw - 2 * var(--pad));
 }
 @container post (min-width:1001px) and (max-width:1339.98px){
   .post--rail:not(.post--toc)>*{
@@ -69,9 +70,18 @@
   }
 }
 @container post (min-width:1340px){
+  /* --frame = the site header's .container, so the cover, TOC and rail land on the
+     same outer edges as the logo and the header CTA */
+  .post>*{--frame:min(100cqw - 40px,1240px);--cover-w:var(--frame)}
   :is(.post--rail,.post--toc)>*{
-    --m:min(var(--measure),100cqw - 2 * (var(--pad) + var(--gap) + var(--rail-w)));
+    --m:min(var(--measure),var(--frame) - 2 * (var(--gap) + 260px));
+    --rail-w:max(260px,(var(--frame) - var(--m)) / 2 - var(--gap));
+    --toc-w:var(--rail-w);
   }
+  /* wide = the article plus whatever sits beside it (rail, TOC), edge to edge */
+  .post--rail:not(.post--toc)>*{--wide-w:calc(var(--m) + var(--gap) + var(--rail-w));--wide-ml:0px}
+  .post--toc.post--norail>*{--wide-w:calc(var(--toc-w) + var(--gap) + var(--m));--wide-ml:calc(-1 * (var(--toc-w) + var(--gap)))}
+  .post--toc.post--rail>*{--wide-w:calc(var(--toc-w) + 2 * var(--gap) + var(--m) + var(--rail-w));--wide-ml:calc(-1 * (var(--toc-w) + var(--gap)))}
 }
 
 .post-layout{display:grid;grid-template-columns:var(--cols);margin-top:clamp(40px,5.5vw,80px)}
@@ -95,6 +105,9 @@
 .post-body>.b-wide{width:var(--wide-w);max-width:none;margin-left:var(--wide-ml);margin-right:0}
 .post-body>.b-full{width:100cqw;max-width:none;margin-left:calc(-1 * var(--left));margin-right:0}
 .post-body>:is(.b-wide,.b-full){position:relative;z-index:2}
+.post-body>:first-child{margin-top:0}
+/* anchors land just under the sticky header (html already has scroll-padding-top) */
+.post-body [id],.post-refs li{scroll-margin-top:24px}
 html:not(.js) .post-body>:is(.b-wide,.b-full){background:var(--bg)}
 
 /* ---- header ------------------------------------------------------------- */
@@ -138,8 +151,8 @@ html:not(.js) .post-body>:is(.b-wide,.b-full){background:var(--bg)}
 .post-head--editorial .post-byline__avatar{display:none}
 
 /* cover figure (editorial + guide) */
-.post-cover{grid-column:var(--head);justify-self:center;width:var(--wide-w);margin:clamp(36px,5vw,64px) 0 0}
-.post-head--guide .post-cover{justify-self:start;margin-left:var(--wide-ml)}
+.post-cover{grid-column:var(--head);justify-self:center;width:var(--cover-w);margin:clamp(36px,5vw,64px) 0 0}
+.post-head--guide .post-cover{justify-self:start;width:var(--wide-w);margin-left:var(--wide-ml)}
 @container post (min-width:1001px) and (max-width:1339.98px){
   .post--rail:not(.post--toc) .post-cover,.post--toc .post-cover{justify-self:stretch;width:auto;margin-left:0}
 }
@@ -150,7 +163,7 @@ html:not(.js) .post-body>:is(.b-wide,.b-full){background:var(--bg)}
 @container post (max-width:700px){
   .post-cover__frame{aspect-ratio:4 / 3}
   .post-cover{width:100cqw;margin-left:calc(-1 * var(--left))}
-  .post-head--guide .post-cover{margin-left:calc(-1 * var(--left))}
+  .post-head--guide .post-cover{width:100cqw;margin-left:calc(-1 * var(--left))}
   .post-cover__frame{border-radius:0;box-shadow:none}
   .post-cover>.post-cover__caption{padding-inline:var(--pad)}
 }
@@ -172,6 +185,7 @@ html:not(.js) .post-body>:is(.b-wide,.b-full){background:var(--bg)}
 .post-crumbs--photo .post-crumbs__home{color:color-mix(in srgb,var(--photo-paper) 82%,transparent)}
 .post-crumbs--photo .post-crumbs__home:hover{color:var(--photo-paper)}
 .post-crumbs--photo li+li::before{background:var(--photo-accent)}
+.post-hero :focus-visible{outline-color:var(--photo-paper)}
 .post-hero__fig{width:var(--m);margin:14px 0 0 var(--left)}
 .post-hero__fig .post-cover__caption{margin-top:0}
 @container post (max-width:700px){
@@ -181,7 +195,7 @@ html:not(.js) .post-body>:is(.b-wide,.b-full){background:var(--bg)}
 
 /* split layout: title + dek beside the photograph */
 .post-head--split{display:block}
-.post-split{display:grid;width:min(100cqw - 2 * var(--pad),1280px);grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:clamp(36px,5.5vw,96px);align-items:center;margin-inline:auto}
+.post-split{display:grid;width:min(100cqw - 2 * var(--pad),1240px);grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:clamp(36px,5.5vw,96px);align-items:center;margin-inline:auto}
 .post-split .post-title{max-width:16ch}
 .post-split .post-title--S,.post-split .post-title--M{max-width:20ch}
 .post-cover--split{width:auto;margin:0}
@@ -220,9 +234,9 @@ html:not(.js) .post-body>:is(.b-wide,.b-full){background:var(--bg)}
 .post-toc__list{counter-reset:toc;margin:0;padding:0;list-style:none;border-left:1px solid var(--line)}
 .post-toc__item{counter-increment:toc}
 .post-toc__item a{position:relative;display:block;padding:7px 0 7px 18px;color:var(--ink-muted);font:400 .9375rem/1.4 var(--sans);text-decoration:none;transition:color 200ms var(--ease)}
-.post-toc__item--h3 a{padding-left:32px;font-size:.875rem}
 .post-toc__item a::before{content:"";position:absolute;top:8px;bottom:8px;left:-1px;width:2px;border-radius:2px;background:var(--accent);transform:scaleY(0);transition:transform 200ms var(--ease)}
 .post-toc__item a:hover{color:var(--ink)}
+.post-toc__item a:focus-visible{outline-offset:-3px;border-radius:6px}
 .post-toc__item a[aria-current="true"]{color:var(--ink);font-weight:600}
 .post-toc__item a[aria-current="true"]::before{transform:scaleY(1)}
 
@@ -252,6 +266,9 @@ html:not(.js) .post-body>:is(.b-wide,.b-full){background:var(--bg)}
 @container post (min-width:1001px) and (max-width:1339.98px){
   .post--rail:not(.post--toc) .post-rail__inner{grid-template-columns:minmax(0,1fr)}
 }
+/* no JS = no fade, so the TOC/rail stay at the top of their columns instead of
+   riding into a later wide/full block */
+html:not(.js) .post :is(.post-toc__inner,.post-rail__inner){position:static;max-height:none}
 .post-toc__inner.is-occluded,.post-rail__inner.is-occluded{opacity:0;visibility:hidden;transition:opacity 200ms var(--ease),visibility 0s linear 200ms}
 
 /* ---- end matter --------------------------------------------------------- */
@@ -272,7 +289,7 @@ html:not(.js) .post-body>:is(.b-wide,.b-full){background:var(--bg)}
 html:not(.js) .post-share__copy-item{display:none}
 
 .post-refs ol{display:grid;gap:12px;margin:18px 0 0;padding:0 0 0 1.6em;color:var(--ink-muted);font:400 .9375rem/1.55 var(--sans);font-variant-numeric:tabular-nums}
-.post-refs li{padding-left:6px;scroll-margin-top:var(--sticky-top)}
+.post-refs li{padding-left:6px}
 .post-refs li::marker{color:var(--ink);font-weight:600}
 .post-refs li:target{color:var(--ink)}
 .post-refs li:target::marker{color:var(--accent)}
@@ -321,5 +338,6 @@ html:not(.js) .post-progress{display:none}
 .yt.is-playing iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 
 @media (prefers-reduced-motion:reduce){
-  .post-toc__inner,.post-rail__inner,.post-toast{transition:none}
+  .post-toc__inner,.post-rail__inner,.post-toast,.post-toc-m summary::after,.post-toc__item a::before,.post-author__more .icon,.post-byline a{transition:none}
+  .post-author__more:hover .icon{transform:none}
 }

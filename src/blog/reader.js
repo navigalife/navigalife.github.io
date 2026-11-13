@@ -129,6 +129,8 @@
   post.addEventListener('click', function (event) {
     var facade = event.target.closest && event.target.closest('a.yt[data-yt]');
     if (!facade) return;
+    // Cmd/Ctrl/Shift/middle-click keep the link's own behaviour (open on YouTube).
+    if (event.defaultPrevented || event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     var id = facade.getAttribute('data-yt') || '';
     if (!/^[A-Za-z0-9_-]{11}$/.test(id)) return;
     event.preventDefault();
@@ -138,7 +140,9 @@
     if (rect.height) frameBox.style.minHeight = Math.round(rect.height) + 'px';
     var iframe = document.createElement('iframe');
     iframe.src = 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1&rel=0&modestbranding=1&playsinline=1';
-    iframe.title = facade.getAttribute('aria-label') || facade.getAttribute('title') || 'YouTube video';
+    // The facade's accessible name is its sr-only "Play video: <name> (YouTube)".
+    var label = (facade.getAttribute('aria-label') || facade.textContent || '').replace(/\s+/g, ' ').trim().replace(/^Play video:?\s*/i, '');
+    iframe.title = label || 'YouTube video';
     iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
     iframe.setAttribute('allowfullscreen', '');
     iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');

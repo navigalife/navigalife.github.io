@@ -48,17 +48,6 @@ const ICONS = {
 const pick = (value, allowed, fallback) => (allowed.has(value) ? value : fallback);
 const list = (value) => (Array.isArray(value) ? value : []);
 
-// Citation ids actually used in the body, so a reference only gets a ↩ back-link
-// when its #cite-<id>-1 anchor exists.
-const citedIds = (value, found = new Set()) => {
-  if (Array.isArray(value)) value.forEach((item) => citedIds(item, found));
-  else if (value && typeof value === 'object') {
-    if (typeof value.cite === 'string') found.add(value.cite);
-    Object.values(value).forEach((item) => { if (item && typeof item === 'object') citedIds(item, found); });
-  }
-  return found;
-};
-
 const safeExternal = (url) => (typeof url === 'string' && /^https?:\/\/[^\s]+$/i.test(url.trim()) ? url.trim() : '');
 const hostOf = (url) => {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
@@ -143,25 +132,32 @@ const renderHeader = (ctx, post, layout) => {
     + `${renderCrumbs(ctx, post)}${renderTitle(post)}${renderDek(post)}${renderByline(ctx, post)}</div>${figure}</header>`;
 };
 
-// Guide table of contents: h2s and h3s from the body, plus the takeaways/FAQ
-// blocks when they carry an id (W2c anchors). Rendered twice from one list — a
-// sticky left nav on wide screens and a collapsible "On this page" in the column
-// on narrow ones; CSS shows exactly one.
-const tocItems = (post) => list(blocks.headingsOf(post.blocks)).filter((h) => h && h.anchor && h.text && (h.level === 2 || h.level === 3));
-const tocList = (items) => `<ol class="post-toc__list">${items.map((h) => `<li class="post-toc__item post-toc__item--h${h.level}"><a href="#${esc(h.anchor)}">${esc(h.text)}</a></li>`).join('')}</ol>`;
+// Guide table of contents: h2-level entries only (headings, the takeaways box and
+// the FAQ title, in document order, as headingsOf reports them); h3s stay in-body
+// anchors. An entry is kept only when its id really is in the rendered body, so the
+// TOC never links to nothing whichever blocks version is loaded. Rendered twice from
+// one list — a sticky left nav on wide screens and a collapsible "On this page" in
+// the column on narrow ones; CSS shows exactly one.
+const tocItems = (post, bodyHtml) => list(blocks.headingsOf(post.blocks)).filter((h) => h && h.level === 2
+  && typeof h.anchor === 'string' && h.anchor && h.text && bodyHtml.includes(` id="${esc(h.anchor)}"`));
+const tocList = (items) => `<ol class="post-toc__list">${items.map((h) => `<li class="post-toc__item${h.kind && h.kind !== 'heading' ? ` post-toc__item--${esc(h.kind)}` : ''}"><a href="#${esc(h.anchor)}">${esc(h.text)}</a></li>`).join('')}</ol>`;
 const renderToc = (items) => `<nav class="post-toc" aria-label="On this page"><div class="post-toc__inner"><p class="post-toc__title">On this page</p>${tocList(items)}</div></nav>`;
 const renderTocMobile = (items) => `<details class="post-toc-m"><summary><span>On this page</span><span class="post-toc-m__count">${items.length} sections</span></summary><nav aria-label="On this page">${tocList(items)}</nav></details>`;
 
-const renderReferences = (post) => {
-  const refs = list(post.references).filter((r) => r && r.id && r.text);
+// Page-level ids use underscores: slugify() never emits one, so no heading anchor
+// can ever collide with them.
+const renderReferences = (post, bodyHtml) => {
+  // The number is the index in post.references + 1 (CONTRACT citation pin), so each
+  // item carries an explicit value — a skipped entry never shifts the numbering.
+  const refs = list(post.references).map((r, i) => ({ r, n: i + 1 })).filter(({ r }) => r && r.id && r.text);
   if (!refs.length) return '';
-  const cited = citedIds(post.blocks);
-  return `<section class="post-refs" aria-labelledby="post-refs-title"><h2 class="post-endhead" id="post-refs-title">References</h2><ol class="post-refs__list">`
-    + refs.map((r) => {
+  return `<section class="post-refs" aria-labelledby="post_refs_title"><h2 class="post-endhead" id="post_refs_title">References</h2><ol class="post-refs__list">`
+    + refs.map(({ r, n }) => {
       const url = safeExternal(r.url);
       const link = url ? ` <a class="post-refs__link" href="${esc(url)}" rel="noopener" target="_blank">${esc(hostOf(url) || 'Source')}<span class="sr-only"> (opens in a new tab)</span></a>` : '';
-      const back = cited.has(r.id) ? ` <a class="post-refs__back" href="#cite-${esc(r.id)}-1" aria-label="Back to the text">↩</a>` : '';
-      return `<li id="ref-${esc(r.id)}"><span class="post-refs__text">${esc(r.text)}</span>${link}${back}</li>`;
+      // ↩ only when the body really rendered the #cite-<id>-1 anchor.
+      const back = bodyHtml.includes(` id="cite-${esc(r.id)}-1"`) ? ` <a class="post-refs__back" href="#cite-${esc(r.id)}-1" aria-label="Back to reference ${n} in the text">↩</a>` : '';
+      return `<li id="ref-${esc(r.id)}" value="${n}"><span class="post-refs__text">${esc(r.text)}</span>${link}${back}</li>`;
     }).join('')
     + '</ol></section>';
 };
@@ -188,9 +184,9 @@ const renderCta = (ctx) => {
   const wa = ctx.contactHref && ctx.contactHref.whatsapp;
   const call = ctx.contactHref && ctx.contactHref.call;
   if (!wa && !call) return '';
-  return `<aside class="post-cta" aria-labelledby="post-cta-title"><div class="post-cta__copy">`
+  return `<aside class="post-cta" aria-labelledby="post_cta_title"><div class="post-cta__copy">`
     + `<p class="post-cta__kicker">MediVasc care team</p>`
-    + `<h2 class="post-cta__title" id="post-cta-title">Worried about a foot or a leg <em>right now</em>?</h2>`
+    + `<h2 class="post-cta__title" id="post_cta_title">Worried about a foot or a leg <em>right now</em>?</h2>`
     + '<p class="post-cta__text">Message us on WhatsApp. Tell us what you are seeing, add a photo if you can, and our team will tell you what to do next.</p></div>'
     + '<div class="post-cta__actions">'
     + (wa ? `<a class="button post-cta__wa" href="${esc(wa)}" rel="noopener" target="_blank">${ICONS.whatsapp}<span>Chat on WhatsApp</span></a>` : '')
@@ -238,8 +234,8 @@ const renderRail = (ctx, post) => {
     ? `<section class="post-rail__group" aria-labelledby="${id}"><h2 class="post-rail__title" id="${id}">${title}</h2><div class="post-rail__cards">${items.map((p) => renderPostCard(ctx, p, 'rail')).join('')}</div></section>`
     : '');
   return `<aside class="post-rail" aria-label="More from the ${esc(crumbLabel(ctx))}"><div class="post-rail__inner">`
-    + group('post-rail-related', 'Related reading', related)
-    + group('post-rail-featured', 'Featured', featured)
+    + group('post_rail_related', 'Related reading', related)
+    + group('post_rail_featured', 'Featured', featured)
     + '</div></aside>';
 };
 
@@ -264,14 +260,14 @@ const renderPost = (ctx, post) => {
   const layout = pick(post.layout, LAYOUTS, 'editorial');
   const bodySize = pick(post.bodySize, BODY_SIZES, 'M');
   const leadIn = pick(post.leadIn, LEADINS, 'dropcap');
-  const toc = layout === 'guide' ? tocItems(post) : [];
+  const body = wrapLeadIn(blocks.renderBlocks(post.blocks, {
+    img: ctx.img, depth: ctx.depth, films: ctx.films, references: post.references, contactHref: ctx.contactHref,
+  }), leadIn);
+  const toc = layout === 'guide' ? tocItems(post, body) : [];
   const hasToc = toc.length >= 2;
   const rail = renderRail(ctx, post);
   // The closing CTA steps aside when the author already ended the body on one.
   const endsOnCta = list(post.blocks).slice(-3).some((b) => b && b.type === 'cta');
-  const body = wrapLeadIn(blocks.renderBlocks(post.blocks, {
-    img: ctx.img, depth: ctx.depth, films: ctx.films, references: post.references, contactHref: ctx.contactHref,
-  }), leadIn);
   const classes = ['post', `post--${layout}`, `post--body-${bodySize}`, rail ? 'post--rail' : 'post--norail', hasToc ? 'post--toc' : ''].filter(Boolean).join(' ');
   return `<div class="post-progress" aria-hidden="true"><span class="post-progress__bar"></span></div>`
     + `<article class="${classes}" data-layout="${layout}">`
@@ -284,7 +280,7 @@ const renderPost = (ctx, post) => {
     + '<footer class="post-end">'
     + `<p class="post-disclaimer">${esc(DISCLAIMER)}</p>`
     + renderShare(post)
-    + renderReferences(post)
+    + renderReferences(post, body)
     + renderAuthorCard(ctx, post)
     + (endsOnCta ? '' : renderCta(ctx))
     + '</footer></div>'
