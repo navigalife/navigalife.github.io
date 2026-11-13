@@ -284,3 +284,31 @@ Build: `MV_DIST=/tmp/mv-<lane>/dist MV_BLOG_SAMPLES=1 node src/build.js` (never 
 - Preview assets are referenced from admin modules ONLY as the exact string literals
   `'./preview/blog-render.js'` and `'./preview/blog-preview.css'` (resolve with
   `new URL(<literal>, import.meta.url)`); V4's copyAdmin versions those literals with `?v=`.
+
+### Addendum pins (3) — wave 2 finish (session 4)
+Ownership for this wave (supersedes the table above for these lanes):
+| Lane | Owns |
+|---|---|
+| W5a-1 wire | `admin/app.js`, `admin/index.html`, `admin/page-editor.js` (GATES only), `admin/draft-merge.js` (blog entries only), `admin/blog-tab.js`, `admin/blog-admin.css` (structural skeleton only), `admin/__harness.html` |
+| W5b-1 editor | `admin/blog-editor.js`, `admin/blog-editor.css`, `admin/__w5b.html` |
+| W5c-v seo | `admin/blog-seo.js`, `admin/blog-seo.css`, `admin/__w5c.html` |
+| W5d-v manage | `admin/blog-manage.js`, `admin/blog-manage.css`, `admin/gh-api.js` (additive), `admin/__w5d.html` |
+| X polish | `src/site.js`, `src/blog/build-blog.js`, `src/blog/blog-blocks.css`, `src/blog/blog-post.css`, `src/blog/render-post.js` (no new requires), `src/template.js` (noscript box only) |
+Only W5a touches `__harness.html`; every other admin lane tests in its own `__w5x.html`.
+
+Optional extras, now pinned (hosts may pass them; components must work without them):
+- `mountSeoPanel(root, { …, resolveSrc })` — for `draft:` covers in the share previews.
+- `mountPostPreview(root, { …, allPosts, controls })` — `allPosts` fills related/featured cards;
+  `controls: false` hides the component's own device/theme switches (host drives `setMode`).
+- `mountBlockEditor(root, { …, historyButtons })` — `false` hides built-in undo/redo; root
+  dispatches `bed:history` (`detail: { canUndo, canRedo }`) after every history change. Module
+  also exports `_internals` (pure helpers, tests only).
+- W5d components accept `posts` as an array OR a zero-arg getter returning one.
+- Posts that exist only as D1 drafts reach components with `status: 'draft'` (not a posts.json
+  status; never written to posts.json).
+- Authors referenced by any post cannot be deleted (W5d blocks it, names the posts) — there is
+  no `onMoveAuthor`. Deleting a category with posts moves them (`onMovePosts`) AND, if any moved
+  post is live, appends `{ from: 'blog/category/<old>/', to: 'blog/category/<target>/' }`. An
+  author slug change with live posts appends `blog/author/<old>/` → new, same rules as categories.
+- `stageAsset(file, { purpose: 'author' })` → `Promise<{ src }>`; a replaced or removed staged
+  author photo is unstaged by the host when W5d calls the optional `unstageAsset(src)`.
