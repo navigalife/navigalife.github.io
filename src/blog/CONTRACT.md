@@ -188,3 +188,92 @@ light and dark) before you report.
   (viewport-bleed). Floats `.b-left`/`.b-right` + `.b-size-S|M|L`. The post page
   (W2b) must let `.b-wide`/`.b-full` break out of the 68ch column (and out from under the
   rail — e.g. full-bleed spans the viewport; wide spans article+rail).
+
+---
+
+# Wave 1.5 + Wave 2 (session 3) — advisor addendum. Same rules: do not edit; report contract bugs.
+
+## File ownership (supersedes the module map above where they overlap)
+| Lane | Owns (edit ONLY these) |
+|---|---|
+| V1 post | `src/blog/render-post.js`, `src/blog/blog-post.css`, `src/blog/reader.js` |
+| V2 blocks | `admin/blog-blocks.js`, `src/blog/blog-blocks.css`, `tools/test/blog-blocks.test.js` |
+| V3 seo | `src/blog/seo.js`, `src/blog/og.js`, `tools/blog-due.js`, `.github/workflows/blog-schedule.yml`, `tools/test/blog-seo.test.js`, `tools/test/blog-due.test.js` |
+| V4 build | `src/build.js`, `src/template.js`, `src/blog/build-blog.js`, `src/blog/admin-preview.js` (new), `.gitignore` |
+| V5 rules | `admin/content-rules.js` (blog section), `admin/blog-checks.js`, `data/blog/*.json`, `src/blog/check-refs.js` (new), `tools/test/blog-rules.test.js` |
+| V6 landing+site | `src/blog/render-landing.js`, `src/blog/blog-landing.css`, `src/blog/landing.js`, `src/styles.css` |
+| W5a admin shell | `admin/blog-tab.js` (new), `admin/blog-admin.css` (new), `admin/index.html`, `admin/app.js`, `admin/page-editor.js` (GATES only), `admin/__harness.html` |
+| W5b editor | `admin/blog-editor.js` (new), `admin/blog-editor.css` (new) |
+| W5c seo panel | `admin/blog-seo.js` (new), `admin/blog-seo.css` (new) |
+| W5d settings | `admin/blog-manage.js` (new), `admin/blog-manage.css` (new), `admin/gh-api.js` (additive methods only) |
+
+Dev-only scratch files are free for anyone if they match `admin/__<lane>*.html` (gitignored) or live
+under `/tmp/mv-<lane>/`. Tests in `tools/test/` are plain `node <file>` scripts (no framework),
+exit non-zero on failure. **Ports**: V1 8801-8809, V2 8811-, V3 8821-, V4 8831-, V5 8841-,
+V6 8851-, W5a 8861- (wrangler 8869), W5b 8871-, W5c 8881-, W5d 8891-. Kill your servers before you report.
+**Browser**: `require('/Users/puranjaimendiratta/dev/pi/medivasc-vid/node_modules/puppeteer-core')`
+with `executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'`.
+Build: `MV_DIST=/tmp/mv-<lane>/dist MV_BLOG_SAMPLES=1 node src/build.js` (never the shared `dist/`).
+
+## Pins
+- Muted text token is `--ink-muted` (there is no `--muted`).
+- Body/dek serif is **Source Serif 4** (blog-post.css @font-face); UI chrome (buttons, credits,
+  kickers, meta) stays **Instrument Sans**; display stays Fraunces.
+- `render-post.js` and `render-landing.js` stay **pure**: no Node built-ins, only the requires they
+  have today (`../../admin/blog-blocks.js`, `../../admin/content-rules.js`, `./render-landing.js`).
+  V4 bundles them for the browser (below); a new require breaks the admin preview.
+- `headingsOf(blocks)` also returns the takeaways box as `{level: 2, text: <title>, anchor:
+  'key-takeaways', kind: 'takeaways'}` when a takeaways block exists (V2); the TOC (V1) shows
+  **h2 entries only** (incl. takeaways); h3 stay as in-body anchors.
+- `renderOgPng` must never throw on any valid title (V3 shrinks/breaks long words);
+  build-blog still wraps it in try/catch and falls back to the site OG (V4).
+- `seo.postJsonLd(ctx, post, { ogImage })` — third arg optional absolute URL (V3 adds, V4 passes).
+- `src/blog/check-refs.js` (V5): `checkBlogRefs(posts, config, { root, films })` → array of
+  `{ postId, field, message }` for: image files missing on disk (`root`-relative `assets/…`),
+  internal `blog/<slug>/` links to no live post, `config.featured` ids not in `posts`, video
+  `film` srcs not in films. V4 calls it in build-blog and **fails the build** on any error
+  (samples included only when MV_BLOG_SAMPLES=1). V4 also passes `films` into validateBlogPosts.
+- Sample-only config: `data/blog/samples.config.json` = `{ "featured": [ids] }`, merged over
+  config.json ONLY when MV_BLOG_SAMPLES=1 (V5 writes the file + empties `config.featured`;
+  V4 does the merge).
+- **Admin preview bundle** (V4, `src/blog/admin-preview.js`): `writeAdminPreview(outDir)` writes
+  `outDir/blog-render.js` (classic script; render-landing.js + render-post.js wrapped in a tiny
+  CommonJS shim whose `require` maps the two admin UMDs to `globalThis.MediVascBlogBlocks` /
+  `globalThis.MediVascContentRules`; sets `globalThis.MediVascBlogRender = { renderPost,
+  renderPostCard }`) and `outDir/blog-preview.css` (theme CSS for the active theme + site
+  styles.css + blog.css, unhashed, font urls rewritten to `../../assets/fonts/…`). The build calls
+  it for `dist/admin/preview/`; `node src/blog/admin-preview.js` (CLI) writes `admin/preview/`
+  in the source tree for the harness (gitignored). copyAdmin also versions every
+  `href="<name>.css"` in index.html, and its bundle hash covers `admin/*.css`.
+- **Admin components** — W5a hosts; one in-memory post object is the truth, owned by W5a.
+  Every component reads via `getPost()` and writes via `onChange(patch)` (a shallow object of the
+  top-level post fields it changed, e.g. `{ blocks }`, `{ seo }`). Components never touch
+  `state`, never publish, never call GitHub except W5c revisions through `gh`.
+  ```js
+  // admin/blog-editor.js (W5b) — the document: title, titleAccent, dek, cover (incl. alt,
+  // caption, credit, focal, patient consent), blocks, references, titleSize/bodySize/leadIn.
+  export function mountBlockEditor(root, { post, onChange, stageImage, resolveSrc, films, h, icon })
+    // → { setPost(post), undo(), redo(), canUndo(), canRedo(), focus(), destroy() }
+  // stageImage(file, { purpose: 'cover' | 'block' }) → Promise<{ src, width, height }>
+  //   (W5a: intakeImage → drafts asset → src 'draft:<name>'); resolveSrc(src) → displayable URL.
+  // admin/blog-seo.js (W5c) — slug, seo.*, about[], related[]; previews; revisions.
+  export function mountSeoPanel(root, { getPost, onChange, allPosts, config, h, icon })   // → { refresh(), destroy() }
+  export function mountPostPreview(root, { getPost, config, films, resolveSrc })          // → { refresh(), setMode({ device: 'phone'|'desktop', theme: 'light'|'dark' }), destroy() }
+  export function mountRevisions(root, { postId, gh, onRestore })                         // → { destroy() }
+  // admin/blog-manage.js (W5d) — blog name/intro/SEO, categories, authors, featured order.
+  export function mountBlogSettings(root, { getConfig, onChange, posts, stageAsset, h, icon }) // onChange(config) whole config; → { refresh(), destroy() }
+  export function mountCalendar(root, { posts, onOpen })                                  // onOpen(postId); → { refresh(posts), destroy() }
+  export function mountScheduleAlert(root, { gh })                                        // → { destroy() }
+  // admin/gh-api.js additions (W5d) on GhApi:
+  //   workflowState(file) → 'active' | 'disabled_inactivity' | 'disabled_manually' | …
+  //   enableWorkflow(file) → void            listCommits(path, { perPage = 30 }) → [{ sha, date, message, author }]
+  //   getFileAt(path, ref) → string (file text at that commit)
+  ```
+  `h`/`icon` = app.js helpers (escape + svg icon). Each component loads its own CSS
+  (`blog-*.css` linked from index.html by W5a, bare filenames). Draft image src scheme:
+  `draft:<name>` (name matches drafts-api `ASSET_NAME`); at publish W5a rewrites to
+  `assets/blog/<slug>/<name>` and stages the blob in the same commit. Post list, status,
+  publish/schedule/unpublish, slug-change → `previousSlugs`, layout picker, category, author,
+  reviewer, publishAt (IST) = W5a.
+- Admin rule modules load as `import './content-rules.js'` side effect →
+  `globalThis.MediVascContentRules` (same for blog-blocks.js, blog-checks.js).
