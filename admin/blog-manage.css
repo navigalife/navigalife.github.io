@@ -160,6 +160,9 @@
 /* --------------------------------------------------------------- dialog */
 .bm .bm-dialog{width:min(92vw,480px);padding:0;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);box-shadow:0 24px 80px color-mix(in srgb,var(--ink) 18%,transparent)}
 .bm .bm-dialog::backdrop{background:color-mix(in srgb,var(--ink) 50%,transparent)}
+/* --ink is light in dark mode, so the scrim and shadow would wash the page out; dim with the page ground instead. */
+[data-theme="dark"] .bm .bm-dialog{box-shadow:0 24px 80px color-mix(in srgb,var(--bg) 70%,transparent)}
+[data-theme="dark"] .bm .bm-dialog::backdrop{background:color-mix(in srgb,var(--bg) 72%,transparent)}
 .bm .bm-dialog[open]{animation:bm-rise 200ms var(--bm-ease)}
 .bm .bm-dialog form{padding:24px}
 .bm .bm-dialog h2{margin:0 0 10px;font-family:"Fraunces",Georgia,serif;font-size:1.35rem;font-weight:600;letter-spacing:-.02em;line-height:1.25}
@@ -184,6 +187,7 @@
   .bm .bm-section__head .button{align-self:flex-start}
   .bm .bm-row__bar{grid-template-columns:40px minmax(0,1fr) auto;gap:2px;padding:6px 6px 6px 2px}
   .bm .bm-grip{width:40px}
+  .bm .bm-grip:focus-visible{outline-offset:-3px} /* the list clips overflow and the bar has 2px left padding */
   .bm [data-row="authors"] .bm-row__bar{grid-template-columns:minmax(0,1fr);padding-left:6px}
   .bm [data-row="authors"] .bm-grip-space{display:none}
   .bm .bm-row__meta{flex-direction:column;align-self:stretch;align-items:flex-start;gap:1px}
@@ -267,6 +271,9 @@
 .bm .bm-alert__action{flex:none}
 .bm .bm-alert--done{border-color:color-mix(in srgb,var(--good) 30%,var(--line));background:color-mix(in srgb,var(--good) 7%,var(--surface))}
 .bm .bm-alert--done .bm-alert__icon{background:color-mix(in srgb,var(--good) 14%,var(--surface));color:var(--good)}
+@media(max-width:520px){
+  .bm .bm-dialog__actions{flex-direction:column-reverse;align-items:stretch}
+}
 @media(max-width:640px){
   .bm .bm-alert{flex-wrap:wrap;align-items:flex-start}
   .bm .bm-alert__copy{flex-basis:calc(100% - 50px)}

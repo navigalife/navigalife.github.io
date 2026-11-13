@@ -733,7 +733,7 @@ export function mountPostPreview(root, { getPost, config = {}, films = [], resol
   root.innerHTML = `
     <div class="bseo-pv__bar">
       ${controls ? `<div class="bseo-seg" role="group" aria-label="Preview device"><button type="button" data-device="phone" aria-pressed="true">Phone</button><button type="button" data-device="desktop" aria-pressed="false">Desktop</button></div>
-      <div class="bseo-seg" role="group" aria-label="Preview colours"><button type="button" data-theme="light" aria-pressed="true">Light</button><button type="button" data-theme="dark" aria-pressed="false">Dark</button></div>` : ''}
+      <div class="bseo-seg" role="group" aria-label="Preview colours"><button type="button" data-ptheme="light" aria-pressed="true">Light</button><button type="button" data-ptheme="dark" aria-pressed="false">Dark</button></div>` : ''}
       <span class="bseo-pv__url" data-url></span>
     </div>
     <div class="bseo-pv__stage" data-stage>
@@ -895,7 +895,7 @@ export function mountPostPreview(root, { getPost, config = {}, films = [], resol
 
   const syncControls = () => {
     root.querySelectorAll('[data-device]').forEach((b) => { if (b.tagName === 'BUTTON') b.setAttribute('aria-pressed', String(b.dataset.device === state.device)); });
-    root.querySelectorAll('button[data-theme]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.theme === state.theme)));
+    root.querySelectorAll('button[data-ptheme]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.ptheme === state.theme)));
   };
   const setMode = ({ device, theme } = {}) => {
     if (state.destroyed) return;
@@ -916,7 +916,7 @@ export function mountPostPreview(root, { getPost, config = {}, films = [], resol
     const button = e.target.closest('button');
     if (!button) return;
     if (button.dataset.device) setMode({ device: button.dataset.device });
-    if (button.dataset.theme) setMode({ theme: button.dataset.theme });
+    if (button.dataset.ptheme) setMode({ theme: button.dataset.ptheme });
   });
 
   layout();
