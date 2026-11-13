@@ -30,8 +30,6 @@
     if (typeof value === 'string') return value;
     return list(value).map((run) => (isObject(run) && typeof run.t === 'string' ? run.t : '')).join('');
   };
-  const inlineLinks = (value) =>
-    list(value).filter((run) => isObject(run) && typeof run.href === 'string').map((run) => run.href);
 
   const BLOCK_NAMES = {
     paragraph: 'Paragraph', lead: 'Intro paragraph', heading: 'Heading', list: 'List',
@@ -238,14 +236,17 @@
     }
 
     // Links and images.
+    // Every inline link run anywhere in the post body (captions included).
     const hrefs = [];
-    list(post.blocks).forEach((block) => {
-      if (!isObject(block)) return;
-      for (const value of [block.text, block.caption]) hrefs.push(...inlineLinks(value));
-      for (const value of list(block.items)) hrefs.push(...inlineLinks(isObject(value) ? value.a : value));
-      if (Array.isArray(block.text)) block.text.forEach((para) => hrefs.push(...inlineLinks(para)));
-      list(block.rows).forEach((row) => list(row).forEach((cell) => hrefs.push(...inlineLinks(cell))));
-    });
+    const collect = (value) => {
+      if (Array.isArray(value)) value.forEach(collect);
+      else if (isObject(value)) {
+        if (typeof value.href === 'string') hrefs.push(value.href);
+        Object.keys(value).forEach((key) => { if (key !== 'href') collect(value[key]); });
+      }
+    };
+    collect(post.blocks);
+    if (isObject(post.cover)) collect(post.cover.caption);
     const internal = hrefs.filter((h) => /^blog\//.test(h)).length;
     if (internal) good('internal-link', `The post links to ${internal} other post${internal === 1 ? '' : 's'} on the blog — that helps readers and Google find more of your writing.`);
     else warn('internal-link', 'Link to at least one other post on the blog — it keeps readers reading and helps Google understand your site.');
@@ -273,36 +274,47 @@
 
   // -------------------------------------------------------------- claimsCheck
 
-  const CLAIMS_NOTE = 'This checker looks for common risky wording only. It is a helper, not legal advice — for anything unusual, check with someone who knows the Drugs and Magic Remedies Act and the ASCI healthcare guidelines.';
+  const CLAIMS_NOTE = 'This checker only looks for common risky wording (in English, and a few Hindi and Hinglish phrases). It is a helper, not legal advice — before publishing anything unusual, check with someone who knows the Drugs and Magic Remedies Act and the ASCI healthcare guidelines.';
 
-  // [pattern, advice]. Patterns are case-insensitive and whole-word.
+  // Advice shared by the English, Hinglish and Hindi forms of one claim.
+  const ADVICE = {
+    cure: 'Avoid promising a cure. Indian advertising rules (the Drugs and Magic Remedies Act, whose list includes diabetes, and the ASCI healthcare guidelines) do not allow cure claims for many conditions. Say what care can do instead — “help manage”, “treat”, “help heal” or “improve”.',
+    guarantee: 'Avoid guarantees about health results — no one can promise how a body will respond. Try “aims to”, “can help” or “in many cases”.',
+    miracle: 'Words like “miracle” or “magic” suggest a remedy beyond ordinary medicine, which the Drugs and Magic Remedies Act does not allow in health advertising. Describe plainly what the treatment does.',
+  };
+
+  // [pattern, advice]. English patterns are case-insensitive and whole-word.
+  // Negated uses ("there is no cure", "help prevent amputation") are skipped:
+  // they are honest wording, not promises.
   const CLAIMS = [
-    [/\b(?:cure|cures|cured|curing|curable)\b/gi,
-      'Promising a cure is not allowed for health services in India. Say what care can do instead — “help manage”, “treat”, “help heal” or “improve”.'],
-    [/\bguarantee(?:s|d)?\b|\bguaranteed\b/gi,
-      'Avoid guarantees about health results. Try “aims to”, “can help” or “in many cases”.'],
-    [/(?:\b100\s?%|\b100 per ?cent\b|\bhundred per ?cent\b)/gi,
+    [/(?<!\b(?:no|not|never|cannot|can't|can’t|isn't|isn’t|without|nor)\s+(?:(?:a|an|any|be|been|yet|known|real|permanent)\s+){0,2})\b(?:cure|cures|cured|curing|curable)\b/gi, ADVICE.cure],
+    [/\bpakk?a\s+ila+j\b|\bjad+\s+se\s+(?:khatam|khatm|khtm|mita\w*|theek)\b|(?:पक्का|पक्की)\s*(?:इलाज|उपचार)|ज\S{1,2}\s+से\s+(?:ख\S{1,4}|मिटा\S*|समाप्त)|स्थायी\s+(?:इलाज|उपचार)/gi, ADVICE.cure],
+    [/\bguarantee[sd]?\b|\bgaa?rant(?:ee|i)\b|गारंटी/gi, ADVICE.guarantee],
+    [/\b100\s?%|\b100\s+per\s?cent\b|\bhundred\s+per\s?cent\b/gi,
       'Avoid 100% claims — results differ from person to person. Describe what is typical, or what the care aims to do.'],
-    [/\bpermanent(?:ly)?\s+(?:fix(?:es|ed)?|solutions?|relief|results?|cure[sd]?|healing|recovery)\b|\b(?:fix(?:es|ed)?|solve[sd]?|heal(?:s|ed)?|remove[sd]?|gone)\s+(?:it\s+|them\s+)?(?:for good|forever|permanently)\b/gi,
+    [/\bpermanent(?:ly)?\s+(?:fix(?:es|ed)?|solutions?|relief|results?|cure[sd]?|heal(?:s|ed|ing)?|recovery|remed(?:y|ies)|removal|ila+j)\b|\b(?:fix(?:es|ed)?|solve[sd]?|heal(?:s|ed)?|remove[sd]?|gone|cure[sd]?)\s+(?:it\s+|them\s+)?(?:for good|forever|for ever|permanently|for life)\b/gi,
       'Avoid promising permanent results. Try “long-lasting improvement for many people” or “helps keep it under control”.'],
-    [/\bmiracle\b|\bmiraculous(?:ly)?\b|\bmagic(?:al)?\b/gi,
-      'Words like “miracle” or “magic” are not allowed for health treatments (Drugs and Magic Remedies Act). Describe plainly what the treatment does.'],
-    [/\bno (?:more |need for (?:an? )?)?amputations?\b|\bnever (?:need|have|face) (?:an )?amputations?\b|\b(?:prevents?|eliminates?|avoids?) amputations?\b|\bsaves? (?:your |the |every )?(?:legs?|feet|foot|limbs?)\b/gi,
+    [/\bmiracle\b|\bmiraculous(?:ly)?\b|\bmagic(?:al)?\b|\bchamatkar\w*|चमत्कार\S*/gi, ADVICE.miracle],
+    [/\bno (?:more |need for (?:an? )?)?amputations?(?: ever)?\b|\bnever (?:need|have|face|undergo) (?:an )?amputations?\b|(?<!\bhelps? (?:to )?)\b(?:prevents?|eliminates?|avoids?|stops?) (?:all |any )?amputations?\b|(?<!\bhelps? (?:to )?)\bsaves? (?:your |the |every |a )?(?:legs?|feet|foot|limbs?)\b|\bamputation[- ]free\b/gi,
       'Avoid promising that an amputation will not happen — that depends on each person. Try “help lower the risk of amputation” or “help protect the limb”.'],
-    [/\breverse[sd]?\s+(?:your\s+|the\s+)?(?:diabetes|neuropathy|nerve damage|pad|peripheral arterial disease|blockages?)\b|\bdiabetes reversal\b/gi,
-      'Avoid “reverse diabetes” style claims (diabetes is a scheduled condition). Try “help manage” or “improve control”.'],
-    [/\bwithout (?:any )?(?:surgery|operations?|amputations?)\b|\bno (?:need for )?surgery\b|\bavoid surgery\b/gi,
+    [/\breverse[sd]?\s+(?:your\s+|the\s+)?(?:diabetes|neuropathy|nerve damage|pad|peripheral arterial disease|blockages?)\b|\bdiabetes reversal\b|\b(?:get rid of|free from|freedom from|beat|defeat)\s+(?:your\s+)?diabetes\b|\bdiabetes[- ]free\b|\b(?:sugar|diabetes)\s+(?:ko\s+)?(?:jad+\s+se\s+)?khatam\b/gi,
+      'Avoid saying diabetes (or nerve or artery damage) can be reversed or ended — diabetes is on the Drugs and Magic Remedies Act’s list, so claims like this are not allowed in health advertising. Try “help manage” or “improve control”.'],
+    [/\bwithout (?:any )?(?:surgery|operations?|amputations?)\b|\bno (?:need for )?(?:surgery|operation)\b|\bavoid(?:s|ing)? (?:surgery|an operation)\b|\bbina operation\b/gi,
       'Avoid promising that surgery will not be needed — that depends on each person. Describe what the treatment involves, or say it may be an option “before surgery is considered”.'],
-    [/\b(?:no|zero|without (?:any )?)\s*side[- ]effects?\b|\brisk[- ]free\b|\bno risks?\b|\b100% safe\b|\bcompletely safe\b/gi,
+    [/\b(?:no|zero|without (?:any )?)\s*side[- ]effects?\b|\brisk[- ]free\b|\bno risks?\b|\b(?:100% |completely |perfectly |totally )safe\b/gi,
       'Every treatment can have side effects. Say who it suits and that a doctor will check, rather than calling it risk-free.'],
     [/\b(?:instant|immediate|overnight)\s+(?:relief|results?|cure|healing|recovery)\b/gi,
       'Avoid promising instant results — healing takes time and varies. Try “many people notice a difference over weeks”.'],
+    [/\b(?:heal(?:s|ed)?|cure[sd]?|recover(?:s|ed)?|results?|relief|gone|walking again)\s+(?:with)?in\s+(?:just\s+|only\s+)?(?:\d+|one|two|three|four|five|six|seven|eight|ten|a few)\s+(?:days?|weeks?|months?)\b/gi,
+      'Promising a result within a set time is risky — healing time differs for each person. If this is one patient’s story, say so (“in this patient’s case…”) and add that results vary.'],
     [/\b(?:fully|completely|totally)\s+(?:heal(?:s|ed)?|cure[sd]?|recover(?:s|ed)?|gone|normal)\b/gi,
       'Avoid absolute promises of a complete recovery. Try “heal well”, “improve” or describe one person’s experience as their own.'],
-    [/\bbest (?:doctors?|treatments?|hospitals?|clinics?|results?)\b|\bnumber one\b|\bno\.? ?1\b/gi,
-      '“Best” and “number one” claims need proof under ASCI rules. Describe what you offer instead.'],
+    [/\bbest (?:doctors?|treatments?|hospitals?|clinics?|results?|specialists?|surgeons?)\b|\bnumber one\b|\bno\.? ?1\b|\b(?:top|leading)\s+(?:doctors?|specialists?|surgeons?|hospitals?|clinics?)\b|\bindia['’]?s\s+(?:best|top|first|only|leading)\b|\bthe only (?:treatment|cure|solution|clinic|hospital|centre|center|place)\b/gi,
+      '“Best”, “top”, “number one” or “only” claims need independent proof under the ASCI guidelines. Describe what you offer instead.'],
     [/\bclinically proven\b|\bscientifically proven\b/gi,
       'Only say “proven” if you cite the study in the references. Otherwise try “supported by guidelines” or “used in clinics for…”.'],
+    [/\bbefore[- ]and[- ]after\s+(?:photos?|pictures?|images?|pics?|shots?|results?|stories|story|transformations?)\b|\bbefore-and-after\b|\bbefore\s*(?:&|\/|–)\s*after\b/gi,
+      'Before-and-after pictures or stories must be real, unedited, shared with the patient’s written consent and typical of what people can expect — say clearly that results differ from person to person.'],
   ];
 
   const claimsCheck = (post) => {

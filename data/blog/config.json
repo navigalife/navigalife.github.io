@@ -3,7 +3,7 @@
   "navLabel": "Blog",
   "intro": "Plain-spoken guidance on diabetic feet, circulation, wounds and swollen limbs — written to help you act early and keep walking.",
   "seo": { "title": "", "description": "" },
-  "featured": ["p_s01", "p_s02", "p_s04"],
+  "featured": [],
   "categories": [
     {
       "id": "c_foot",

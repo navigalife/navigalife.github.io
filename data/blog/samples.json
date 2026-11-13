@@ -625,9 +625,9 @@
       },
       {
         "type": "video",
-        "source": "youtube",
-        "youtube": "M7lc1UVf-VE",
-        "caption": "Sample embed — replace with a patient-education video before publishing."
+        "source": "film",
+        "src": "assets/conditions/severity-b.mp4",
+        "caption": "A patient's own short video, shared with consent. Circulation problems differ from person to person — ask your doctor what your own test results mean."
       },
       {
         "type": "divider"

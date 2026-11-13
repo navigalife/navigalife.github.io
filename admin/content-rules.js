@@ -1382,7 +1382,11 @@
     }
 
     if (config.redirects !== undefined) {
-      const URL_FORM = /^blog\/[a-z0-9]+(?:-[a-z0-9]+)*\/$/;
+      // Exactly three address forms: a post (blog/<slug>/), a category
+      // (blog/category/<slug>/) or an author (blog/author/<slug>/). A bare
+      // blog/category/ or blog/author/ is not a page.
+      const URL_FORM = /^blog\/(?:(?:category|author)\/)?[a-z0-9]+(?:-[a-z0-9]+)*\/$/;
+      const urlOk = (url) => typeof url === 'string' && URL_FORM.test(url) && !/^blog\/(?:category|author)\/$/.test(url);
       if (!Array.isArray(config.redirects)) add('redirects', `${where}: the redirects are not a list.`);
       else {
         const froms = new Set();
@@ -1393,8 +1397,8 @@
             return;
           }
           for (const key of ['from', 'to']) {
-            if (typeof r[key] !== 'string' || !URL_FORM.test(r[key])) {
-              add(`${at}.${key}`, `${where}: redirect ${k + 1} “${key}” must look like blog/post-address/ (got “${String(r[key])}”).`);
+            if (!urlOk(r[key])) {
+              add(`${at}.${key}`, `${where}: redirect ${k + 1} “${key}” must look like blog/post-address/, blog/category/category-address/ or blog/author/author-address/ (got “${String(r[key])}”).`);
             }
           }
           if (r.from === r.to) add(at, `${where}: redirect ${k + 1} points to itself.`);
@@ -1578,17 +1582,15 @@
         else if (!ids.has(id)) add(`${i}.related.${k}`, `${who}: related post “${String(id)}” does not exist.`);
       });
     });
-    // Featured ids must resolve whenever sample posts are loaded (they are what
-    // the shipped config features until the owner picks real posts). Without
-    // samples, a missing id is skipped: the build drops non-live featured ids,
-    // and failing here would block the production build on sample ids.
-    if (posts.some((post) => isObject(post) && post.sample === true)) {
-      asList(cfg.featured).forEach((id, k) => {
-        if (typeof id === 'string' && !ids.has(id)) {
-          add(`config.featured.${k}`, `Blog settings: featured post “${id}” does not exist — remove it from the featured list.`);
-        }
-      });
-    }
+    // Featured ids must name a post in the list. Sample ids live only in
+    // data/blog/samples.config.json (merged when samples load), so the shipped
+    // config never features a post the production build cannot see. A featured
+    // post that is scheduled or unpublished is fine: the build skips it.
+    asList(cfg.featured).forEach((id, k) => {
+      if (typeof id === 'string' && !ids.has(id)) {
+        add(`config.featured.${k}`, `Blog settings: featured post “${id}” does not exist — remove it from the featured list.`);
+      }
+    });
     return errors;
   };
 
