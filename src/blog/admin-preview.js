@@ -1,4 +1,4 @@
-// Admin preview bundle (CONTRACT "Admin preview bundle"): the post page renderers
+// Admin preview bundle: the post page renderers
 // and the blog stylesheet, packaged so the admin can draw a draft exactly as the
 // site will, with no build step in the browser.
 //
@@ -54,7 +54,7 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 
-// require() targets the renderers may use (CONTRACT: render-*.js stay pure).
+// require() targets the renderers may use (render-*.js stay pure).
 const EXTERNALS = {
   '../../admin/blog-blocks.js': 'MediVascBlogBlocks',
   '../../admin/content-rules.js': 'MediVascContentRules',
@@ -69,7 +69,7 @@ const renderBundle = async () => {
       if (!known.has(target)) {
         throw new Error(
           `Admin preview: src/blog/${name.slice(2)} requires '${target}', which the browser bundle cannot provide. `
-          + 'Renderers must stay pure (CONTRACT "Pins"); only blog-blocks.js, content-rules.js and render-landing.js.',
+          + 'Renderers must stay pure; only blog-blocks.js, content-rules.js and render-landing.js.',
         );
       }
     }

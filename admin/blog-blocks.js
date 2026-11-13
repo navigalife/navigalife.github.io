@@ -6,7 +6,7 @@
 //                     const blocks = globalThis.MediVascBlogBlocks;
 //
 // A classic script on purpose (no import/export, no Node APIs, no deps), like
-// content-rules.js. Data shapes: src/blog/CONTRACT.md "Inline text" + "Blocks".
+// content-rules.js. Data shapes: content-rules.js (validateBlogPosts).
 //
 // This file is the XSS boundary for post bodies. Post text is never HTML: every
 // text and attribute value is escaped here; inline runs honour only b/i/hl/href/

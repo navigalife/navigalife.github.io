@@ -1,8 +1,8 @@
 // The Journal (/blog/) build: loads data/blog/*.json, validates it, builds every
 // referenced photograph's responsive variants, and writes the landing, post,
 // category, author, redirect and feed pages into the shared dist through the same
-// page shell as the homepage (src/template.js renderShell). Interfaces are pinned
-// in src/blog/CONTRACT.md. Called from src/build.js in two steps: loadBlog() runs
+// page shell as the homepage (src/template.js renderShell). Contract: AGENTS.md
+// "The blog". Called from src/build.js in two steps: loadBlog() runs
 // with the other validators (before dist is wiped, so a content error never
 // leaves the site half-built), buildBlog() runs once the site assets exist.
 const fs = require('node:fs/promises');
@@ -178,7 +178,7 @@ const readOptional = async (file) => {
   }
 };
 
-// The one blog stylesheet (CONTRACT "CSS / JS"): landing + post + blocks, in that
+// The one blog stylesheet: landing + post + blocks, in that
 // order. Shared by the hashed assets/blog.css and the admin preview bundle.
 const BLOG_CSS_FILES = ['blog-landing.css', 'blog-post.css', 'blog-blocks.css'];
 const blogCssSource = async () => (await Promise.all(BLOG_CSS_FILES.map(readOptional))).join('\n');
@@ -227,7 +227,7 @@ const buildBlog = async (blog, {
     { root, buildGallery },
   );
 
-  // Hashed blog stylesheet + script (CONTRACT "CSS / JS").
+  // Hashed blog stylesheet + script.
   const [blogCssText, readerJs, landingJs] = await Promise.all([
     blogCssSource(),
     readOptional('reader.js'),
@@ -248,7 +248,7 @@ const buildBlog = async (blog, {
   const categoryCounts = countBy('category');
   const authorCounts = countBy('author');
 
-  // One ctx per depth (CONTRACT "ctx"): every href in it is depth-prefixed.
+  // One ctx per depth: every href in it is depth-prefixed.
   const ctxCache = new Map();
   const ctxFor = (depth) => {
     if (ctxCache.has(depth)) return ctxCache.get(depth);

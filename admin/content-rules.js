@@ -984,8 +984,8 @@
   };
 
   // -------------------------------------------------------------------- blog
-  // data/blog/config.json and posts.json (+ samples.json) — shapes pinned in
-  // src/blog/CONTRACT.md. Keep the enums below in sync with that file.
+  // data/blog/config.json and posts.json (+ samples.json). These validators ARE the
+  // schema (AGENTS.md "The blog" points here); renderers and admin follow these enums.
 
   const TINTS = ['teal', 'clay', 'sage', 'ochre', 'slate', 'plum'];
   const LAYOUTS = ['editorial', 'cover', 'split', 'guide'];
@@ -1028,7 +1028,7 @@
   const HTML_TAG = /<\/?[A-Za-z][^<>]*>|<!--/;
   const INLINE_KEYS = ['t', 'b', 'i', 'hl', 'href', 'cite'];
   const MARK_NAMES = { b: 'bold', i: 'italic', hl: 'highlight' };
-  // Link targets the renderers keep (CONTRACT "Inline text"): anything else is dropped.
+  // Link targets the renderers keep: anything else is dropped.
   const BLOG_HREFS = [
     /^https:\/\/[^\s<>"]+$/,
     /^mailto:[^\s<>"@]+@[^\s<>"@]+$/,

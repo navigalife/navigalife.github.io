@@ -1,6 +1,6 @@
 // Blog settings, the publishing calendar and the paused-schedule alert (W5d).
-// Browser ES module, hosted by admin/blog-tab.js; signatures pinned in
-// src/blog/CONTRACT.md (session-3 addendum). Every component here works on
+// Browser ES module, hosted by admin/blog-tab.js; cross-file contracts in
+// AGENTS.md "The blog". Every component here works on
 // data the host hands it and reports back through callbacks — nothing in this
 // file touches admin state, publishes, or calls GitHub except the alert's
 // two workflow calls through `gh`.

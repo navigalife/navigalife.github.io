@@ -1,5 +1,5 @@
 // Blog landing, category, author pages and the shared post card (W2a).
-// Contract: src/blog/CONTRACT.md. Every renderer returns the HTML that goes inside
+// Contract: AGENTS.md "The blog". Every renderer returns the HTML that goes inside
 // <main id="main">; every href is ctx-relative (post.href, category.href, ctx.depth),
 // never root-absolute. All text is escaped here — nothing from data is trusted.
 //

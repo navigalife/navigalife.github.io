@@ -456,7 +456,7 @@ const copyAdmin = async ({ theme } = {}) => {
   await fs.cp(source, target, { recursive: true, filter: (from) => from !== localPreview });
   await assertNotAdminSource(target, 'version the admin bundle');
   const realTarget = await fs.realpath(target);
-  // The admin preview bundle (CONTRACT "Admin preview bundle").
+  // The admin preview bundle.
   const preview = await writeAdminPreview(path.join(target, 'preview'), { theme });
 
   // Cache-bust the admin bundle. The admin ships static filenames (app.js and
@@ -495,7 +495,7 @@ const copyAdmin = async ({ theme } = {}) => {
   // Modules import their siblings by relative path ('./gh-api.js'); version
   // every such import in every module, so one URL per file and none stale. The
   // preview assets are referenced only as the literals './preview/blog-render.js'
-  // and './preview/blog-preview.css' (CONTRACT addendum pins (2)).
+  // and './preview/blog-preview.css'.
   const sibling = new RegExp(`(['"])(\\./(?:${modules.map((m) => m.slice(0, -3)).join('|')})\\.js)\\1`, 'g');
   const previewRef = /(['"])\.\/preview\/(blog-render\.js|blog-preview\.css)\1/g;
   for (const file of modules) {

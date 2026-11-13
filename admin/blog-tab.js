@@ -1,7 +1,7 @@
 // The Blog tab (lane W5a): the posts list, the layout picker, and the post view
 // that hosts the editor (blog-editor.js), the SEO panel / preview / history
 // (blog-seo.js) and the settings + calendar views (blog-manage.js).
-// Pinned interfaces: src/blog/CONTRACT.md, session-3 addendum.
+// Cross-file contracts: AGENTS.md "The blog".
 //
 // While a post is open, ONE in-memory object (cur.post) is the truth. Components
 // read it with getPost() and write with onChange(patch); this file autosaves it to
@@ -93,7 +93,7 @@ const ownWords = (message) => {
   return match[1].trim() ? rest.charAt(0).toUpperCase() + rest.slice(1) : 'This post ' + rest;
 };
 
-// The type settings validateBlogPosts requires on every post (CONTRACT addendum 4).
+// The type settings validateBlogPosts requires on every post.
 // A new post starts with them; a post from before they existed (an older D1 draft,
 // a restored revision) gets the same values filled in when it is opened.
 const styleDefaults = (layout) => ({ titleSize: 'L', bodySize: 'M', leadIn: layout === 'guide' ? 'none' : 'dropcap' });

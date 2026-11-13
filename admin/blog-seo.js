@@ -1,5 +1,5 @@
 // Admin Blog tab — search & sharing panel, live post preview and version history.
-// Interfaces pinned in src/blog/CONTRACT.md ("Admin components"); styles in
+// Cross-file contracts: AGENTS.md "The blog"; styles in
 // blog-seo.css, every selector under the one root class `.bseo`.
 //
 //   mountSeoPanel(root, { getPost, onChange, allPosts, config, h, icon, resolveSrc? })

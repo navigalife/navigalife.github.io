@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Tests for the pure helpers of admin/blog-editor.js (the `_internals` test seam,
-// CONTRACT "Addendum pins (3)"). Plain node, no framework, no DOM:
+// AGENTS.md "The blog"). Plain node, no framework, no DOM:
 //   node tools/test/blog-editor.test.js
 // prints one line per failure plus one summary line, exits non-zero on failure.
 // MV_TEST_AREAS=1 also prints the per-area test counts to stderr.
@@ -37,7 +37,7 @@ const test = (area, name, fn) => {
   }
 };
 
-const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/; // CONTRACT Blocks: video `youtube?` (11-char id)
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/; // content-rules.js: video `youtube?` (11-char id)
 const E = RULES.BLOG_ENUMS;
 
 (async () => {
@@ -56,7 +56,7 @@ const E = RULES.BLOG_ENUMS;
   const commit = (v) => toInline(trimRuns(asRuns(v)));
   const textOf = (runs) => runs.map((r) => (r.cite !== undefined ? '' : r.t)).join('');
 
-  // Every Inline-typed field of a post body, per the CONTRACT "Blocks" table.
+  // Every Inline-typed field of a post body, per content-rules.js validateBlogPosts.
   const inlineFields = (blocks) => {
     const out = [];
     const add = (p, v) => { if (v !== undefined) out.push({ path: p, value: v }); };

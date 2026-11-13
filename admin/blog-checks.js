@@ -8,7 +8,7 @@
 //
 // Classic script on purpose (same pattern as content-rules.js): no
 // import/export, no dependencies. It reads posts in the shape pinned by
-// src/blog/CONTRACT.md and keeps its own text extraction, so it never depends
+// content-rules.js and keeps its own text extraction, so it never depends
 // on the renderer.
 //
 // API — each item is { id, status: 'good' | 'warn', message } in plain words:

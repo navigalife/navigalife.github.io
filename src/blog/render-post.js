@@ -1,5 +1,5 @@
 // The Journal post page: renderPost(ctx, post) returns the HTML that sits inside
-// <main id="main">. Interfaces pinned in src/blog/CONTRACT.md; styles in
+// <main id="main">. Contract: AGENTS.md "The blog"; styles in
 // blog-post.css, progressive behaviour (progress bar, TOC highlight, copy link,
 // YouTube facade) in reader.js. Everything here reads fine with JS off.
 //
@@ -147,7 +147,7 @@ const renderTocMobile = (items) => `<details class="post-toc-m"><summary><span>O
 // Page-level ids use underscores: slugify() never emits one, so no heading anchor
 // can ever collide with them.
 const renderReferences = (post, bodyHtml) => {
-  // The number is the index in post.references + 1 (CONTRACT citation pin), so each
+  // The number is the index in post.references + 1, so each
   // item carries an explicit value — a skipped entry never shifts the numbering.
   const refs = list(post.references).map((r, i) => ({ r, n: i + 1 })).filter(({ r }) => r && r.id && r.text);
   if (!refs.length) return '';

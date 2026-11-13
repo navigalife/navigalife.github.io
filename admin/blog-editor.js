@@ -1,7 +1,7 @@
 /* admin/blog-editor.js — W5b: the blog post DOCUMENT editor (title, accent, dek,
  * cover, typography presets, all 16 block types, references).
  *
- * Contract: src/blog/CONTRACT.md (session-3 addendum). Hand-built, dependency-free.
+ * Contract: AGENTS.md "The blog". Hand-built, dependency-free.
  * The model never holds HTML: every contenteditable is serialized DOM → Inline
  * runs ({t, b, i, hl, href} | {cite}) through an allowlist walk, and rendered
  * back with createElement/textContent only. The host (W5a) owns the post; this

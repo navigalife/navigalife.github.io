@@ -1,5 +1,5 @@
 // Blog SEO: JSON-LD graphs, <title>/description, RSS, sitemap entries, llms.txt
-// section and redirect stubs. See src/blog/CONTRACT.md. All functions are pure.
+// section and redirect stubs. See AGENTS.md "The blog". All functions are pure.
 //
 // JSON-LD builders return ONE `@graph` object per page (W1 serialises it). The graph
 // reuses the homepage's node ids — `<site>#website` (WebSite) and
