@@ -14,3 +14,4 @@ CREATE TABLE IF NOT EXISTS daily (
   n INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (day, kind, source, ref, device, country, region, city)
 );
+-- Blog tables (drafts, draft_assets, blog_daily) live in migrations/0002_blog.sql.

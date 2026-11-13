@@ -31,7 +31,7 @@ const REGION_NAMES = { 'National Capital Territory of Delhi': 'Delhi' };
 const ENQUIRY = new Set(['w', 'c', 'e']);
 const CACHE_MS = 5 * 60000;
 
-const view = { range: '30', source: null, data: null, fetchedAt: 0, error: '', loading: false, allStates: false, allCities: false, token: '', root: null };
+const view = { range: '30', source: null, data: null, fetchedAt: 0, error: '', loading: false, allStates: false, allCities: false, allPosts: false, blog: null, blogTitles: null, token: '', root: null };
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const num = (value) => new Intl.NumberFormat('en-IN').format(value);
@@ -191,7 +191,70 @@ const renderBody = () => {
     (abroad.length ? '<div class="tr-sub"><h3>Outside India</h3>' + rankedList(abroad, (g) => esc(countryName(g.key)), { limit: 6, expanded: true, action: '', emptyText: '' }) + '</div>' : '') +
     '</div></div>';
 
-  return kpis + sourcesCard + renderTrend(scoped, period) + placesCard;
+  return kpis + sourcesCard + renderTrend(scoped, period) + placesCard + renderBlog(period);
+};
+
+// Blog panel: reads per blog page from GET /blog-stats (blog_daily), for the selected
+// period. Hidden until a blog page has been read in it. Not split by source (blog_daily
+// has none), so a source filter gets an "all sources" note rather than wrong numbers.
+const humanise = (slug) => { const words = slug.replace(/-+/g, ' ').trim(); return words.charAt(0).toUpperCase() + words.slice(1); };
+const blogLabel = (path) => {
+  const title = view.blogTitles && view.blogTitles.get(path);
+  const parts = path.split('/').filter(Boolean); // ['blog', 'slug'] | ['blog', 'category', 'slug'] …
+  const name = title ? esc(title)
+    : parts.length === 1 ? 'Blog home'
+      : parts[1] === 'category' && parts[2] ? 'Category: ' + esc(humanise(parts[2]))
+        : parts[1] === 'author' && parts[2] ? 'Author: ' + esc(humanise(parts[2]))
+          : esc(humanise(parts[parts.length - 1]));
+  return '<span title="/' + esc(path) + '">' + name + '</span>';
+};
+const renderBlog = (period) => {
+  const blog = view.blog;
+  if (!blog || blog.key !== period.from + '|' + period.to) return '';
+  const groups = blog.rows.map(([path, visits, enquiries]) => ({ key: path, visits, enquiries }));
+  if (!groups.some((g) => g.visits || g.enquiries)) return '';
+  return '<div class="tr-card"><div class="tr-card__head"><h2>Blog' + (view.source ? ' <small>· all sources</small>' : '') + '</h2>' +
+    '<p>Which blog pages are read, most first. Each page counts once per visit; enquiries are WhatsApp, call or email taps made on that page.</p></div>' +
+    '<div class="tr-sub tr-sub--blog">' + rankedList(groups, (g) => blogLabel(g.key), { limit: 8, expanded: view.allPosts, action: 'more-posts', emptyText: '' }) + '</div></div>';
+};
+
+const isBlogStats = (d) => Boolean(d) && typeof d === 'object' && Array.isArray(d.rows) &&
+  d.rows.every((r) => Array.isArray(r) && typeof r[0] === 'string' && Number.isFinite(r[1]) && Number.isFinite(r[2]));
+
+// Post titles from the live site's RSS feed (same origin as the admin), once per page
+// load; posts missing from it fall back to their slug, read as words.
+const loadBlogTitles = async () => {
+  if (view.blogTitles) return;
+  view.blogTitles = new Map();
+  try {
+    const response = await fetch(new URL('../blog/feed.xml', location.href), { cache: 'no-store' });
+    if (!response.ok) return;
+    const feed = new DOMParser().parseFromString(await response.text(), 'application/xml');
+    for (const item of feed.querySelectorAll('item')) {
+      const link = item.querySelector('link')?.textContent.trim();
+      const title = item.querySelector('title')?.textContent.trim();
+      if (!link || !title) continue;
+      try { view.blogTitles.set(new URL(link).pathname.replace(/^\/+/, ''), title); } catch { /* not a URL */ }
+    }
+  } catch { /* titles are a nicety; slugs still read fine */ }
+};
+
+// Fetched per period; any failure (old worker, table not set up) just hides the panel.
+const loadBlog = async () => {
+  if (!view.data) return;
+  const period = periodOf();
+  const key = period.from + '|' + period.to;
+  if (view.blog && view.blog.key === key) return;
+  view.blog = { key, rows: [] };
+  try {
+    const response = await fetch(apiBase() + '/blog-stats?from=' + period.from + '&to=' + period.to, { headers: { Authorization: 'Bearer ' + view.token }, cache: 'no-store' });
+    const data = response.ok ? await response.json().catch(() => null) : null;
+    if (!isBlogStats(data) || view.blog.key !== key) return;
+    if (data.rows.length) await loadBlogTitles();
+    if (view.blog.key !== key) return;
+    view.blog.rows = data.rows;
+    render();
+  } catch { /* hidden */ }
 };
 
 const renderLinks = () => '<div class="tr-card"><div class="tr-card__head"><h2>Links to post</h2><p>Use these wherever you share the website, so every visit is credited to the right place. Google search needs no special link.</p></div><ul class="tr-links">' +
@@ -244,6 +307,7 @@ const load = async () => {
     if (!isStats(data)) throw new Error('The traffic service answered with ' + (data && typeof data.error === 'string' ? 'an error (' + data.error.slice(0, 40) + ')' : 'something unexpected') + '. Try Refresh in a minute.');
     view.data = data;
     view.fetchedAt = Date.now();
+    view.blog = null; // refetched for the new numbers below
   } catch (error) {
     view.error = error instanceof TypeError ? 'Could not reach the traffic service. Check the connection and press Refresh.' : error.message;
   } finally {
@@ -257,6 +321,7 @@ const load = async () => {
       render();
     }
   }
+  loadBlog();
 };
 
 const showTip = (root, column) => {
@@ -274,18 +339,19 @@ const showTip = (root, column) => {
 
 export const mountTraffic = (root, token) => {
   view.root = root;
-  if (token !== view.token) { view.token = token; view.data = null; view.fetchedAt = 0; }
+  if (token !== view.token) { view.token = token; view.data = null; view.fetchedAt = 0; view.blog = null; }
   render();
   if (!view.loading && (!view.data || Date.now() - view.fetchedAt > CACHE_MS)) load();
   root.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-traffic]');
     if (!button) return;
     const { traffic: action, value } = button.dataset;
-    if (action === 'range') view.range = value;
+    if (action === 'range') { view.range = value; loadBlog(); }
     else if (action === 'source') view.source = view.source === value ? null : value;
     else if (action === 'refresh') return load();
     else if (action === 'more-states') view.allStates = !view.allStates;
     else if (action === 'more-cities') view.allCities = !view.allCities;
+    else if (action === 'more-posts') view.allPosts = !view.allPosts;
     else if (action === 'device') { if (value === 'count') localStorage.removeItem(STAFF_KEY); else localStorage.setItem(STAFF_KEY, '1'); }
     else if (action === 'copy') {
       try { await navigator.clipboard.writeText(value); button.textContent = 'Copied'; } catch { button.textContent = 'Copy failed'; }

@@ -592,3 +592,5 @@ label.row-action{position:relative}
 .film-scrub input:disabled{opacity:.45}
 .film-clip .upload-control{min-height:72px}
 @media(max-width:640px){.film-clip{grid-template-columns:1fr}.film-frame{width:min(100%,220px)}}
+/* Traffic: blog panel */
+.tr-sub--blog .tr-rank__name{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;white-space:normal;line-height:1.35}

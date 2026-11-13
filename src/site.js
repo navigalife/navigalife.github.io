@@ -1184,15 +1184,28 @@
 // only the utm_source tag and the referring host; no cookie, no identifier. Counts
 // only on the live domain, never on devices that have unlocked the admin
 // ('medivasc-staff'), and on localhost only when 'medivasc-traffic-dev' names a
-// local worker URL.
+// local worker URL. Blog pages (and only those) also send their own path as `b`, so
+// the Traffic tab can say which posts are read: the first view of each blog page per
+// tab session, and the visit's enquiry when its tap happens on a blog page.
 (() => {
   try {
     const host = location.hostname;
     const live = host === 'medivasc.in' || host === 'www.medivasc.in';
     const endpoint = live ? 'https://medivasc-api.puranjai1210.workers.dev/p' : localStorage.getItem('medivasc-traffic-dev');
     if (!endpoint || localStorage.getItem('medivasc-staff')) return;
-    const send = (kind, signal) => {
-      const body = JSON.stringify({ k: kind, u: signal.u, r: signal.r });
+    // '/changes/blog/x/index.html' -> 'blog/x/'; '' on every non-blog page.
+    const blogPath = (() => {
+      let path = location.pathname.replace(/^\/changes\//, '/').replace(/\/index\.html$/, '/').replace(/^\/+/, '');
+      if (!/^blog(\/|$)/.test(path)) return '';
+      if (!path.endsWith('/')) path += '/';
+      return path.length <= 125 ? path : '';
+    })();
+    const session = {
+      get: (key) => { try { return sessionStorage.getItem(key); } catch (error) { return null; } },
+      set: (key, value) => { try { sessionStorage.setItem(key, value); } catch (error) { /* private mode */ } },
+    };
+    const send = (kind, signal, blog) => {
+      const body = JSON.stringify(blog ? { k: kind, u: signal.u, r: signal.r, b: blog } : { k: kind, u: signal.u, r: signal.r });
       let queued = false;
       try { queued = navigator.sendBeacon(endpoint, new Blob([body], { type: 'text/plain' })); } catch (error) { queued = false; }
       if (!queued) fetch(endpoint, { method: 'POST', body, keepalive: true, mode: 'no-cors' }).catch(() => {});
@@ -1205,7 +1218,18 @@
       if (referrer === host) referrer = '';
       signal = { u: (new URLSearchParams(location.search).get('utm_source') || '').slice(0, 40), r: referrer.slice(0, 80) };
       try { sessionStorage.setItem('medivasc-source', JSON.stringify(signal)); } catch (error) { /* private mode: may recount on reload */ }
-      send('v', signal);
+      send('v', signal, blogPath);
+      if (blogPath) session.set('medivasc-blog-read', JSON.stringify([blogPath]));
+    } else if (blogPath) {
+      // A later page of a visit already counted: 'b' counts this blog page once per
+      // tab session and never adds a visit.
+      let read = [];
+      try { read = JSON.parse(session.get('medivasc-blog-read')) || []; } catch (error) { read = []; }
+      if (!Array.isArray(read)) read = [];
+      if (!read.includes(blogPath)) {
+        send('b', signal, blogPath);
+        session.set('medivasc-blog-read', JSON.stringify(read.concat(blogPath).slice(-50)));
+      }
     }
     // One enquiry per visit: only the first contact tap of the tab session is sent, so
     // the Traffic tab's "visits that enquired" is a true share (a second WhatsApp tap,
@@ -1221,7 +1245,7 @@
       if (!kind) return;
       enquired = true;
       try { sessionStorage.setItem('medivasc-enquired', '1'); } catch (error) { /* private mode: in-page flag still holds */ }
-      send(kind, signal);
+      send(kind, signal, blogPath); // credited to the blog page it happened on, if any
     }, true);
   } catch (error) { /* counting must never break the page */ }
 })();
