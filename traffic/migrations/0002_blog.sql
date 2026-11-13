@@ -32,8 +32,8 @@ CREATE TABLE IF NOT EXISTS draft_assets (
 -- Per (IST day, blog page) reading counts; no visitor data, like `daily`.
 -- path = 'blog/', 'blog/<slug>/', 'blog/category/<slug>/'… (no /changes/, no index.html).
 -- visits = first view of that page in a tab session; enquiries = the visit's first
--- WhatsApp/call/email tap, credited to the blog page it happened on or, if it happened
--- elsewhere, to the last blog page read earlier in the same visit.
+-- WhatsApp/call/email tap, credited only when that tap happens ON a blog page (a tap on
+-- the homepage after reading a post is not credited to the post; owner call if wanted).
 CREATE TABLE IF NOT EXISTS blog_daily (
   day TEXT NOT NULL,
   path TEXT NOT NULL,
