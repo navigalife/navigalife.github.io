@@ -379,6 +379,77 @@ test('authorJsonLd: ProfilePage + Person (credentials, https-only sameAs) / Orga
 });
 
 // ---------------------------------------------------------------------------
+// The company as its own byline (author name = ctx.company.name, case/space-insensitive)
+// ---------------------------------------------------------------------------
+const ORG_ID = `${SITE}#organization`;
+const companyAuthors = [
+  taxon({ id: 'a_co', name: 'MediVasc', slug: 'medivasc', role: '', credentials: '', bio: '', photo: '', sameAs: [] }, 'author'),
+  taxon({ id: 'a_co_loose', name: ' medivasc ', slug: 'medivasc', role: '', credentials: '', bio: '', photo: '', sameAs: [] }, 'author'),
+];
+// No reviewer, so any Person in the graph could only have come from the byline.
+const companyPost = (a) => ({ ...p2, id: `p_${a.id}`, author: a.id, authorObj: a, reviewer: null, reviewerObj: null, reviewedAt: null });
+const companyCtx = (a) => makeCtx({ authors: [...authors, ...companyAuthors], posts: [companyPost(a)] });
+const deepFind = (value, pred, out = []) => {
+  if (Array.isArray(value)) value.forEach((v) => deepFind(v, pred, out));
+  else if (value && typeof value === 'object') {
+    if (pred(value)) out.push(value);
+    Object.values(value).forEach((v) => deepFind(v, pred, out));
+  }
+  return out;
+};
+const hasType = (o, type) => (Array.isArray(o['@type']) ? o['@type'].includes(type) : o['@type'] === type);
+
+for (const a of companyAuthors) {
+  const label = JSON.stringify(a.name);
+  test(`postJsonLd: company byline ${label} → author IS the site MedicalClinic`, () => {
+    const art = node(graphOf(seo.postJsonLd(companyCtx(a), companyPost(a))), 'BlogPosting');
+    assert.deepEqual(art.author, { '@type': 'MedicalClinic', '@id': ORG_ID, name: 'MediVasc', url: SITE });
+  });
+  test(`postJsonLd: company byline ${label} → no Person anywhere in the post JSON-LD`, () => {
+    const out = seo.postJsonLd(companyCtx(a), companyPost(a));
+    const people = deepFind(out, (o) => hasType(o, 'Person'));
+    assert.deepEqual(people, [], 'no @type Person at any depth');
+  });
+  test(`authorJsonLd: company byline ${label} → ProfilePage is about the org; one org node`, () => {
+    const graph = graphOf(seo.authorJsonLd(companyCtx(a), a));
+    assert.deepEqual(node(graph, 'ProfilePage').mainEntity, { '@id': ORG_ID });
+    assert.equal(graph.filter((n) => n['@id'] === ORG_ID).length, 1, 'exactly one node carries the org @id');
+  });
+}
+
+test('postJsonLd: "MediVasc Care Team" byline still renders as its own Organization (regression)', () => {
+  const art = node(graphOf(seo.postJsonLd(ctx, p1)), 'BlogPosting');
+  assert.deepEqual(art.author, {
+    '@type': 'Organization',
+    '@id': `${SITE}blog/author/medivasc-care-team/#author`,
+    name: 'MediVasc Care Team',
+    url: `${SITE}blog/author/medivasc-care-team/`,
+    parentOrganization: { '@id': ORG_ID },
+  });
+});
+
+test('postJsonLd: a named clinician byline ("Dr A Sharma") still renders as a Person (regression)', () => {
+  const sharma = taxon({ id: 'a_sharma', name: 'Dr A Sharma', slug: 'dr-a-sharma', role: '', credentials: '', bio: '', photo: '', sameAs: [] }, 'author');
+  const art = node(graphOf(seo.postJsonLd(ctx, { ...p2, author: 'a_sharma', authorObj: sharma })), 'BlogPosting');
+  assert.deepEqual(art.author, {
+    '@type': 'Person',
+    '@id': `${SITE}blog/author/dr-a-sharma/#author`,
+    name: 'Dr A Sharma',
+    url: `${SITE}blog/author/dr-a-sharma/`,
+  });
+});
+
+test('postJsonLd: reviewer null or absent → no reviewedBy key at any depth', () => {
+  const absent = { ...p2 };
+  delete absent.reviewer;
+  delete absent.reviewerObj;
+  for (const [label, post] of [['null', p2], ['absent', absent], ['company byline', companyPost(companyAuthors[0])]]) {
+    const out = seo.postJsonLd(ctx, post);
+    assert.deepEqual(deepFind(out, (o) => 'reviewedBy' in o), [], `reviewer ${label}: no reviewedBy anywhere`);
+  }
+});
+
+// ---------------------------------------------------------------------------
 // RSS
 // ---------------------------------------------------------------------------
 test('rssFeed: well-formed, escaped, absolute, newest first, live posts only', () => {

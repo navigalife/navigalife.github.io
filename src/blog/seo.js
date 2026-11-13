@@ -93,11 +93,17 @@ const authorById = (ctx, id) => (id ? list(ctx.authors).find((a) => a && a.id ==
   || list(ctx.blog && ctx.blog.authors).find((a) => a && a.id === id) || null : null);
 const taxonUrl = (ctx, item, kind) => text(item && item.absUrl) || `${siteOf(ctx)}blog/${kind}/${text(item && item.slug)}/`;
 
-// A team/desk byline is an Organization; a named clinician is a Person.
+// The company as its own byline IS the site's organisation node (siteNodes), not a
+// second entity; a team/desk byline is an Organization; a named clinician is a Person.
+const isCompanyAuthor = (ctx, author) => text(author.name).toLowerCase() === siteName(ctx).toLowerCase();
 const isOrgAuthor = (author) => /^organi[sz]ation$/i.test(text(author.type || author.kind))
   || /\b(team|staff|desk|editors?|editorial)\b/i.test(text(author.name));
 const authorRef = (ctx, author) => {
   if (!author || !text(author.name)) return null;
+  if (isCompanyAuthor(ctx, author)) {
+    const id = ids(ctx);
+    return { '@type': 'MedicalClinic', '@id': id.org, name: siteName(ctx), url: id.site };
+  }
   const url = taxonUrl(ctx, author, 'author');
   return isOrgAuthor(author)
     ? { '@type': 'Organization', '@id': `${url}#author`, name: text(author.name), url, parentOrganization: { '@id': ids(ctx).org } }
@@ -266,6 +272,9 @@ const authorJsonLd = (ctx, author) => {
   const id = ids(ctx);
   const url = taxonUrl(ctx, author, 'author');
   const ref = authorRef(ctx, author);
+  // The company's author page describes the org node siteNodes already emits;
+  // a second entity under the same @id would only restate (or contradict) it.
+  const company = ref['@id'] === id.org;
   const sameAs = unique(list(author.sameAs).map(text).filter((u) => /^https:\/\//.test(u)));
   const topics = unique(list(ctx.posts)
     .filter((post) => post.author === author.id || post.reviewer === author.id)
@@ -293,7 +302,7 @@ const authorJsonLd = (ctx, author) => {
     mainEntity: { '@id': ref['@id'] },
   };
   const crumbs = breadcrumb(`${url}#breadcrumb`, [...journalCrumbs(ctx), [text(author.name), url]]);
-  return [{ '@context': 'https://schema.org', '@graph': [page, entity, crumbs, ...siteNodes(ctx)] }];
+  return [{ '@context': 'https://schema.org', '@graph': [page, ...(company ? [] : [entity]), crumbs, ...siteNodes(ctx)] }];
 };
 
 // ---------------------------------------------------------------------------

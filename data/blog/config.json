@@ -49,11 +49,11 @@
   "authors": [
     {
       "id": "a_team",
-      "name": "MediVasc Care Team",
-      "slug": "medivasc-care-team",
+      "name": "MediVasc",
+      "slug": "medivasc",
       "role": "",
       "credentials": "",
-      "bio": "The MediVasc care team works with people across India to help protect feet and legs from the complications of diabetes, poor circulation and long-standing swelling.",
+      "bio": "MediVasc works with people across India to help protect feet and legs from the complications of diabetes, poor circulation and long-standing swelling.",
       "photo": "",
       "sameAs": []
     }
