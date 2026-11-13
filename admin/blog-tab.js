@@ -1031,12 +1031,13 @@ export const createBlogTab = (ctx) => {
       const next = buildNext(c, intent);
       problems = next ? check(next.nextPosts, next.index) : { mine: [], others: [], config: [] };
     }
-    const all = [...problems.mine, ...problems.config, ...problems.others];
+    const all = [...problems.mine, ...problems.config.map((message) => ({ message, path: '' })), ...problems.others.map((message) => ({ message, path: '' }))];
     c.problems = all.length ? { intent } : null;
     if (!all.length) return setNote(c, 'problems', '');
     const shown = all.slice(0, 6);
     setNote(c, 'problems', '<div class="bt-problems" role="alert"><strong>' + (intent === 'schedule' ? 'Before this can be scheduled' : 'Before this can go live') + '</strong><ul>' +
-      shown.map((message) => '<li>' + h(message) + '</li>').join('') + '</ul>' +
+      shown.map(({ message, path }) => '<li>' + h(message) +
+        (path ? ' <button class="button button--text bt-inline" type="button" data-bt="jump" data-value="' + h(path) + '">Fix this</button>' : '') + '</li>').join('') + '</ul>' +
       (all.length > shown.length ? '<span>…and ' + (all.length - shown.length) + ' more.</span>' : '') + '</div>');
     return undefined;
   };
@@ -1047,8 +1048,67 @@ export const createBlogTab = (ctx) => {
       : rules.validateBlogPosts(nextPosts, config(), films()).map((message) => ({ path: '', message }));
     const mine = [];
     const others = [];
-    for (const problem of detailed) (String(problem.path).split('.')[0] === String(index) ? mine : others).push(problem.message);
-    return { mine: mine.map(ownWords), others, config: rules.validateBlogConfig(config()) };
+    for (const problem of detailed) {
+      const [at, ...rest] = String(problem.path).split('.');
+      if (at === String(index)) mine.push({ message: ownWords(problem.message), path: rest.join('.') });
+      else others.push(problem.message);
+    }
+    return { mine, others, config: rules.validateBlogConfig(config()) };
+  };
+
+  // "Fix this" in the problems list: show the pane that holds the field, then
+  // focus it. Paths are validateBlogPostsDetailed's, minus the post index.
+  const SETTINGS_FIELDS = new Set(['layout', 'category', 'author', 'reviewer', 'reviewedAt', 'publishAt']);
+  const SEO_FIELDS = new Set(['slug', 'previousSlugs', 'seo', 'about', 'related']);
+  const focusEl = (el) => {
+    if (!el) return false;
+    // The editor's file inputs are hidden; its "Add a photo" button opens them.
+    if (el.matches('input[type="file"]')) el = (el.closest('.bed-media') || el.parentElement)?.querySelector('[data-act="pick"]') || el;
+    el.scrollIntoView({ block: 'center' });
+    el.focus({ preventScroll: true });
+    return document.activeElement === el || el.contains(document.activeElement);
+  };
+  const byPath = (scope, path) => {
+    if (!scope) return null;
+    const parts = path.split('.');
+    for (let n = parts.length; n > 0; n -= 1) {
+      const key = parts.slice(0, n).join('.');
+      const hit = [...scope.querySelectorAll('[data-f], [data-file], [data-bt-field]')].find((el) => (el.dataset.f || el.dataset.file || el.dataset.btField) === key);
+      if (hit) return hit;
+    }
+    return null;
+  };
+  const jumpTo = (c, path) => {
+    const top = path.split('.')[0];
+    const show = (pane) => {
+      c.pane = pane;
+      if (pane !== 'write') c.sidePane = pane;
+      syncPanes();
+    };
+    if (SETTINGS_FIELDS.has(top)) {
+      show('settings');
+      const pane = viewEl.querySelector('[data-pane-id="settings"]');
+      return focusEl(byPath(pane, top) || pane?.querySelector('[data-bt="set-' + top + '"][aria-pressed="true"], [data-bt="set-' + top + '"]'));
+    }
+    if (SEO_FIELDS.has(top)) {
+      show('seo');
+      const part = viewEl.querySelector('[data-part="seo"]');
+      return focusEl(byPath(part, path) || part?.querySelector('input, textarea, select, button'));
+    }
+    if (narrowQuery.matches) show('write');
+    const editor = viewEl.querySelector('[data-part="editor"]');
+    if (!editor) return false;
+    const block = /^blocks\.(\d+)(?:\.(.+))?$/.exec(path);
+    if (block) {
+      const wrap = editor.querySelectorAll('.bed-block')[Number(block[1])];
+      if (!wrap) return focusEl(null) || call(c.handles.editor, 'focus');
+      return focusEl((block[2] && byPath(wrap, block[2])) || wrap.querySelector('[data-f], input, textarea, select, button'));
+    }
+    if (top === 'cover' && !byPath(editor, path)) {
+      // No cover yet: the alt / caption fields appear once a photo is chosen.
+      return focusEl(editor.querySelector('[data-file="cover"]'));
+    }
+    return focusEl(byPath(editor, path)) || call(c.handles.editor, 'focus');
   };
 
   // The posts.json that a publish / schedule / unpublish of this post would commit.
@@ -1239,6 +1299,7 @@ export const createBlogTab = (ctx) => {
         c.saveState = 'pending';
         return saveNow(c);
       }
+      if (action === 'jump') return jumpTo(c, value || '');
       if (action === 'keep-mine') return keepMine(c);
       if (action === 'load-theirs') return loadTheirs(c);
       return undefined;
@@ -1287,6 +1348,17 @@ export const createBlogTab = (ctx) => {
   host.addEventListener('change', onChange);
   // Clicks inside a component can change undo state; keep the buttons current.
   host.addEventListener('keyup', () => { if (cur) paintBar(); });
+  // Leaving or reloading inside the autosave pause: save now rather than in
+  // 1.5 s. app.js's beforeunload prompt holds the page while the PUT lands, and
+  // a hidden tab (phone switched apps) may never come back to finish the timer.
+  // (The editor batches its onChange ~240 ms; a flush() on its handle, when it
+  // has one, hands over the last keystrokes first.)
+  const saveBeforeLeaving = () => {
+    if (cur) call(cur.handles.editor, 'flush');
+    for (const c of contexts) if (c.dirty && !c.saving && c.timer && c.saveState === 'pending') saveNow(c);
+  };
+  window.addEventListener('beforeunload', saveBeforeLeaving);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveBeforeLeaving(); });
 
   // ---------------------------------------------------------------- app.js hooks
 

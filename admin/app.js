@@ -2011,8 +2011,10 @@ editorRoot.addEventListener('click', async (event) => {
 });
 
 editorRoot.addEventListener('submit', (event) => {
-  event.preventDefault();
+  // Blog components handle their own forms; blog-manage's <form method="dialog">
+  // confirm dialogs only close (with their returnValue) if the submit goes through.
   if (blogTab.owns(event.target)) return;
+  event.preventDefault();
   try {
     if (therapyEditor.handleSubmit(event.target) || filmsEditor.handleSubmit(event.target)) return;
     if (event.target.id === 'product-form' || event.target.id === 'protocol-form' || event.target.id === 'testimonial-form' || event.target.id === 'solution-form') saveEditor();
