@@ -44,10 +44,45 @@ const siteName = (ctx) => text(ctx && ctx.company && ctx.company.name) || 'MediV
 const absImg = (ctx, src) => {
   const value = text(src);
   if (!value) return '';
+  if (/^https:\/\//.test(value)) return value;
   const abs = ctx && typeof ctx.absImg === 'function' ? text(ctx.absImg(value)) : '';
   if (abs) return abs;
   return /^https:\/\//.test(value) ? value : `${siteOf(ctx)}${value.replace(/^\/+/, '')}`;
 };
+
+// The site's default share image (the homepage og:image, a HASHED file — the
+// unhashed master is not in dist): build-blog passes it as ctx.siteOgImage
+// (absolute or site-relative). Absent → '' (no image beats a 404 image).
+const siteImage = (ctx) => (text(ctx && ctx.siteOgImage) ? absImg(ctx, ctx.siteOgImage) : '');
+
+// Minimal copies of the homepage's WebSite + MedicalClinic nodes, same @ids, so
+// every blog graph is self-contained (publisher/isPartOf resolve on the page;
+// Google merges them with the homepage's full nodes).
+const siteNodes = (ctx, { withBlog = false } = {}) => {
+  const id = ids(ctx);
+  return [
+    ...(withBlog ? [{ '@type': 'Blog', '@id': id.blog, url: id.blogUrl, name: blogName(ctx), publisher: { '@id': id.org } }] : []),
+    { '@type': 'WebSite', '@id': id.website, url: id.site, name: siteName(ctx) },
+    { '@type': 'MedicalClinic', '@id': id.org, url: id.site, name: siteName(ctx) },
+  ];
+};
+
+// ctx.posts is already the live set (W1 filters at build). The syndication outputs
+// (RSS, sitemap, llms.txt) re-check it anyway: a post that is not published or
+// scheduled, or not yet due, never leaks into a feed. `ctx.now` pins the clock.
+const LIVE = new Set(['published', 'scheduled']);
+const livePosts = (ctx) => {
+  const now = dateOf((ctx && ctx.now) || new Date()) || new Date();
+  return list(ctx && ctx.posts).filter((post) => {
+    if (!post || !LIVE.has(post.status)) return false;
+    const at = dateOf(post.publishAt || post.published);
+    return Boolean(at) && at.getTime() <= now.getTime();
+  });
+};
+
+// A patient photo stays on the page but is never pushed outward (image sitemap,
+// JSON-LD image, RSS media, share card).
+const shareableCover = (post) => (post && post.cover && text(post.cover.src) && !post.cover.patient ? post.cover : null);
 
 const postUrl = (ctx, post) => text(post.absUrl) || `${siteOf(ctx)}blog/${text(post.slug)}/`;
 const categoryOf = (ctx, post) => post.categoryObj
@@ -105,7 +140,10 @@ const wordCount = (post) => {
 // ---------------------------------------------------------------------------
 // JSON-LD
 // ---------------------------------------------------------------------------
-const postJsonLd = (ctx, post) => {
+// `ogImage`: the absolute URL of the post's share card (V4 passes it when one was
+// rendered). image = [share card, cover] in that order; the site default only when
+// the post has neither.
+const postJsonLd = (ctx, post, { ogImage: shareCard } = {}) => {
   if (!post) return [];
   const id = ids(ctx);
   const url = postUrl(ctx, post);
@@ -116,8 +154,10 @@ const postJsonLd = (ctx, post) => {
   const reviewer = post.reviewer ? authorRef(ctx, post.reviewerObj || authorById(ctx, post.reviewer)) : null;
   const published = w3c(post.publishAt) || w3c(post.published);
   const modified = w3c(post.updatedAt) || w3c(post.updated) || published;
-  const cover = post.cover && text(post.cover.src) ? absImg(ctx, post.cover.src) : '';
-  const ogImage = text(post.ogImage) || text(post.ogImageUrl);
+  const coverObj = shareableCover(post);
+  const cover = coverObj ? absImg(ctx, coverObj.src) : '';
+  const card = text(shareCard) ? absImg(ctx, shareCard) : '';
+  const images = unique([card, cover].filter((u) => /^https:\/\//.test(u)));
   const keywords = unique([text(post.seo && post.seo.focusKeyphrase), ...list(post.seo && post.seo.keywords).map(text)]);
   const faqs = list(post.blocks).filter((b) => b && b.type === 'faq').flatMap((b) => list(b.items))
     .map((item) => item && { q: text(item.q), a: inlineText(item.a) })
@@ -137,11 +177,13 @@ const postJsonLd = (ctx, post) => {
     inLanguage: lang,
     isPartOf: { '@id': id.website },
     breadcrumb: { '@id': crumbsId },
-    primaryImageOfPage: cover ? compact({ '@type': 'ImageObject', url: cover, contentUrl: cover, caption: text(post.cover.alt) }) : undefined,
+    primaryImageOfPage: cover ? compact({ '@type': 'ImageObject', url: cover, contentUrl: cover, caption: text(coverObj.alt) }) : undefined,
     datePublished: published,
     dateModified: modified,
+    // Only what the owner entered: no reviewer → neither field; a reviewer without
+    // a review date → no lastReviewed (never back-filled from the publish date).
     reviewedBy: reviewer || undefined,
-    lastReviewed: reviewer ? dayOf(post.reviewedAt) || dayOf(post.updatedAt) || dayOf(post.publishAt) : undefined,
+    lastReviewed: reviewer ? dayOf(post.reviewedAt) || undefined : undefined,
     mainEntity: faqs.length
       ? faqs.map((item) => ({ '@type': 'Question', name: item.q, acceptedAnswer: { '@type': 'Answer', text: item.a } }))
       : undefined,
@@ -152,12 +194,12 @@ const postJsonLd = (ctx, post) => {
     headline: title,
     description,
     url,
-    image: unique([cover, ogImage]),
+    image: images.length ? images : [siteImage(ctx)].filter(Boolean),
     datePublished: published,
     dateModified: modified,
     author: author || { '@id': id.org },
     publisher: { '@id': id.org },
-    mainEntityOfPage: { '@id': pageId },
+    mainEntityOfPage: url,
     isPartOf: { '@id': id.blog },
     inLanguage: lang,
     articleSection: category ? text(category.name) : undefined,
@@ -170,7 +212,7 @@ const postJsonLd = (ctx, post) => {
     ...(category ? [[text(category.name), taxonUrl(ctx, category, 'category')]] : []),
     [title, url],
   ]);
-  return [{ '@context': 'https://schema.org', '@graph': [article, page, crumbs] }];
+  return [{ '@context': 'https://schema.org', '@graph': [article, page, crumbs, ...siteNodes(ctx, { withBlog: true })] }];
 };
 
 const landingJsonLd = (ctx) => {
@@ -193,7 +235,7 @@ const landingJsonLd = (ctx) => {
       datePublished: w3c(post.publishAt) || w3c(post.published),
     })),
   });
-  return [{ '@context': 'https://schema.org', '@graph': [blogNode, breadcrumb(`${id.blogUrl}#breadcrumb`, journalCrumbs(ctx))] }];
+  return [{ '@context': 'https://schema.org', '@graph': [blogNode, breadcrumb(`${id.blogUrl}#breadcrumb`, journalCrumbs(ctx)), ...siteNodes(ctx)] }];
 };
 
 const categoryJsonLd = (ctx, category) => {
@@ -216,7 +258,7 @@ const categoryJsonLd = (ctx, category) => {
     } : undefined,
   });
   const crumbs = breadcrumb(`${url}#breadcrumb`, [...journalCrumbs(ctx), [text(category.name), url]]);
-  return [{ '@context': 'https://schema.org', '@graph': [page, crumbs] }];
+  return [{ '@context': 'https://schema.org', '@graph': [page, crumbs, ...siteNodes(ctx, { withBlog: true })] }];
 };
 
 const authorJsonLd = (ctx, author) => {
@@ -251,7 +293,7 @@ const authorJsonLd = (ctx, author) => {
     mainEntity: { '@id': ref['@id'] },
   };
   const crumbs = breadcrumb(`${url}#breadcrumb`, [...journalCrumbs(ctx), [text(author.name), url]]);
-  return [{ '@context': 'https://schema.org', '@graph': [page, entity, crumbs] }];
+  return [{ '@context': 'https://schema.org', '@graph': [page, entity, crumbs, ...siteNodes(ctx)] }];
 };
 
 // ---------------------------------------------------------------------------
@@ -320,8 +362,7 @@ const rfc822 = (value) => { const date = dateOf(value); return date ? date.toUTC
 const rssFeed = (ctx) => {
   const id = ids(ctx);
   const blog = (ctx && ctx.blog) || {};
-  const posts = list(ctx && ctx.posts)
-    .filter((post) => post && dateOf(post.publishAt || post.published))
+  const posts = livePosts(ctx)
     .sort((a, b) => dateOf(b.publishAt || b.published) - dateOf(a.publishAt || a.published))
     .slice(0, 30);
   // Deterministic: the feed's dates come from the posts, never from the clock.
@@ -333,7 +374,8 @@ const rssFeed = (ctx) => {
     const url = postUrl(ctx, post);
     const category = categoryOf(ctx, post);
     const author = post.authorObj || authorById(ctx, post.author);
-    const cover = post.cover && text(post.cover.src) ? absImg(ctx, post.cover.src) : '';
+    const coverObj = shareableCover(post);
+    const cover = coverObj ? absImg(ctx, coverObj.src) : '';
     const type = cover ? imageType(cover) : '';
     return [
       '    <item>',
@@ -344,7 +386,7 @@ const rssFeed = (ctx) => {
       text(post.dek) ? `      <description>${xml(text(post.dek))}</description>` : '',
       category ? `      <category>${xml(text(category.name))}</category>` : '',
       author && text(author.name) ? `      <dc:creator>${xml(text(author.name))}</dc:creator>` : '',
-      cover ? `      <media:content url="${xml(cover)}" medium="image"${type ? ` type="${type}"` : ''}>${text(post.cover.alt) ? `<media:description type="plain">${xml(text(post.cover.alt))}</media:description>` : ''}</media:content>` : '',
+      cover ? `      <media:content url="${xml(cover)}" medium="image"${type ? ` type="${type}"` : ''}>${text(coverObj.alt) ? `<media:description type="plain">${xml(text(coverObj.alt))}</media:description>` : ''}</media:content>` : '',
       '    </item>',
     ].filter(Boolean).join('\n');
   });
@@ -377,7 +419,7 @@ const latest = (posts) => posts
 const urlEntry = (loc, lastmod, images = []) => `<url><loc>${xml(loc)}</loc>${lastmod ? `<lastmod>${xml(lastmod)}</lastmod>` : ''}${images.map((src) => `<image:image><image:loc>${xml(src)}</image:loc></image:image>`).join('')}</url>`;
 
 const sitemapEntries = (ctx) => {
-  const posts = list(ctx && ctx.posts);
+  const posts = livePosts(ctx);
   if (!posts.length) return [];
   const id = ids(ctx);
   const entries = [urlEntry(id.blogUrl, (latest(posts) || {}).iso)];
@@ -402,7 +444,7 @@ const sitemapEntries = (ctx) => {
 // llms.txt "## Journal" section
 // ---------------------------------------------------------------------------
 const llmsSection = (ctx) => {
-  const posts = list(ctx && ctx.posts);
+  const posts = livePosts(ctx);
   if (!posts.length) return '';
   const id = ids(ctx);
   const blog = (ctx && ctx.blog) || {};

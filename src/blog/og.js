@@ -9,10 +9,13 @@
 //
 // The generator verifies its own layout (AGENTS Lesson 24): every line is measured
 // before it is placed, the title shrinks/rebalances until it fits its box, and the
-// rendered title layer is scanned pixel by pixel against that box. Anything that
-// still does not fit throws — a clipped card never ships. A title with characters
-// the fonts cannot draw (e.g. Devanagari) returns null, so the page falls back to
-// the site's default share image instead of showing tofu.
+// rendered title layer is scanned pixel by pixel against that box. It never throws
+// on a title: past the preferred sizes it shrinks to a floor, then hyphen-breaks an
+// over-long word, then (absurdly long titles only) ends the title with an ellipsis;
+// a layout that fails the self-check is skipped for the next one, and if none
+// passes the card is null — a clipped card never ships. A title with characters
+// the fonts cannot draw (e.g. Devanagari) also returns null; either way the page
+// falls back to the site's default share image instead of showing tofu.
 'use strict';
 
 const fs = require('node:fs');
@@ -399,7 +402,8 @@ const plainWord = (word) => word.map((s) => s.text).join('');
 
 // Lay out the title at `size` inside `maxWidth`: minimal line count (greedy), then
 // a balanced break (CSS text-wrap: balance, plus no orphan and no weak line-ends).
-// Returns null when a single word is wider than the box.
+// Returns null when a single word is wider than the box. A word flagged
+// `joinPrev` (the second+ piece of a hyphen-broken word) always starts a new line.
 const layoutTitle = (words, size, maxWidth, tracking) => {
   const { display, italic } = faces();
   const fontOf = (seg) => (seg.italic ? italic : display);
@@ -413,6 +417,11 @@ const layoutTitle = (words, size, maxWidth, tracking) => {
     const runs = [];
     let x = 0;
     for (let w = i; w < j; w += 1) {
+      if (w > i && words[w].joinPrev) {
+        const split = { runs: [], width: Infinity };
+        lineCache.set(key, split);
+        return split;
+      }
       if (w > i) x += space;
       words[w].forEach((seg, si) => {
         if (si > 0) x += track;
@@ -467,6 +476,174 @@ const layoutTitle = (words, size, maxWidth, tracking) => {
 };
 
 // ---------------------------------------------------------------------------
+// Fallbacks for titles that do not fit at the preferred sizes
+// ---------------------------------------------------------------------------
+const TITLE_TRACKING = -0.02;
+const TITLE_LEADING = 1.08;
+const SIZE_MAX = 84;
+const SIZE_MIN = 40; // smallest preferred size (up to 4 lines)
+const SIZE_FLOOR = 32; // fallback floor (up to 6 lines)
+const LINES_PREFERRED = 4;
+const LINES_FALLBACK = 6;
+const HYPHEN = '-';
+const DASH_END = /[-‐–—/]$/; // a piece ending in one of these needs no added hyphen
+const TRIM_END = /[\s,;:.–—-]+$/u;
+
+const sizesFrom = (from, to) => {
+  const out = [];
+  for (let size = from; size >= to; size -= 2) out.push(size);
+  return out;
+};
+
+// [{ text, italic }] segments ↔ a flat list of styled characters.
+const charsOf = (word) => word.flatMap((seg) => [...seg.text].map((ch) => ({ ch, italic: seg.italic })));
+const wordOf = (chars) => {
+  const out = [];
+  for (const { ch, italic } of chars) {
+    const last = out[out.length - 1];
+    if (last && last.italic === italic) last.text += ch; else out.push({ text: ch, italic });
+  }
+  return out;
+};
+const wordWidth = (word, size, tracking) => {
+  const { display, italic } = faces();
+  let x = 0;
+  word.forEach((seg, si) => {
+    if (si > 0) x += tracking * size;
+    x += shapeRun(seg.italic ? italic : display, seg.text, size, tracking).width;
+  });
+  return x;
+};
+
+// Split one over-long word into the fewest pieces that each fit `maxWidth`, every
+// piece but the last ending in a hyphen (none added after an existing dash or
+// slash). Piece widths are balanced so no stub of two letters dangles at the end.
+const hyphenateWord = (word, size, maxWidth, tracking) => {
+  const chars = charsOf(word);
+  const memo = new Map();
+  const pieceChars = (from, to) => {
+    const slice = chars.slice(from, to);
+    if (to < chars.length && !DASH_END.test(slice[slice.length - 1].ch)) slice.push({ ch: HYPHEN, italic: slice[slice.length - 1].italic });
+    return slice;
+  };
+  const measure = (from, to) => {
+    const key = `${from}:${to}`;
+    if (!memo.has(key)) memo.set(key, wordWidth(wordOf(pieceChars(from, to)), size, tracking));
+    return memo.get(key);
+  };
+  const cutsAt = (limit) => {
+    const cuts = [];
+    for (let from = 0; from < chars.length;) {
+      let to = from + 1;
+      while (to < chars.length && measure(from, to + 1) <= limit) to += 1;
+      if (to < chars.length) {
+        // Prefer breaking just after an existing dash in the back 40% of the piece.
+        for (let k = to - 1; k > from + Math.ceil((to - from) * 0.6); k -= 1) {
+          if (DASH_END.test(chars[k - 1].ch)) { to = k; break; }
+        }
+      }
+      cuts.push(to);
+      from = to;
+    }
+    return cuts;
+  };
+  const count = cutsAt(maxWidth).length;
+  let lo = 0;
+  let hi = maxWidth;
+  for (let step = 0; step < 14; step += 1) {
+    const mid = (lo + hi) / 2;
+    if (cutsAt(mid).length <= count) hi = mid; else lo = mid;
+  }
+  const pieces = [];
+  let from = 0;
+  for (const to of cutsAt(hi)) {
+    const piece = wordOf(pieceChars(from, to));
+    if (from > 0) piece.joinPrev = true;
+    pieces.push(piece);
+    from = to;
+  }
+  return pieces;
+};
+
+const hyphenateTitle = (words, size, maxWidth, tracking) => {
+  let breaks = 0;
+  const out = words.flatMap((word) => {
+    if (wordWidth(word, size, tracking) <= maxWidth) return [word];
+    const pieces = hyphenateWord(word, size, maxWidth, tracking);
+    breaks += pieces.length - 1;
+    return pieces;
+  });
+  return { words: out, breaks };
+};
+
+// The first `count` words, the last one ending in an ellipsis.
+const truncateWords = (words, count) => {
+  const kept = words.slice(0, count).map((word) => Object.assign(word.map((seg) => ({ ...seg })), word.joinPrev ? { joinPrev: true } : {}));
+  // Never end on "the …" / "of …".
+  while (kept.length > 1 && !kept[kept.length - 1].joinPrev
+    && WEAK_END.has(plainWord(kept[kept.length - 1]).toLowerCase().replace(/[^\p{L}]/gu, ''))) kept.pop();
+  const last = kept[kept.length - 1];
+  const tail = last[last.length - 1];
+  tail.text = `${tail.text.replace(TRIM_END, '')}…`;
+  return kept;
+};
+
+// Candidate title layouts, best first; the renderer takes the first one that
+// passes its self-check. 1) preferred sizes, scored (size vs rag quality vs a
+// fourth line); 2) smaller sizes down to the floor, up to six lines; 3) the fewest
+// hyphen breaks of over-long words, then the best score; 4) an ellipsis at the floor.
+function* titleLayouts(words, maxWidth, maxHeight) {
+  const { display } = faces();
+  const fit = (attempt, maxLines) => {
+    if (!attempt || attempt.lines.length > maxLines) return null;
+    const capH = display.capHeight * (attempt.size / display.unitsPerEm);
+    const blockH = capH + (attempt.lines.length - 1) * attempt.size * TITLE_LEADING + attempt.size * 0.26; // + descender room
+    if (blockH > maxHeight) return null;
+    const score = attempt.size - 40 * attempt.cost - 5 * Math.max(0, attempt.lines.length - 3);
+    return { ...attempt, capH, blockH, score };
+  };
+  const byScore = (a, b) => b.score - a.score;
+  const at = (list, size, maxLines) => fit(layoutTitle(list, size, maxWidth, TITLE_TRACKING), maxLines);
+
+  yield* sizesFrom(SIZE_MAX, SIZE_MIN).map((size) => at(words, size, LINES_PREFERRED)).filter(Boolean).sort(byScore);
+  yield* sizesFrom(SIZE_MIN - 2, SIZE_FLOOR).map((size) => at(words, size, LINES_FALLBACK)).filter(Boolean).sort(byScore);
+  yield* sizesFrom(SIZE_MAX, SIZE_FLOOR)
+    .map((size) => {
+      const split = hyphenateTitle(words, size, maxWidth, TITLE_TRACKING);
+      const attempt = split.breaks ? at(split.words, size, LINES_FALLBACK) : null;
+      return attempt && { ...attempt, breaks: split.breaks };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.breaks - b.breaks || byScore(a, b));
+  // Too long for six lines at the floor: keep the most words that fit.
+  const split = hyphenateTitle(words, SIZE_FLOOR, maxWidth, TITLE_TRACKING).words;
+  let lo = 1;
+  let hi = split.length - 1;
+  let best = null;
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const attempt = at(truncateWords(split, mid), SIZE_FLOOR, LINES_FALLBACK);
+    if (attempt) { best = attempt; lo = mid + 1; } else hi = mid - 1;
+  }
+  if (best) yield { ...best, truncated: true };
+}
+
+// A single label line: as typed when it fits, else cut at a character with an
+// ellipsis; null when not even one character fits.
+const fitLabel = (font, str, size, tracking, maxWidth) => {
+  const full = shapeRun(font, str, size, tracking);
+  if (full.width <= maxWidth) return { text: str, run: full };
+  const chars = [...str];
+  while (chars.length > 1) {
+    chars.pop();
+    const cut = `${chars.join('').replace(TRIM_END, '')}…`;
+    const run = shapeRun(font, cut, size, tracking);
+    if (run.width <= maxWidth) return { text: cut, run };
+  }
+  return null;
+};
+
+// ---------------------------------------------------------------------------
 // Card
 // ---------------------------------------------------------------------------
 const escAttr = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -487,7 +664,7 @@ const paletteFor = (theme, variant) => {
     };
 };
 
-const fitError = (slug, what) => new Error(`og: share card for "${slug}" — ${what}. Shorten the title or fix the layout; a clipped card never ships.`);
+const fitWarning = (slug, what) => `og: share card for "${slug}" — ${what}. A clipped card never ships.`;
 
 // Scan an RGBA buffer for its painted bounds (alpha > 8).
 const paintedBounds = (data, width, height) => {
@@ -509,16 +686,22 @@ const loadCover = async (post, root, width, height) => {
   if (/^[a-z]+:/i.test(cover.src) || cover.src.startsWith('/')) return null;
   const file = path.join(root, cover.src);
   if (!file.startsWith(root + path.sep) || !fs.existsSync(file)) return null;
-  const upright = await sharp(file).rotate().toBuffer({ resolveWithObject: true });
-  const { width: w, height: h } = upright.info;
-  const scale = Math.max(width / w, height / h);
-  const rw = Math.max(width, Math.round(w * scale));
-  const rh = Math.max(height, Math.round(h * scale));
-  const fx = Number.isFinite(cover.focal && cover.focal.x) ? cover.focal.x : 0.5;
-  const fy = Number.isFinite(cover.focal && cover.focal.y) ? cover.focal.y : 0.5;
-  const left = Math.min(rw - width, Math.max(0, Math.round(fx * rw - width / 2)));
-  const top = Math.min(rh - height, Math.max(0, Math.round(fy * rh - height / 2)));
-  return sharp(upright.data).resize(rw, rh).extract({ left, top, width, height }).toBuffer();
+  try {
+    const upright = await sharp(file).rotate().toBuffer({ resolveWithObject: true });
+    const { width: w, height: h } = upright.info;
+    const scale = Math.max(width / w, height / h);
+    const rw = Math.max(width, Math.round(w * scale));
+    const rh = Math.max(height, Math.round(h * scale));
+    const fx = Number.isFinite(cover.focal && cover.focal.x) ? cover.focal.x : 0.5;
+    const fy = Number.isFinite(cover.focal && cover.focal.y) ? cover.focal.y : 0.5;
+    const left = Math.min(rw - width, Math.max(0, Math.round(fx * rw - width / 2)));
+    const top = Math.min(rh - height, Math.max(0, Math.round(fy * rh - height / 2)));
+    return await sharp(upright.data).resize(rw, rh).extract({ left, top, width, height }).toBuffer();
+  } catch (error) {
+    // An unreadable cover costs the card its photo, not the card.
+    console.warn(`og: cover ${cover.src} could not be read (${error.message}); card drawn without it.`);
+    return null;
+  }
 };
 
 /**
@@ -540,7 +723,7 @@ const renderOgPng = async (post, { blogName, category, lockupPath, theme, root, 
   const journal = String(blogName || '').trim();
   // Characters the fonts cannot draw → let the page use the site default image.
   if (missingGlyphs(display, title).length || missingGlyphs(italic, title).length
-    || missingGlyphs(label, kicker).length || missingGlyphs(display, journal).length) return null;
+    || missingGlyphs(label, kicker).length || missingGlyphs(italic, journal).length) return null;
 
   // Frame.
   const coverW = 430;
@@ -550,14 +733,14 @@ const renderOgPng = async (post, { blogName, category, lockupPath, theme, root, 
   const colW = colRight - padX;
   const titleMaxW = coverBuf ? colW : Math.min(colW, 900);
 
-  // Kicker (category) at the top.
+  // Kicker (category) at the top; a name too long for the column ends in an ellipsis.
   const kickerSize = 17;
   const kickerTrack = 0.16;
   const kickerBaseline = 96;
   const diamond = 9;
-  const kickerRun = kicker ? shapeRun(label, kicker, kickerSize, kickerTrack) : null;
-  const kickerX = padX + (kickerRun ? diamond + 14 : 0);
-  if (kickerRun && kickerX + kickerRun.width > colRight) throw fitError(slug, `category label "${kicker}" is wider than the card column`);
+  const kickerX = padX + diamond + 14;
+  const kickerFit = kicker ? fitLabel(label, kicker, kickerSize, kickerTrack, colRight - kickerX) : null;
+  const kickerRun = kickerFit ? kickerFit.run : null;
 
   // Footer: rule, lockup, journal name.
   const footerRuleY = 484;
@@ -568,54 +751,48 @@ const renderOgPng = async (post, { blogName, category, lockupPath, theme, root, 
   // Title box: between the kicker and the footer rule.
   const box = { x0: padX, x1: padX + titleMaxW, y0: kickerBaseline + 34, y1: footerRuleY - 34 };
   const words = titleWords(title, post.titleAccent);
-  const tracking = -0.02;
-  const lineHeight = 1.08;
-  // Every size that fits is a candidate; the winner balances size against rag
-  // quality (and a fourth line), so a long title takes 3 well-broken lines over 4
-  // ragged ones, and a short one gets the biggest type.
-  let layout = null;
-  for (let size = 84; size >= 40; size -= 2) {
-    const attempt = layoutTitle(words, size, box.x1 - box.x0, tracking);
-    if (!attempt || attempt.lines.length > 4) continue;
-    const capH = display.capHeight * (size / display.unitsPerEm);
-    const blockH = capH + (attempt.lines.length - 1) * size * lineHeight + size * 0.26; // + descender room
-    if (blockH > box.y1 - box.y0) continue;
-    const score = size - 40 * attempt.cost - (attempt.lines.length === 4 ? 5 : 0);
-    if (process.env.MV_OG_DEBUG) console.log(slug, size, attempt.lines.length, attempt.cost.toFixed(3), score.toFixed(1));
-    if (!layout || score > layout.score) layout = { ...attempt, capH, blockH, score };
-  }
-  if (!layout) throw fitError(slug, `the title does not fit in ${4} lines at the smallest size`);
-
-  // Title block sits under the kicker, optically centred in the space above the footer
-  // (a short title doesn't leave a hole at the bottom; a long one fills the box).
-  const free = box.y1 - box.y0 - layout.blockH;
-  const firstBaseline = box.y0 + Math.round(free * 0.32) + layout.capH;
-  const titlePaths = [];
-  const titleBox = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
-  layout.lines.forEach((line, li) => {
-    const baseline = firstBaseline + li * layout.size * lineHeight;
-    for (const { seg, run, x } of line.runs) {
-      const font = seg.italic ? italic : display;
-      const { d, box: ink } = runPath(font, run, padX + x, baseline);
-      if (!d) continue;
-      titlePaths.push(`<path d="${d}" fill="${seg.italic ? colors.accent : colors.ink}"/>`);
-      titleBox.x0 = Math.min(titleBox.x0, ink.x0); titleBox.x1 = Math.max(titleBox.x1, ink.x1);
-      titleBox.y0 = Math.min(titleBox.y0, ink.y0); titleBox.y1 = Math.max(titleBox.y1, ink.y1);
-    }
-  });
   const tol = 2; // italic overhang / antialiasing
-  if (titleBox.x0 < box.x0 - tol || titleBox.x1 > box.x1 + tol || titleBox.y0 < box.y0 - tol || titleBox.y1 > box.y1 + tol) {
-    throw fitError(slug, `measured title ink ${JSON.stringify(titleBox)} escapes its box ${JSON.stringify(box)}`);
-  }
+  const escapes = (b) => b.x0 < box.x0 - tol || b.x1 > box.x1 + tol || b.y0 < box.y0 - tol || b.y1 > box.y1 + tol;
 
-  // Rendered check: rasterise the title layer alone and scan its painted pixels.
-  const titleSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${titlePaths.join('')}</svg>`;
-  const titleRaster = await sharp(Buffer.from(titleSvg)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const painted = paintedBounds(titleRaster.data, W, H);
-  if (!painted) throw fitError(slug, 'the title rendered no pixels');
-  if (painted.x0 < box.x0 - tol || painted.x1 > box.x1 + tol || painted.y0 < box.y0 - tol || painted.y1 > box.y1 + tol) {
-    throw fitError(slug, `rendered title ${JSON.stringify(painted)} escapes its box ${JSON.stringify(box)}`);
+  // Take the best candidate layout that passes both self-checks (measured ink,
+  // then the rasterised title layer scanned pixel by pixel); a failing one is
+  // skipped, never shipped. No passing layout → null (site default image).
+  let layout = null;
+  let titlePaths = [];
+  const rejected = [];
+  for (const candidate of titleLayouts(words, box.x1 - box.x0, box.y1 - box.y0)) {
+    if (process.env.MV_OG_DEBUG) console.log(slug, candidate.size, candidate.lines.length, candidate.cost.toFixed(3), candidate.score.toFixed(1), candidate.breaks || 0, candidate.truncated ? 'truncated' : '');
+    // Title block sits under the kicker, optically centred in the space above the
+    // footer (a short title doesn't leave a hole at the bottom; a long one fills the box).
+    const free = box.y1 - box.y0 - candidate.blockH;
+    const firstBaseline = box.y0 + Math.round(free * 0.32) + candidate.capH;
+    const paths = [];
+    const ink = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+    candidate.lines.forEach((line, li) => {
+      const baseline = firstBaseline + li * candidate.size * TITLE_LEADING;
+      for (const { seg, run, x } of line.runs) {
+        const font = seg.italic ? italic : display;
+        const { d, box: inkBox } = runPath(font, run, padX + x, baseline);
+        if (!d) continue;
+        paths.push(`<path d="${d}" fill="${seg.italic ? colors.accent : colors.ink}"/>`);
+        ink.x0 = Math.min(ink.x0, inkBox.x0); ink.x1 = Math.max(ink.x1, inkBox.x1);
+        ink.y0 = Math.min(ink.y0, inkBox.y0); ink.y1 = Math.max(ink.y1, inkBox.y1);
+      }
+    });
+    if (!paths.length || escapes(ink)) { rejected.push(`${candidate.size}px: measured ink ${JSON.stringify(ink)}`); continue; }
+    const titleSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${paths.join('')}</svg>`;
+    const titleRaster = await sharp(Buffer.from(titleSvg)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const painted = paintedBounds(titleRaster.data, W, H);
+    if (!painted || escapes(painted)) { rejected.push(`${candidate.size}px: rendered ${JSON.stringify(painted)}`); continue; }
+    layout = candidate;
+    titlePaths = paths;
+    break;
   }
+  if (!layout) {
+    console.warn(fitWarning(slug, `no title layout passed the self-check (${rejected.slice(0, 3).join('; ') || 'none fit'}); the page uses the site default image`));
+    return null;
+  }
+  if (layout.truncated) console.warn(`og: share card for "${slug}" — the title is too long for the card; it ends in an ellipsis there (the page keeps the full title).`);
 
   // Kicker + journal name.
   const shapes = [];
@@ -631,8 +808,8 @@ const renderOgPng = async (post, { blogName, category, lockupPath, theme, root, 
     const run = shapeRun(italic, journal, journalSize, -0.005);
     const jx = colRight - run.width;
     const jBaseline = lockupTop + lockupH / 2 + (italic.capHeight * journalSize) / italic.unitsPerEm / 2;
-    if (jx < padX + 200) throw fitError(slug, `the journal name "${journal}" collides with the lockup`);
-    journalSvg = `<path d="${runPath(italic, run, jx, jBaseline).d}" fill="${colors.muted}"/>`;
+    // A journal name long enough to reach the lockup is left off (the lockup carries the brand).
+    if (jx >= padX + 200) journalSvg = `<path d="${runPath(italic, run, jx, jBaseline).d}" fill="${colors.muted}"/>`;
   }
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">`
@@ -655,4 +832,4 @@ const renderOgPng = async (post, { blogName, category, lockupPath, theme, root, 
   return sharp(Buffer.from(svg)).composite(composites).png({ compressionLevel: 9 }).toBuffer();
 };
 
-module.exports = { renderOgPng, _internals: { readFont, shapeRun, layoutTitle, titleWords, smarten } };
+module.exports = { renderOgPng, _internals: { readFont, shapeRun, layoutTitle, titleWords, smarten, titleLayouts, hyphenateWord, fitLabel } };

@@ -1,0 +1,79 @@
+# Blog scheduler: publishes scheduled posts on time.
+#
+# The site is static, so a post whose publishAt is still in the future is left
+# out of the build. Every 15 minutes this job reads data/blog/posts.json on main
+# and asks tools/blog-due.js whether any post came due after the last deploy
+# STARTED; if one did, it dispatches deploy.yml on main. Nothing is committed.
+#
+# Timing: tell the owner "within ~30 minutes". GitHub starts cron runs late
+# (often 5-20 minutes, more at busy hours, and a tick can be skipped), and the
+# deploy itself takes a few minutes on top.
+#
+# GitHub DISABLES scheduled workflows after 60 days without repository activity.
+# The admin's schedule-off alert (lane W5d, mountScheduleAlert) watches this
+# file's state (gh workflowState('blog-schedule.yml')) and offers to re-enable it.
+#
+# Loop safety: "last deploy" is the newest deploy.yml run on main, whatever its
+# outcome, so a failing deploy is not re-dispatched every tick. With no deploy
+# run on record the start falls back to the epoch (1970-01-01T00:00:00Z), and
+# blog-due.js then only counts posts that came due in the last 24 hours, so an
+# empty run history does not count every old post as new.
+#
+# GITHUB_TOKEN may dispatch workflow_dispatch runs (the one event it is allowed
+# to trigger), which is why this job needs `actions: write` and no PAT.
+name: Blog scheduler
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: blog-schedule
+  cancel-in-progress: false
+
+jobs:
+  due:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out production branch (main)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Find when the last deploy started
+        id: last
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          started=$(gh run list --workflow deploy.yml --branch main --limit 1 --json createdAt -q '.[0].createdAt')
+          if [ -z "$started" ] || [ "$started" = "null" ]; then
+            echo "No deploy.yml run on main yet: using the epoch (blog-due.js then counts only the last 24 hours)."
+            started=1970-01-01T00:00:00Z
+          fi
+          echo "Last deploy started: $started"
+          echo "started=$started" >> "$GITHUB_OUTPUT"
+      - name: Check for posts that came due
+        id: due
+        env:
+          LAST_DEPLOY: ${{ steps.last.outputs.started }}
+        run: node tools/blog-due.js --last-deploy "$LAST_DEPLOY"
+      - name: Deploy main
+        if: steps.due.outputs.due == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DUE_IDS: ${{ steps.due.outputs.ids }}
+        run: |
+          echo "Came due since the last deploy: $DUE_IDS"
+          gh workflow run deploy.yml --ref main
