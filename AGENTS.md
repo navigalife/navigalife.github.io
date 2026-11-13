@@ -135,10 +135,10 @@ keeps serving the last good deploy. The admin enforces the same rules at edit
 time, so the owner is stopped before a failed publish. Two kinds of rules:
 
 - **Shared by construction — `admin/content-rules.js`.** The rules for
-  `data/content.json`, `treatment.json`, `films.json`, and the SEO, hero,
-  eligibility and company fields live in this ONE classic-script file. The build
-  `require()`s it and the admin `import`s it, so those rules cannot drift. Add a
-  new content rule there, not in `build.js` or `app.js`.
+  `data/content.json`, `treatment.json`, `films.json`, `data/blog/*.json`, and the
+  SEO, hero, eligibility and company fields live in this ONE classic-script file.
+  The build `require()`s it and the admin `import`s it, so those rules cannot
+  drift. Add a new content rule there, not in `build.js` or `app.js`.
 - **Still written twice — keep in lockstep by hand (Lesson 13).** The testimonial
   invariants below live in both `src/build.js` and `admin/app.js`. Separately,
   `src/site.js` ships standalone, so it carries a verbatim copy of content-rules
@@ -171,11 +171,121 @@ time, so the owner is stopped before a failed publish. Two kinds of rules:
   admin editor in the same change (Lesson 27).
 - **Local admin harness: `admin/__harness.html`** (gitignored, so it exists only in
   the advisor's clone). It drives the real admin against local `data/` with a mocked
-  GitHub API, so nothing touches the live repo. Serve the **repo root**:
-  `python3 -m http.server <port> --bind 127.0.0.1`, then open
-  `/admin/__harness.html`. Its header lists the test hooks (`__published`,
-  `__reconstruct()`, `__cutoutFail` …). A local `npm run build` copies it into
-  `dist/admin/` (CI never has it), so **never deploy a local `dist/`**.
+  GitHub API, so nothing touches the live repo. Serve the **repo root** on
+  127.0.0.1, then open `/admin/__harness.html`. Plain `python3 -m http.server`
+  resets connections under the admin's parallel fetches (it is already threaded;
+  its listen backlog is 5): subclass `ThreadingHTTPServer` with
+  `request_queue_size = 128`. Its header lists
+  the test hooks (`__published`, `__reconstruct()`, `__cutoutFail` …). The Blog tab's
+  preview needs `node src/blog/admin-preview.js` first (writes the gitignored
+  `admin/preview/`). A local `npm run build` copies the harness into `dist/admin/`
+  (CI never has it), so **never deploy a local `dist/`**.
+
+## The blog (`/blog/`, The MediVasc Journal)
+
+Schemas are code, not prose: every field and enum is in `admin/content-rules.js`
+`validateBlogConfig` / `validateBlogPosts` (+ `*Detailed`, `BLOG_ENUMS`, `TINTS`,
+`LAYOUTS`), the body in `admin/blog-blocks.js`. Read them; never copy lists here.
+
+- **Build** — `src/build.js` calls `src/blog/build-blog.js` (`loadBlog()` validates
+  before `dist` is wiped, `buildBlog()` writes pages). In `src/blog/`: pure renderers
+  `render-landing.js` / `render-post.js`; `seo.js`; `og.js` share cards;
+  `check-refs.js` (files on disk, links to live posts, featured ids, film srcs —
+  build-fatal). One hashed `blog.css` (landing + post + blocks) and `blog.js`
+  (`reader.js` + `landing.js`, each a guarded IIFE); reading works with JS off.
+- **Shared UMD** (Node `require`, `globalThis.*` in the admin) — `content-rules.js`,
+  `blog-blocks.js` (the ONE body renderer, the XSS boundary), `blog-checks.js`.
+- **Admin** — `blog-tab.js` hosts (list, status, publish/schedule, autosave);
+  `blog-editor.js` (document), `blog-seo.js` (SEO, preview, revisions), `blog-manage.js`
+  (settings, calendar, schedule alert), `image-intake.js`, `drafts-api.js`.
+- **Scheduler** `.github/workflows/blog-schedule.yml` + `tools/blog-due.js`.
+  **Worker** `traffic/worker.js` `/drafts…` (behind `adminGate`) + `/blog-stats`,
+  tables in `traffic/migrations/0002_blog.sql`.
+
+**Data, flags, drafts, scheduling**
+- Shipped: `data/blog/config.json` (settings, categories, authors, featured,
+  redirects) and `posts.json` (published | scheduled | unpublished), both written by
+  the admin's normal publish commit. `samples.json` + `samples.config.json` are
+  tracked but **local preview only**, loaded only by `MV_BLOG_SAMPLES=1`, which is
+  never in the deploy path. Sample featured ids live there, so **`config.featured`
+  ships as `[]`** (a featured id with no post fails the build).
+- `MV_DIST=<dir>` builds anywhere (parallel builds); `MV_BLOG_DATA=<dir>` = fixtures.
+- **Drafts are private**: D1 `drafts` + `draft_assets` in the Worker, never git. A
+  D1-only post reaches components as `status: 'draft'`, never written to posts.json.
+- **Scheduled posts are public** in posts.json before go-live; the build omits a post
+  until its `publishAt`, and the cron dispatches `deploy.yml` when one came due since
+  the last deploy started. GitHub runs cron late (tell the owner "within ~30
+  minutes") and disables it after 60 days of repo inactivity; `mountScheduleAlert`
+  watches the workflow state and offers re-enable.
+
+**Images**
+- `intakeImage` takes any size/format (incl. HEIC), fixes orientation, downscales in
+  the browser to ≤2400px (never via a full-size canvas: iOS kills the tab) and
+  re-encodes WebP with metadata dropped; only that uploads.
+- Draft photos are `draft:<name>` in `draft_assets`; publish rewrites them to
+  `assets/blog/<slug>/<name>` and stages the blobs in the SAME commit as posts.json.
+  Author photos (≤800px) stage as-is at `assets/blog/authors/<slug>.<ext>`, never
+  `draft:`. The build makes WebP variants at `BLOG_WIDTHS`, never past the source.
+- `patient: true` (editor demands the consent tick) keeps a photo on the page but out
+  of OG cards, JSON-LD/RSS images and the image sitemap.
+
+**SEO outputs** (`seo.js`, pure)
+- One JSON-LD `@graph` per page reusing the homepage's `<site>#website` and
+  `<site>#organization` (MedicalClinic); a post is MedicalWebPage (+FAQPage with a
+  faq block) + BlogPosting. RSS `blog/feed.xml`; blog URLs + `<image:image>` join the
+  root `sitemap.xml`; a `## Journal` section joins `llms.txt`; `previousSlugs` and
+  `config.redirects` become noindex redirect stubs. `og.js` draws each post's card
+  from glyph outlines (Mac = CI); a null card falls back to the site image.
+- **Author (as of ship)**: the company, `a_team` / "MediVasc" / slug `medivasc`. Its
+  name equals `data/company.json` `name`, so `authorRef` renders it AS the
+  `<site>#organization` node, not a second entity (rename one, break the join). No
+  reviewer, so `reviewedBy` stays absent; credential fields render only when set.
+
+**URLs** — flat `/blog/<slug>/` (no category in it), `/blog/category/<slug>/`,
+`/blog/author/<slug>/`. Every blog href/src is RELATIVE via `ctx.depth` (`/changes/`
+mounts the site under a subpath); absolute URLs only in canonical, og:*, JSON-LD, RSS
+and sitemaps. blog-blocks `depthOf` silently drops an absolute depth (`'/'`).
+
+**Admin contracts that cross files**
+- `blog-tab.js` owns ONE in-memory post; components read `getPost()`, write
+  `onChange(patch)` (shallow top-level fields), never touch `state` or publish.
+  Signatures: the exported `mount*` functions in blog-editor/-seo/-manage.js.
+- The renderers take no Node built-ins and no new `require`: `admin-preview.js`
+  bundles them for the preview, referenced ONLY as `'./preview/blog-render.js'` /
+  `'./preview/blog-preview.css'` (copyAdmin adds `?v=`).
+- New posts carry `titleSize`/`bodySize`/`leadIn` from `blankPost` (required).
+  Deleting a category moves its posts (`onMovePosts`), redirecting if any is live; an
+  author named by a post cannot be deleted.
+
+**Invariants**
+- Validator-enforced (the build fails, the admin blocks): posts are structured blocks
+  + allowlisted inline marks (`INLINE_KEYS`; links only to `BLOG_HREFS`), never raw
+  HTML. Alt text is required. Headings are H2/H3 and an H3 cannot precede the first
+  H2. Sizes and colours are presets, never raw px/hex.
+- Build-side: the Blog nav and all blog pages exist only with ≥1 live post (`blogNav`).
+
+**Blog gotchas**
+- `data-theme` on ANY element matches styles.css's global `[data-theme="dark"]`
+  rules; use another name (the SEO preview uses `data-ptheme`).
+- The editor's `onChange` is debounced 240ms; tests wait ≥300ms before asserting.
+- A pointer-drag handle needs `touch-action:none`, else touch fires `pointercancel`.
+- `site.js` counts up only `.hero__stat-value[data-count]`; never reuse `data-count`
+  (a bare selector once zeroed the gallery's counters; blocks use `data-n`).
+- Scroll offsets under the header use the single `--header-h` token, never a literal.
+- copyAdmin and the `dist` wipe refuse any target whose real path overlaps `admin/`
+  (`assertNotAdminSource`): a symlinked admin once let `?v=` rewrite source files.
+- `tools/test/*.test.js` are plain node scripts (non-zero exit = fail), not in CI:
+  run `for f in tools/test/*.test.js; do node "$f"; done` before every blog commit.
+- Browser checks: puppeteer-core (Lesson 8; not a repo dependency) on the system
+  Chrome via `executablePath`. Screenshot clips are page coordinates (add scrollX/Y
+  when scrolled); clicks ignore the preview's CSS `transform: scale`.
+- Parent-document listeners DO fire inside the `sandbox="allow-same-origin"` preview.
+- `draft:` srcs fail `BLOG_IMAGE` until publish rewrites them; harness pages stub
+  `stageImage` with `assets/` paths.
+- A LAN preview of the repo root must deny dotfiles, `traffic/` (holds
+  `traffic/.dev.vars`), `owner-assets/`, `scrape/` and `dist/`.
+- **Worker ship order**: apply `0002_blog.sql` to the REMOTE D1 BEFORE deploying the
+  Worker, then smoke `/drafts` from the live admin.
 
 ## Design authority
 
