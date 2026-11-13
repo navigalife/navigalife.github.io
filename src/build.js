@@ -4,7 +4,8 @@ const { statSync } = require('node:fs');
 const path = require('node:path');
 const sharp = require('sharp');
 
-const { renderPage, phoneHref } = require('./template');
+const { renderPage, renderShell, contactHrefs, phoneHref } = require('./template');
+const { loadBlog, buildBlog } = require('./blog/build-blog');
 // The content rules the admin runs too — one file, so the two cannot drift.
 const rules = require('../admin/content-rules.js');
 
@@ -27,14 +28,16 @@ const writeHashed = async (directory, stem, extension, content) => {
   return path.posix.join(directory, filename);
 };
 
-const processImage = async (relativePath, widths = [320, 640]) => {
+// `toWebp` (blog photographs) re-encodes any raster source into the webp
+// variants; without it a non-webp source is copied once into assets/brand.
+const processImage = async (relativePath, widths = [320, 640], { toWebp = false } = {}) => {
   const sourcePath = path.join(ROOT, relativePath);
   const extension = path.extname(relativePath).slice(1).toLowerCase();
   const stem = path.basename(relativePath, path.extname(relativePath));
   const parent = path.basename(path.dirname(relativePath));
   const variants = {};
 
-  if (extension === 'webp') {
+  if (extension === 'webp' || toWebp) {
     for (const width of widths) {
       const buffer = await sharp(sourcePath)
         .rotate()
@@ -79,11 +82,11 @@ const buildImageMap = async (testimonials) => {
 // carry the source's real (already EXIF-rotated) dimensions and the largest
 // variant path, so the template can size auto-width rail cards without layout
 // shift and open a full-resolution screenshot in the lightbox.
-const buildGallery = async (srcs, widths) => {
+const buildGallery = async (srcs, widths, options) => {
   const items = await Promise.all(
     srcs.map(async (src) => {
       const [variants, meta] = await Promise.all([
-        processImage(src, widths),
+        processImage(src, widths, options),
         sharp(path.join(ROOT, src)).metadata(),
       ]);
       const built = Object.keys(variants).map(Number).sort((a, b) => a - b);
@@ -535,6 +538,10 @@ const build = async () => {
     treatment: treatmentData,
     films: filmsData,
   });
+  // The Journal (data/blog/): validated here with the rest of the content, so a
+  // blog problem stops the build before dist is wiped. null = no blog settings.
+  const blog = await loadBlog({ root: ROOT, rules });
+  const blogNav = blog && blog.live.length ? { label: blog.config.navLabel || 'Blog' } : null;
   await fs.rm(DIST, { recursive: true, force: true });
   await fs.mkdir(DIST, { recursive: true });
 
@@ -568,6 +575,20 @@ const build = async () => {
     .filter(Boolean);
   const cssPath = await writeHashed('assets', 'site', 'css', `${themeCss(theme)}\n${baseCss}`);
   const jsPath = await writeHashed('assets', 'site', 'js', clientJs);
+  const site = {
+    company,
+    content,
+    config,
+    themeId,
+    themeBg: theme.light['--bg'],
+    siteUrl: SITE_URL,
+    cssPath,
+    jsPath,
+    markPaths: brand.markPaths,
+    markPathsTm: brand.markPathsTm,
+    markPathsTmLg: brand.markPathsTmLg,
+    blogNav,
+  };
   const html = renderPage({
     company,
     protocols: visibleProtocols,
@@ -588,7 +609,27 @@ const build = async () => {
     ogImage: brand.ogImage,
     siteUrl: SITE_URL,
     themeBg: theme.light['--bg'],
+    blogNav,
   });
+  const journal = blogNav
+    ? await buildBlog(blog, {
+      root: ROOT,
+      dist: DIST,
+      siteUrl: SITE_URL,
+      site,
+      theme,
+      films: filmsData,
+      siteOgImage: brand.ogImage,
+      buildGallery,
+      writeHashed,
+      renderShell,
+      contactHrefs,
+    })
+    : null;
+  // Blog URLs (with <image:image> entries) join the root sitemap; the image
+  // namespace is declared only when there is an entry that can use it.
+  const sitemapEntries = journal ? journal.sitemapEntries : [];
+  const llmsJournal = journal && journal.llmsSection ? `\n${journal.llmsSection}\n` : '';
 
   await Promise.all([
     fs.writeFile(path.join(DIST, 'index.html'), html),
@@ -599,9 +640,9 @@ const build = async () => {
     ),
     fs.writeFile(
       path.join(DIST, 'sitemap.xml'),
-      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE_URL}</loc><lastmod>${new Date().toISOString().slice(0, 10)}</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url></urlset>\n`,
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"${sitemapEntries.length ? ' xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"' : ''}><url><loc>${SITE_URL}</loc><lastmod>${new Date().toISOString().slice(0, 10)}</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>${sitemapEntries.join('')}</urlset>\n`,
     ),
-    fs.writeFile(path.join(DIST, 'llms.txt'), llmsTxt({ company, config, content, protocols: visibleProtocols })),
+    fs.writeFile(path.join(DIST, 'llms.txt'), llmsTxt({ company, config, content, protocols: visibleProtocols }) + llmsJournal),
     fs.writeFile(path.join(DIST, '.nojekyll'), ''),
     copyFonts(),
     copyConditionMedia(),
@@ -613,6 +654,7 @@ const build = async () => {
   console.log(
     `Built MediVasc landing: ${testimonials.length} recovery stories, ${visibleProtocols.length} protocols, theme ${themeId}.`,
   );
+  if (journal) console.log(`Journal: ${journal.posts} post${journal.posts === 1 ? '' : 's'}, ${journal.pages} blog pages.`);
   console.log(`Client JavaScript: ${jsBytes} bytes (${(jsBytes / 1024).toFixed(2)} KB).`);
   console.log(`Output: ${DIST}`);
 };

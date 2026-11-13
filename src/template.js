@@ -395,7 +395,7 @@ const renderJsonLd = ({ company, config, siteUrl }) => {
 // Copy: content.chat. The shell's strings render here; everything site.js says
 // in the conversation travels in the JSON config below, as plain text (site.js
 // escapes it and adds the <strong> itself — no markup ever comes from content).
-const renderChatbot = ({ wa, email, chat }) => {
+const renderChatbot = ({ wa, email, chat, depth = '' }) => {
   const xIcon =
     '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
   const chatIcon =
@@ -420,7 +420,7 @@ const renderChatbot = ({ wa, email, chat }) => {
   <div class="mvbot" data-mvbot data-mvbot-state="closed">
     <div class="mvbot__panel" id="mvbot-panel" data-mvbot-panel role="dialog" aria-label="${name}" aria-modal="false" aria-hidden="true">
       <header class="mvbot__head">
-        <span class="mvbot__avatar" aria-hidden="true"><img src="assets/brand/icon-192.png" alt="" width="42" height="42" loading="lazy" decoding="async"></span>
+        <span class="mvbot__avatar" aria-hidden="true"><img src="${depth}assets/brand/icon-192.png" alt="" width="42" height="42" loading="lazy" decoding="async"></span>
         <span class="mvbot__id">
           <span class="mvbot__name">${name}</span>
           <span class="mvbot__status"><span class="mvbot__status-dot" aria-hidden="true"></span>${escapeHtml(chat.status)}</span>
@@ -449,6 +449,231 @@ const renderChatbot = ({ wa, email, chat }) => {
   </div>`;
 };
 
+// Contact routes from data/company.json — the one source for the homepage CTAs
+// and the blog's ctx.contactHref. `depth` prefixes the in-page #contact fallback
+// so the route still lands on the homepage section from a blog page.
+const contactHrefs = (company, content, depth = '') => {
+  const whatsapp = phoneHref(company.whatsapp).replace('+', '');
+  return {
+    whatsapp: company.whatsapp
+      ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(content.cta.message)}`
+      : '',
+    call: company.phone ? `tel:${phoneHref(company.phone)}` : '',
+    email: company.email ? `mailto:${escapeHtml(company.email)}` : '',
+    contact: `${depth}#contact`,
+  };
+};
+
+// Primary call-to-action degrades gracefully: WhatsApp when a number is on
+// record, otherwise email, otherwise the contact section. Refilling the
+// WhatsApp number in the admin restores every WhatsApp button automatically.
+const primaryCta = (company, content, depth = '') => {
+  const hrefs = contactHrefs(company, content, depth);
+  return hrefs.whatsapp
+    ? { href: hrefs.whatsapp, icon: icon('whatsapp'), label: 'WhatsApp us', external: true }
+    : hrefs.email
+      ? { href: hrefs.email, icon: icon('mail'), label: 'Email us', external: false }
+      : { href: hrefs.contact, icon: '', label: 'Contact us', external: false };
+};
+
+// The pre-paint theme script. The homepage follows the OS preference until the
+// visitor picks a theme; blog pages (`lightDefault`) open light and only the
+// visitor's stored pick (the same localStorage key the toggle writes) turns them dark.
+const themeScript = (lightDefault) => lightDefault
+  ? `<script>(function(){document.documentElement.classList.add('js');try{var s=localStorage.getItem('medivasc-color-scheme')||localStorage.getItem('naviga-color-scheme');if(s==='dark')document.documentElement.dataset.theme='dark'}catch(e){}})()</script>`
+  : `<script>(function(){document.documentElement.classList.add('js');try{var s=localStorage.getItem('medivasc-color-scheme')||localStorage.getItem('naviga-color-scheme');var d=s?s==='dark':matchMedia('(prefers-color-scheme:dark)').matches;if(d)document.documentElement.dataset.theme='dark'}catch(e){}})()</script>`;
+
+// JSON-LD entries: a pre-serialised string goes in verbatim (the homepage graph),
+// an object is serialised here with `<` escaped so no value can close the script.
+const LD_LT = `${String.fromCharCode(92)}u003c`;
+const jsonLdScripts = (entries) => (Array.isArray(entries) ? entries : [entries])
+  .filter(Boolean)
+  .map((entry) => `  <script type="application/ld+json">${typeof entry === 'string' ? entry : JSON.stringify(entry).replaceAll('<', LD_LT)}</script>\n`)
+  .join('');
+
+const HOME_NOSCRIPT = 'Theme controls require JavaScript. All recovery stories, protocols, and contact routes remain available above.';
+
+// The page shell every page shares: head, header, mobile drawer, footer, chatbot
+// and scripts around a page's own <main> content. `site` carries the site-wide
+// data (company, content, config, theme, hashed asset paths, lockups, blog nav);
+// the rest is per page. `depth` ('' on the homepage, '../' on /blog/, …) prefixes
+// every relative path and turns the homepage section anchors into `${depth}#id`,
+// so a blog page's header and footer still land on the homepage sections — and
+// the whole site keeps working when it is mounted under a subpath (/changes/).
+// The Blog nav link renders only when `site.blogNav` is set (≥1 live post).
+const renderShell = ({
+  site,
+  depth = '',
+  lang = 'en',
+  title,
+  description,
+  canonical,
+  ogImage,
+  ogImageAlt,
+  ogType = 'website',
+  jsonLd = [],
+  robots,
+  headExtra = '',
+  bodyClass = '',
+  main = '',
+  extraCss = [],
+  extraJs = [],
+  lightDefault = false,
+  blogCurrent = false,
+  noscript = HOME_NOSCRIPT,
+}) => {
+  const { company, content, config, themeId, themeBg, siteUrl, cssPath, jsPath, markPaths, markPathsTm, markPathsTmLg, blogNav } = site;
+  const cta = primaryCta(company, content, depth);
+  const ctaAttrs = cta.external ? ' target="_blank" rel="noreferrer"' : '';
+  // Single source for the nav (content.nav): the targets are fixed by the content
+  // rules, the labels are owner copy — `label` inline in the header (desktop) and
+  // in the mobile slide-in drawer (below), `footerLabel` in the footer. The Blog
+  // link sits after the locked section anchors, outside that lock.
+  const navLink = (item, key) => `<a href="${depth}#${escapeHtml(item.target)}">${escapeHtml(item[key])}</a>`;
+  const blogLink = blogNav
+    ? `<a href="${depth}blog/"${blogCurrent ? ' aria-current="page"' : ''}>${escapeHtml(blogNav.label)}</a>`
+    : '';
+  const navLinksHtml = content.nav.map((item) => navLink(item, 'label')).join('') + blogLink;
+  const footerNavHtml = content.nav.map((item) => navLink(item, 'footerLabel')).join('') + blogLink;
+  // Every lockup variant carries its own measured intrinsic width/height (see
+  // prepareMarkSized in build.js) — the aspect differs per variant and moved with
+  // the Exotc350 wordmark, so a hard-coded 512x257 would cost a layout shift.
+  const lockupImgs = (mark, loading) =>
+    `<img class="lockup--ink" src="${depth}${mark.ink.src}" alt="" width="${mark.ink.width}" height="${mark.ink.height}" loading="${loading}" decoding="async">
+    <img class="lockup--paper" src="${depth}${mark.paper.src}" alt="" width="${mark.paper.width}" height="${mark.paper.height}" loading="${loading}" decoding="async">`;
+  const lockup = (context) => `<span class="lockup" aria-hidden="true">
+    ${lockupImgs(markPaths, context === 'header' ? 'eager' : 'lazy')}
+  </span>`;
+  // Footer-only lockup: the ™ is baked into these variants at the 'c' shoulder
+  // (see assets/brand/logo-*-tm*.png) rather than positioned in CSS, so it stays
+  // pixel-tight to the letterform. Two size wrappers — '-lg' (larger ™) for the
+  // 54px desktop render, base for the 64px phone render — swapped by breakpoint in
+  // CSS (.lockup__size--sm hidden on desktop, --lg hidden ≤760px).
+  const tmImg = (mark) => lockupImgs(mark, 'lazy');
+  const footerSocial = (() => {
+    const links = Object.entries(socialIcons)
+      .filter(([key]) => company.social?.[key])
+      .map(([key, { label, svg }]) => `<a href="${escapeHtml(company.social[key])}" target="_blank" rel="me noopener noreferrer" aria-label="MediVasc on ${label}"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">${svg}</svg></a>`);
+    return links.length ? `<ul class="footer-social" aria-label="MediVasc on social media">${links.map((link) => `<li>${link}</li>`).join('')}</ul>` : '';
+  })();
+  const footerLockup = () => `<span class="lockup" aria-hidden="true">
+    <span class="lockup__size lockup__size--lg">${tmImg(markPathsTmLg)}</span>
+    <span class="lockup__size lockup__size--sm">${tmImg(markPathsTm)}</span>
+  </span>`;
+  // The bot deep-links to WhatsApp when a number is on record, else composes an
+  // email; if neither exists it is omitted (site.js no-ops on a missing config).
+  const whatsapp = phoneHref(company.whatsapp).replace('+', '');
+  const chatbot = whatsapp || company.email
+    ? renderChatbot({ wa: whatsapp, email: company.email, chat: content.chat, depth })
+    : '';
+  // The homepage's robots directive carries its rationale; other pages pass their own.
+  const robotsMeta = robots
+    ? `<meta name="robots" content="${escapeHtml(robots)}">`
+    : `<!-- max-image-preview:none — Google's *mobile* result for medivasc.in was pulling
+       the og:image in as a snippet thumbnail and centre-cropping it to a square,
+       which sliced the lockup and the kicker ("MediVasc" cut off, "…VENTION OF
+       FOOT AND LEG AMP…"). There is no meta that picks a different thumbnail, so
+       we opt out of image previews and let the result render as clean text, the
+       way desktop already did. og:image itself stays — WhatsApp/LinkedIn/X
+       previews are unaffected by this directive, and WhatsApp is our main channel.
+       Trade-off: no image thumbnail in Google results or Discover. -->
+  <meta name="robots" content="index,follow,max-image-preview:none">`;
+  // Search Console verification belongs to the homepage only.
+  const verification = !depth && config.seo.googleVerification
+    ? `  <meta name="google-site-verification" content="${escapeHtml(config.seo.googleVerification)}">\n`
+    : '';
+
+  return `<!doctype html>
+<html lang="${escapeHtml(lang)}" data-site-theme="${escapeHtml(themeId)}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  ${themeScript(lightDefault)}
+  <title>${escapeHtml(title)}</title>
+  <meta name="description" content="${escapeHtml(description)}">
+  ${robotsMeta}
+${verification}  <meta name="theme-color" content="${escapeHtml(themeBg)}">
+  <meta property="og:type" content="${escapeHtml(ogType)}">
+  <meta property="og:site_name" content="${escapeHtml(company.name)}">
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:url" content="${canonical}">
+  <meta property="og:image" content="${ogImage}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="${escapeHtml(ogImageAlt)}">
+${headExtra}  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(title)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  <meta name="twitter:image" content="${ogImage}">
+  <meta name="twitter:image:alt" content="${escapeHtml(ogImageAlt)}">
+  <link rel="canonical" href="${canonical}">
+  <link rel="icon" href="${depth}assets/brand/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="${depth}assets/brand/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="${depth}assets/brand/apple-touch-icon.png">
+  <link rel="preload" href="${depth}assets/fonts/fraunces-latin-600.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="${depth}assets/fonts/fraunces-latin-600-italic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="${depth}assets/fonts/instrument-sans-latin-400-600.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="${depth}${cssPath}">
+${extraCss.map((href) => `  <link rel="stylesheet" href="${depth}${href}">\n`).join('')}${jsonLdScripts(jsonLd)}</head>
+<body${bodyClass ? ` class="${escapeHtml(bodyClass)}"` : ''}>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" data-header>
+    <div class="container header-inner">
+      <a class="wordmark" href="${depth || '#top'}" aria-label="MediVasc home">${lockup('header')}</a>
+      <button class="icon-button menu-toggle" type="button" aria-expanded="false" aria-controls="nav-drawer" data-menu-toggle><span class="sr-only">Open navigation</span>${icon('menu')}</button>
+      <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+        ${navLinksHtml}
+      </nav>
+      <div class="header-actions">
+        <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme">
+          <span class="theme-toggle__sun">${icon('sun')}</span><span class="theme-toggle__moon">${icon('moon')}</span>
+        </button>
+        <a class="button header-cta" href="${cta.href}"${ctaAttrs}>${cta.icon} ${cta.label}</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile slide-in drawer + scrim: body-level (NOT inside .site-header, whose
+       backdrop-filter would trap fixed descendants to its own 84px box and stack
+       them below the chatbot). Controlled by site.js; single nav source above. -->
+  <div class="nav-scrim" data-nav-scrim></div>
+  <nav class="nav-drawer" id="nav-drawer" aria-label="Mobile navigation" data-nav>
+    <div class="nav-drawer__head">
+      <span class="nav-drawer__brand">${lockup('header')}</span>
+      <button class="icon-button nav-drawer__close" type="button" data-menu-close><span class="sr-only">Close navigation</span>${icon('close')}</button>
+    </div>
+    <div class="nav-drawer__links">
+      ${navLinksHtml}
+    </div>
+    <div class="nav-drawer__foot">
+      <a class="button nav-drawer__cta" href="${cta.href}"${ctaAttrs}>${cta.icon} ${cta.label}</a>
+    </div>
+  </nav>
+
+  <main id="main">${main}</main>
+
+  <footer class="site-footer">
+    <div class="container footer__top">
+      <span class="footer-brand">${footerLockup()}<span class="sr-only">MediVasc™</span></span>
+      <p>${escapeHtml(company.tagline)}</p>
+      <nav aria-label="Footer navigation">${footerNavHtml}</nav>
+      ${footerSocial}
+    </div>
+    <div class="container footer__bottom">
+      <p>${escapeHtml(content.footer.disclaimer)}</p>
+      <p>© ${escapeHtml(company.legalName)}. All rights reserved.</p>
+    </div>
+  </footer>
+
+  ${chatbot}
+
+  <noscript><p class="noscript">${escapeHtml(noscript)}</p></noscript>
+  <script src="${depth}${jsPath}" defer></script>
+${extraJs.map((src) => `  <script src="${depth}${src}" defer></script>\n`).join('')}</body>
+</html>`;
+};
+
 const renderPage = ({
   company,
   protocols,
@@ -469,6 +694,7 @@ const renderPage = ({
   ogImage,
   siteUrl,
   themeBg,
+  blogNav = null,
 }) => {
   const featured = testimonials.find((testimonial) => testimonial.featured);
   const pairStories = testimonials.filter(
@@ -488,15 +714,8 @@ const renderPage = ({
   const waPatient = company.whatsapp
     ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(content.cta.message)}`
     : '';
-  const mailHref = company.email ? `mailto:${escapeHtml(company.email)}` : '';
-  // Primary call-to-action degrades gracefully: WhatsApp when a number is on
-  // record, otherwise email, otherwise the contact section. Refilling the
-  // WhatsApp number in the admin restores every WhatsApp button automatically.
-  const cta = company.whatsapp
-    ? { href: waPatient, icon: icon('whatsapp'), label: 'WhatsApp us', external: true }
-    : mailHref
-      ? { href: mailHref, icon: icon('mail'), label: 'Email us', external: false }
-      : { href: '#contact', icon: '', label: 'Contact us', external: false };
+  // Primary call-to-action (WhatsApp → email → #contact) — shared with the shell.
+  const cta = primaryCta(company, content);
   const ctaAttrs = cta.external ? ' target="_blank" rel="noreferrer"' : '';
   // Per-condition CTA — same graceful degrade as the primary `cta`, but the
   // WhatsApp/email message is prefilled with the specific condition.
@@ -593,12 +812,6 @@ const renderPage = ({
       </dialog>
     </section>`
     : '';
-  // Single source for the nav (content.nav): the targets are fixed by the content
-  // rules, the labels are owner copy — `label` inline in the header (desktop) and
-  // in the mobile slide-in drawer (below), `footerLabel` in the footer.
-  const navLink = (item, key) => `<a href="#${escapeHtml(item.target)}">${escapeHtml(item[key])}</a>`;
-  const navLinksHtml = content.nav.map((item) => navLink(item, 'label')).join('');
-  const footerNavHtml = content.nav.map((item) => navLink(item, 'footerLabel')).join('');
   const heroStats = Array.isArray(config.heroStats)
     ? config.heroStats.filter((stat) => stat && stat.value && stat.label)
     : [];
@@ -613,36 +826,6 @@ const renderPage = ({
   // so the render shows exactly one styled set, never a doubled "«…»", while an
   // inner quotation keeps its closing mark.
   const heroHeadlineText = stripHeadlineQuotes(config.heroHeadline || '');
-  // Every lockup variant carries its own measured intrinsic width/height (see
-  // prepareMarkSized in build.js) — the aspect differs per variant and moved with
-  // the Exotc350 wordmark, so a hard-coded 512x257 would cost a layout shift.
-  const lockupImgs = (mark, loading) =>
-    `<img class="lockup--ink" src="${mark.ink.src}" alt="" width="${mark.ink.width}" height="${mark.ink.height}" loading="${loading}" decoding="async">
-    <img class="lockup--paper" src="${mark.paper.src}" alt="" width="${mark.paper.width}" height="${mark.paper.height}" loading="${loading}" decoding="async">`;
-  const lockup = (context) => `<span class="lockup" aria-hidden="true">
-    ${lockupImgs(markPaths, context === 'header' ? 'eager' : 'lazy')}
-  </span>`;
-  // Footer-only lockup: the ™ is baked into these variants at the 'c' shoulder
-  // (see assets/brand/logo-*-tm*.png) rather than positioned in CSS, so it stays
-  // pixel-tight to the letterform. Two size wrappers — '-lg' (larger ™) for the
-  // 54px desktop render, base for the 64px phone render — swapped by breakpoint in
-  // CSS (.lockup__size--sm hidden on desktop, --lg hidden ≤760px).
-  const tmImg = (mark) => lockupImgs(mark, 'lazy');
-  const footerSocial = (() => {
-    const links = Object.entries(socialIcons)
-      .filter(([key]) => company.social?.[key])
-      .map(([key, { label, svg }]) => `<a href="${escapeHtml(company.social[key])}" target="_blank" rel="me noopener noreferrer" aria-label="MediVasc on ${label}"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">${svg}</svg></a>`);
-    return links.length ? `<ul class="footer-social" aria-label="MediVasc on social media">${links.map((link) => `<li>${link}</li>`).join('')}</ul>` : '';
-  })();
-  const footerLockup = () => `<span class="lockup" aria-hidden="true">
-    <span class="lockup__size lockup__size--lg">${tmImg(markPathsTmLg)}</span>
-    <span class="lockup__size lockup__size--sm">${tmImg(markPathsTm)}</span>
-  </span>`;
-  // The bot deep-links to WhatsApp when a number is on record, else composes an
-  // email; if neither exists it is omitted (site.js no-ops on a missing config).
-  const chatbot = whatsapp || company.email
-    ? renderChatbot({ wa: whatsapp, email: company.email, chat: content.chat })
-    : '';
 
   // The severity-clip case note (content.conditions.case*). Declared once so the
   // desktop figure and the mobile "View more" popup render identical copy (the
@@ -696,84 +879,8 @@ const renderPage = ({
   // or six (never a lone orphan on a second row). Four is the stylesheet default.
   const pathwayCols = content.approach.steps.length > 4 ? 3 : content.approach.steps.length;
 
-  return `<!doctype html>
-<html lang="en" data-site-theme="${escapeHtml(themeId)}">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script>(function(){document.documentElement.classList.add('js');try{var s=localStorage.getItem('medivasc-color-scheme')||localStorage.getItem('naviga-color-scheme');var d=s?s==='dark':matchMedia('(prefers-color-scheme:dark)').matches;if(d)document.documentElement.dataset.theme='dark'}catch(e){}})()</script>
-  <title>${escapeHtml(config.seo.title)}</title>
-  <meta name="description" content="${escapeHtml(config.seo.description)}">
-  <!-- max-image-preview:none — Google's *mobile* result for medivasc.in was pulling
-       the og:image in as a snippet thumbnail and centre-cropping it to a square,
-       which sliced the lockup and the kicker ("MediVasc" cut off, "…VENTION OF
-       FOOT AND LEG AMP…"). There is no meta that picks a different thumbnail, so
-       we opt out of image previews and let the result render as clean text, the
-       way desktop already did. og:image itself stays — WhatsApp/LinkedIn/X
-       previews are unaffected by this directive, and WhatsApp is our main channel.
-       Trade-off: no image thumbnail in Google results or Discover. -->
-  <meta name="robots" content="index,follow,max-image-preview:none">
-${config.seo.googleVerification ? `  <meta name="google-site-verification" content="${escapeHtml(config.seo.googleVerification)}">\n` : ''}  <meta name="theme-color" content="${escapeHtml(themeBg)}">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="${escapeHtml(company.name)}">
-  <meta property="og:title" content="${escapeHtml(config.seo.title)}">
-  <meta property="og:description" content="${escapeHtml(config.seo.description)}">
-  <meta property="og:url" content="${siteUrl}">
-  <meta property="og:image" content="${siteUrl}${ogImage}">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="${escapeHtml(config.seo.imageAlt)}">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${escapeHtml(config.seo.title)}">
-  <meta name="twitter:description" content="${escapeHtml(config.seo.description)}">
-  <meta name="twitter:image" content="${siteUrl}${ogImage}">
-  <meta name="twitter:image:alt" content="${escapeHtml(config.seo.imageAlt)}">
-  <link rel="canonical" href="${siteUrl}">
-  <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="assets/brand/favicon-32.png" sizes="32x32">
-  <link rel="apple-touch-icon" href="assets/brand/apple-touch-icon.png">
-  <link rel="preload" href="assets/fonts/fraunces-latin-600.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="assets/fonts/fraunces-latin-600-italic.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="assets/fonts/instrument-sans-latin-400-600.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="${cssPath}">
-  <script type="application/ld+json">${renderJsonLd({ company, config, siteUrl })}</script>
-</head>
-<body>
-  <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header" data-header>
-    <div class="container header-inner">
-      <a class="wordmark" href="#top" aria-label="MediVasc home">${lockup('header')}</a>
-      <button class="icon-button menu-toggle" type="button" aria-expanded="false" aria-controls="nav-drawer" data-menu-toggle><span class="sr-only">Open navigation</span>${icon('menu')}</button>
-      <nav class="site-nav" id="site-nav" aria-label="Main navigation">
-        ${navLinksHtml}
-      </nav>
-      <div class="header-actions">
-        <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme">
-          <span class="theme-toggle__sun">${icon('sun')}</span><span class="theme-toggle__moon">${icon('moon')}</span>
-        </button>
-        <a class="button header-cta" href="${cta.href}"${ctaAttrs}>${cta.icon} ${cta.label}</a>
-      </div>
-    </div>
-  </header>
-
-  <!-- Mobile slide-in drawer + scrim: body-level (NOT inside .site-header, whose
-       backdrop-filter would trap fixed descendants to its own 84px box and stack
-       them below the chatbot). Controlled by site.js; single nav source above. -->
-  <div class="nav-scrim" data-nav-scrim></div>
-  <nav class="nav-drawer" id="nav-drawer" aria-label="Mobile navigation" data-nav>
-    <div class="nav-drawer__head">
-      <span class="nav-drawer__brand">${lockup('header')}</span>
-      <button class="icon-button nav-drawer__close" type="button" data-menu-close><span class="sr-only">Close navigation</span>${icon('close')}</button>
-    </div>
-    <div class="nav-drawer__links">
-      ${navLinksHtml}
-    </div>
-    <div class="nav-drawer__foot">
-      <a class="button nav-drawer__cta" href="${cta.href}"${ctaAttrs}>${cta.icon} ${cta.label}</a>
-    </div>
-  </nav>
-
-  <main id="main">
+  // The homepage body; the shared head/header/drawer/footer come from renderShell.
+  const main = `
     <section class="hero" id="top">
       <div class="container hero__layout">
         <div class="hero__copy" data-reveal>
@@ -962,27 +1069,17 @@ ${config.seo.googleVerification ? `  <meta name="google-site-verification" conte
         </div>
       </div>
     </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="container footer__top">
-      <span class="footer-brand">${footerLockup()}<span class="sr-only">MediVasc™</span></span>
-      <p>${escapeHtml(company.tagline)}</p>
-      <nav aria-label="Footer navigation">${footerNavHtml}</nav>
-      ${footerSocial}
-    </div>
-    <div class="container footer__bottom">
-      <p>${escapeHtml(content.footer.disclaimer)}</p>
-      <p>© ${escapeHtml(company.legalName)}. All rights reserved.</p>
-    </div>
-  </footer>
-
-  ${chatbot}
-
-  <noscript><p class="noscript">Theme controls require JavaScript. All recovery stories, protocols, and contact routes remain available above.</p></noscript>
-  <script src="${jsPath}" defer></script>
-</body>
-</html>`;
+  `;
+  return renderShell({
+    site: { company, content, config, themeId, themeBg, siteUrl, cssPath, jsPath, markPaths, markPathsTm, markPathsTmLg, blogNav },
+    title: config.seo.title,
+    description: config.seo.description,
+    canonical: siteUrl,
+    ogImage: `${siteUrl}${ogImage}`,
+    ogImageAlt: config.seo.imageAlt,
+    jsonLd: [renderJsonLd({ company, config, siteUrl })],
+    main,
+  });
 };
 
-module.exports = { renderPage, phoneHref };
+module.exports = { renderPage, renderShell, contactHrefs, phoneHref, escapeHtml };
