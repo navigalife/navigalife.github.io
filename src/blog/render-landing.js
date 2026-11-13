@@ -62,7 +62,9 @@ const authorName = (post) => (post.authorObj && text(post.authorObj.name)) || ''
 
 // --- Post card -----------------------------------------------------------------
 
-const gridCard = (ctx, post, { eager = false, showChip = true } = {}) => `
+// `dek` is only rendered for a lone card (blog-grid--n1), which lays out as a wide split;
+// `showAuthor` is off on the author's own page, where the byline would repeat.
+const gridCard = (ctx, post, { eager = false, showChip = true, showAuthor = true, dek = false } = {}) => `
 <article class="blog-card" data-tint="${tintOf(post.categoryObj)}">
   ${media(ctx, post, 'blog-card__media', {
     sizes: '(max-width: 760px) calc(100vw - 40px), (max-width: 1000px) calc(50vw - 40px), 400px',
@@ -71,7 +73,8 @@ const gridCard = (ctx, post, { eager = false, showChip = true } = {}) => `
   <div class="blog-card__body">
     ${showChip ? chip(ctx, post.categoryObj) : ''}
     <h3 class="blog-card__title"><a class="blog-card__link" href="${esc(post.href)}">${titleHtml(post)}</a></h3>
-    <p class="blog-meta">${authorName(post) ? `<span>${esc(authorName(post))}</span>${sep}` : ''}${timeHtml(post)}<span class="blog-meta__pill">${minutes(post)}</span></p>
+    ${dek && text(post.dek) ? `<p class="blog-card__dek">${esc(post.dek)}</p>` : ''}
+    <p class="blog-meta">${showAuthor && authorName(post) ? `<span>${esc(authorName(post))}</span>${sep}` : ''}${timeHtml(post)}<span class="blog-meta__pill">${minutes(post)}</span></p>
   </div>
 </article>`;
 
@@ -158,14 +161,21 @@ const crumbs = (ctx, label) => `
   </ol>
 </nav>`;
 
-const gridSection = (ctx, id, title, posts, { label = '', showChip = true } = {}) => (posts.length ? `
+// One or two posts (the launch reality for most categories) get their own layouts:
+// n1 = a wide image/text split, n2 = a centred pair, instead of a ragged 3-up row.
+const gridSection = (ctx, id, title, posts, { label = '', showChip = true, showAuthor = true } = {}) => {
+  if (!posts.length) return '';
+  const n = posts.length < 3 ? ` blog-grid--n${posts.length}` : '';
+  const dek = posts.length === 1;
+  return `
 <section class="blog-section container" aria-labelledby="${id}">
   <header class="blog-section__head">
     <h2 class="blog-section__title" id="${id}">${esc(title)}</h2>
     ${label ? `<p class="blog-section__label">${esc(label)}</p>` : ''}
   </header>
-  <div class="blog-grid">${posts.map((p) => gridCard(ctx, p, { showChip })).join('')}</div>
-</section>` : '');
+  <div class="blog-grid${n}">${posts.map((p) => gridCard(ctx, p, { showChip, showAuthor, dek })).join('')}</div>
+</section>`;
+};
 
 const count = (n) => `${n} ${n === 1 ? 'article' : 'articles'}`;
 
@@ -191,6 +201,7 @@ const renderLanding = (ctx) => {
   ${topicNav(ctx, null)}
   ${featuredSection(ctx, featured)}
   ${gridSection(ctx, 'blog-latest-title', 'Latest', grid)}
+  ${posts.length ? '' : '<p class="blog-empty container">The first articles are on the way.</p>'}
   ${archive.length ? `
   <section class="blog-section blog-archive container" aria-labelledby="blog-archive-title" data-blog-archive>
     <header class="blog-section__head">
@@ -212,7 +223,7 @@ const renderCategoryPage = (ctx, category) => {
 <div class="blog-landing blog-landing--taxon" data-tint="${tintOf(category)}">
   <header class="blog-masthead blog-masthead--taxon container">
     ${crumbs(ctx, category.name)}
-    <p class="blog-kicker blog-kicker--tint">${count(posts.length)}</p>
+    ${posts.length ? `<p class="blog-kicker blog-kicker--tint">${count(posts.length)}</p>` : ''}
     <h1 class="blog-masthead__title">${esc(category.name)}</h1>
     ${intro.map((p) => `<p class="blog-masthead__intro">${esc(p)}</p>`).join('')}
   </header>
@@ -231,6 +242,7 @@ const renderAuthorPage = (ctx, author) => {
   const reviewed = all.filter((p) => p.reviewer === author.id && p.author !== author.id);
   const role = [text(author.role), text(author.credentials)].filter(Boolean).join(', ');
   const bio = paragraphs(author.bio);
+  const kicker = written.length ? count(written.length) : reviewed.length ? 'Medical reviewer' : '';
   const photo = text(author.photo)
     ? `<div class="blog-author__photo">${ctx.img(author.photo, { alt: text(author.name), sizes: '144px', widths: [480], loading: 'eager' })}</div>`
     : '';
@@ -239,13 +251,14 @@ const renderAuthorPage = (ctx, author) => {
   <header class="blog-masthead blog-masthead--taxon blog-author container">
     ${crumbs(ctx, author.name)}
     ${photo}
-    <p class="blog-kicker">${written.length ? count(written.length) : 'Medical reviewer'}</p>
+    ${kicker ? `<p class="blog-kicker">${kicker}</p>` : ''}
     <h1 class="blog-masthead__title">${esc(author.name)}</h1>
     ${role ? `<p class="blog-author__role">${esc(role)}</p>` : ''}
     ${bio.map((p) => `<p class="blog-masthead__intro">${esc(p)}</p>`).join('')}
   </header>
-  ${gridSection(ctx, 'blog-author-posts', 'Articles', written)}
+  ${gridSection(ctx, 'blog-author-posts', 'Articles', written, { showAuthor: false })}
   ${gridSection(ctx, 'blog-author-reviewed', 'Medically reviewed', reviewed)}
+  ${written.length || reviewed.length ? '' : `<p class="blog-empty container">Articles by ${esc(author.name)} are on the way.</p>`}
 </div>`;
 };
 

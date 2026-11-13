@@ -35,7 +35,7 @@
 [data-tint="slate"]{--t:var(--tint-slate);--t-ink:var(--tint-slate-ink)}
 [data-tint="plum"]{--t:var(--tint-plum);--t-ink:var(--tint-plum-ink)}
 
-.blog-chip{position:relative;z-index:2;display:inline-flex;align-items:center;min-height:26px;padding:3px 11px 2px;border-radius:999px;background:var(--t,var(--surface-2));color:var(--t-ink,var(--ink));font-size:.6875rem;font-weight:600;line-height:1.2;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:background-color 200ms var(--blog-ease),box-shadow 200ms var(--blog-ease)}
+.blog-chip{position:relative;z-index:2;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;min-height:26px;padding:4px 11px 3px;border-radius:999px;background:var(--t,var(--surface-2));color:var(--t-ink,var(--ink));font-size:.6875rem;font-weight:600;line-height:19px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:background-color 200ms var(--blog-ease),box-shadow 200ms var(--blog-ease)}
 a.blog-chip:hover{background:color-mix(in srgb,var(--t,var(--surface-2)) 86%,var(--t-ink,var(--ink)))}
 .blog-kicker{display:inline-flex;align-items:center;gap:12px;margin:0;color:var(--ink-muted);font-size:.75rem;font-weight:600;line-height:1.3;letter-spacing:.16em;text-transform:uppercase}
 .blog-kicker::before,.blog-diamond{content:"";flex:none;width:7px;height:7px;border-radius:1.5px;transform:rotate(45deg);background:var(--accent)}
@@ -45,6 +45,8 @@ a.blog-chip:hover{background:color-mix(in srgb,var(--t,var(--surface-2)) 86%,var
 .blog-meta__pill{display:inline-flex;align-items:center;min-height:24px;padding:1px 10px 0;border-radius:999px;box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 32%,transparent);font-size:.8125rem;font-variant-numeric:tabular-nums;white-space:nowrap}
 .blog-icon{width:20px;height:20px;flex:none}
 
+/* Long unbroken words (drug names, URLs) wrap instead of widening the page. */
+.blog-masthead__title,.blog-feature__title,.blog-card__title,.blog-rail-card__title,.blog-row__title{overflow-wrap:break-word}
 /* Stretched link: the title link covers its whole card; chips sit above it. */
 .blog-card,.blog-feature,.blog-rail-card,.blog-row{position:relative}
 .blog-card__link{color:inherit;text-decoration:none}
@@ -84,9 +86,10 @@ a.blog-chip:hover{background:color-mix(in srgb,var(--t,var(--surface-2)) 86%,var
 .blog-feature__chips{display:flex;flex-wrap:wrap;gap:8px}
 .blog-feature .blog-chip{background:transparent;color:var(--panel-ink);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--panel-ink) 42%,transparent)}
 .blog-feature a.blog-chip:hover{background:color-mix(in srgb,var(--panel-ink) 12%,transparent)}
+.blog-feature a.blog-chip:focus-visible{outline-color:var(--panel-ink)}
 .blog-feature__title{max-width:17ch;margin:0 0 18px;font-family:"Fraunces",Georgia,serif;font-size:clamp(2rem,3.05vw,3.125rem);font-variation-settings:"opsz" 72;font-weight:600;line-height:1.05;letter-spacing:-.03em;text-wrap:balance}
 .blog-feature__title em{font-style:italic}
-.blog-feature__dek{max-width:40ch;margin:0 0 28px;color:var(--panel-muted);font-size:1.0625rem;line-height:1.6;text-wrap:pretty}
+.blog-feature__dek{max-width:40ch;margin:0 0 28px;color:var(--panel-muted);font-family:"Source Serif 4","Iowan Old Style",Georgia,serif;font-size:1.125rem;line-height:1.55;text-wrap:pretty}
 .blog-feature .blog-meta{color:var(--panel-muted)}
 .blog-feature__media{position:relative;overflow:hidden;background:color-mix(in srgb,var(--panel) 80%,var(--ink))}
 .blog-feature__media img,.blog-card__media img,.blog-rail-card__media img{width:100%;height:100%;object-fit:cover;object-position:var(--fx,50%) var(--fy,50%)}
@@ -104,6 +107,8 @@ a.blog-chip:hover{background:color-mix(in srgb,var(--t,var(--surface-2)) 86%,var
 .blog-featured__arrow:disabled{opacity:.35;cursor:default;background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
 .blog-featured__arrow--prev .blog-icon{transform:rotate(180deg)}
 html:not(.js) [data-bf-pager]{display:none}
+/* Without JS the track is a plain scroller: give mouse users a quiet scrollbar. */
+html:not(.js) .blog-featured__track{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 22%,transparent) transparent}
 
 /* ---- Sections + grid ------------------------------------------------------- */
 .blog-section{padding-bottom:clamp(80px,9vw,136px)}
@@ -120,6 +125,15 @@ html:not(.js) [data-bf-pager]{display:none}
 .blog-card__title{max-width:22ch;margin:0;font-family:"Fraunces",Georgia,serif;font-size:clamp(1.375rem,1.85vw,1.625rem);font-variation-settings:"opsz" 72;font-weight:600;line-height:1.2;letter-spacing:-.02em;text-wrap:balance}
 .blog-card__title em,.blog-row__title em,.blog-rail-card__title em{font-style:italic}
 .blog-card .blog-meta{justify-content:center}
+.blog-card__dek{max-width:42ch;margin:0;color:var(--ink-muted);font-family:"Source Serif 4","Iowan Old Style",Georgia,serif;font-size:1.125rem;line-height:1.55;text-wrap:pretty}
+/* Two posts: a centred pair, not two thirds of an empty row. */
+.blog-grid--n2{max-width:1000px;margin-inline:auto;grid-template-columns:repeat(2,minmax(0,1fr))}
+/* One post: a wide split — photograph left, text right and left-aligned, dek shown. */
+.blog-grid--n1{grid-template-columns:minmax(0,1fr)}
+.blog-grid--n1 .blog-card{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);align-items:center;gap:clamp(36px,4.6vw,72px);text-align:left}
+.blog-grid--n1 .blog-card__body{align-items:flex-start;gap:20px;padding:0}
+.blog-grid--n1 .blog-card__title{max-width:18ch;font-size:clamp(1.75rem,2.7vw,2.5rem);line-height:1.1;letter-spacing:-.025em}
+.blog-grid--n1 .blog-card .blog-meta{justify-content:flex-start;margin-top:4px}
 
 /* ---- Rail card (W2b's post-page right rail) --------------------------------- */
 .blog-rail-card{display:grid;grid-template-columns:76px minmax(0,1fr);align-items:center;gap:16px}
@@ -167,6 +181,8 @@ html:not(.js) [data-bf-pager]{display:none}
   .blog-featured__track{--bf-w:calc(100cqw - 96px);--bf-gap:16px}
   .blog-feature{grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:400px}
   .blog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .blog-grid--n1{grid-template-columns:minmax(0,1fr)}
+  .blog-grid--n1 .blog-card{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
 }
 @media (max-width:760px){
   .blog-masthead{padding-block:44px 28px}
@@ -187,10 +203,15 @@ html:not(.js) [data-bf-pager]{display:none}
   .blog-grid{grid-template-columns:minmax(0,1fr);gap:52px}
   .blog-card__body{padding-top:22px;gap:14px}
   .blog-card__title{font-size:1.5rem}
-  .blog-row{grid-template-columns:minmax(0,1fr) 24px;grid-template-areas:"meta arrow" "title arrow";gap:10px 16px;padding:20px 0}
+  .blog-grid--n1 .blog-card{display:flex;text-align:center}
+  .blog-grid--n1 .blog-card__body{align-items:center;gap:14px;padding-top:22px}
+  .blog-grid--n1 .blog-card__title{font-size:1.625rem}
+  .blog-grid--n1 .blog-card .blog-meta{justify-content:center;margin-top:0}
+  .blog-card__dek{font-size:1.0625rem}
+  .blog-row{grid-template-columns:minmax(0,1fr) 24px;grid-template-areas:"meta meta" "title arrow";gap:10px 16px;padding:20px 0}
   .blog-row:first-child{padding-top:0}
   .blog-row__title{grid-area:title;font-size:1.25rem}
-  .blog-row__meta{grid-area:meta;justify-content:flex-start;gap:14px}
+  .blog-row__meta{grid-area:meta;flex-wrap:wrap;justify-content:flex-start;gap:6px 14px;min-width:0}
   .blog-row__meta time{min-width:0;text-align:left}
   .blog-row__arrow{grid-area:arrow}
   .blog-crumbs{margin-bottom:32px}

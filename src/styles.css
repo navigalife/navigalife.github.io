@@ -60,6 +60,11 @@ section[id]{scroll-margin-top:92px}
 .site-nav>a{position:relative}
 .site-nav>a::after{content:"";position:absolute;right:2px;bottom:7px;left:2px;height:2px;border-radius:2px;background:var(--accent);transform:scaleX(0);transform-origin:left center;transition:transform 260ms cubic-bezier(.22,1,.36,1)}
 .site-nav>a:hover::after,.site-nav>a:focus-visible::after{transform:scaleX(1)}
+/* Current page (aria-current, e.g. Blog on blog pages): ink + the accent rule held
+   on in the header; a fine accent underline in the footer; a diamond in the drawer. */
+.site-nav>a[aria-current="page"],.site-footer nav a[aria-current="page"]{color:var(--ink)}
+.site-nav>a[aria-current="page"]::after{transform:scaleX(1)}
+.site-footer nav a[aria-current="page"]{text-decoration:underline 1px var(--accent);text-underline-offset:7px}
 /* Mobile drawer + scrim are body-level and inert on desktop; the fixed panel
    itself lives in the max-width:1000px block. */
 .nav-drawer,.nav-scrim{display:none}
@@ -312,8 +317,11 @@ html:not(.js) .recoveries__more{display:none}
      z above the chatbot (120); body-level so the viewport is its containing box. */
   .nav-scrim{display:block;position:fixed;inset:0;z-index:150;background:color-mix(in srgb,#0b1f2a 52%,transparent);opacity:0;visibility:hidden;transition:opacity 300ms ease,visibility 0s linear 300ms}
   .nav-scrim.is-open{opacity:1;visibility:visible;transition:opacity 300ms ease}
-  .nav-drawer{display:flex;position:fixed;top:0;right:0;bottom:auto;left:auto;height:100dvh;z-index:160;flex-direction:column;align-items:stretch;width:min(84vw,360px);max-width:100%;background:var(--surface);box-shadow:-30px 0 70px -30px color-mix(in srgb,#0b1f2a 60%,transparent);transform:translateX(100%);transition:transform 360ms cubic-bezier(.22,1,.36,1);overflow-y:auto;overscroll-behavior:contain}
-  .nav-drawer.is-open{transform:translateX(0)}
+  /* Closed = visibility:hidden (after the slide-out): parked at translateX(100%) its
+     left-cast shadow otherwise bleeds ~70px of grey into the viewport's right edge,
+     and its links would stay in the tab order while off-screen. */
+  .nav-drawer{display:flex;position:fixed;top:0;right:0;bottom:auto;left:auto;height:100dvh;z-index:160;flex-direction:column;align-items:stretch;width:min(84vw,360px);max-width:100%;background:var(--surface);box-shadow:-30px 0 70px -30px color-mix(in srgb,#0b1f2a 60%,transparent);transform:translateX(100%);visibility:hidden;transition:transform 360ms cubic-bezier(.22,1,.36,1),visibility 0s linear 360ms;overflow-y:auto;overscroll-behavior:contain}
+  .nav-drawer.is-open{transform:translateX(0);visibility:visible;transition:transform 360ms cubic-bezier(.22,1,.36,1)}
   .nav-drawer__head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px 14px 22px;border-bottom:1px solid color-mix(in srgb,var(--line) 78%,transparent)}
   .nav-drawer__brand{display:inline-flex;align-items:center}
   .nav-drawer__brand .lockup img{height:38px}
@@ -323,6 +331,8 @@ html:not(.js) .recoveries__more{display:none}
   .nav-drawer__links a{display:flex;align-items:center;padding:19px 24px;color:var(--ink);font-size:1.125rem;font-weight:500;text-decoration:none;transition:background-color 180ms ease}
   .nav-drawer__links a+a{border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
   .nav-drawer__links a:hover{background:var(--surface-2)}
+  .nav-drawer__links a[aria-current="page"]{gap:14px;font-weight:600}
+  .nav-drawer__links a[aria-current="page"]::after{content:"";width:7px;height:7px;flex:none;border-radius:1.5px;background:var(--accent);transform:rotate(45deg)}
   .nav-drawer__foot{margin-top:auto;display:flex;flex-direction:column;gap:12px;padding:22px 24px calc(22px + env(safe-area-inset-bottom,0px));border-top:1px solid color-mix(in srgb,var(--line) 78%,transparent)}
   .nav-drawer__cta{display:inline-flex;justify-content:center;min-height:52px;font-size:1.05rem}
   .header-actions{grid-column:2;grid-row:1;justify-self:end}
