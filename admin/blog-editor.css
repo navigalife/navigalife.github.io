@@ -137,6 +137,13 @@
 .bed-note{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:12px;color:var(--alert);font:500 .78rem/1.4 var(--sans)}
 .bed-note .bed-ic{width:15px;height:15px}
 .bed-note.is-quiet{color:var(--ink-muted)}
+/* desktop: the quiet "Accent: … Remove" line is title chrome — it opens while the title, the
+   summary or the line itself has focus and folds away otherwise (after a beat, so a click that
+   leaves the title lands before anything moves). Touch keeps it visible; warnings always show. */
+@media (hover:hover) and (pointer:fine){
+  .bed-note.is-quiet{max-height:3em;overflow:hidden;transition:max-height 220ms var(--ease),margin-top 220ms var(--ease),opacity 180ms var(--ease)}
+  .bed-head:not(:has(.bed-title:focus,.bed-dek:focus,.bed-note:focus-within)) .bed-note.is-quiet{max-height:0;margin-top:0;opacity:0;visibility:hidden;transition:max-height 220ms var(--ease) 120ms,margin-top 220ms var(--ease) 120ms,opacity 140ms var(--ease) 120ms,visibility 0s 340ms}
+}
 .bed-dek{margin-top:.55em;color:var(--ink-muted);font-family:var(--serif);font-size:clamp(1.1875rem,1.02rem + .75cqw,1.5rem);font-style:italic;font-weight:400;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;outline:none}
 .bed-title+.bed-note+.bed-dek{margin-top:.6em}
 
@@ -236,6 +243,15 @@
 .bed-strip__set .bed-field{grid-template-columns:auto minmax(0,7.5em);align-items:center;gap:8px}
 .bed-strip__acts{display:flex;gap:1px;margin-left:auto}
 .bed-handle--strip{width:34px;height:34px;opacity:1;cursor:grab}
+/* narrower pane: the strip hangs BELOW the selected block, so it never sits on the text above or
+   on its own block; it flips above (.is-above, set by blog-editor.js placeStrip) only when the
+   block's foot is off-screen. --below tells the script this side applies. */
+@container bed (width < 1080px){
+  .bed-strip{--below:1;top:calc(100% + 8px);bottom:auto;animation-name:bed-in-below}
+  .bed-strip.is-above{top:auto;bottom:calc(100% + 8px);animation-name:bed-in}
+  .bed-block.is-selected:not(:has(>.bed-strip.is-above))+.bed-end{margin-top:calc(var(--bed-strip-room,54px) + 1.1em)}
+}
+@keyframes bed-in-below{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
 /* wide pane: the inspector lives in the right margin, beside the block */
 @container bed (min-width:1080px){
   .bed-block:not(.is-wide):not(.is-full):not(.is-float)>.bed-strip{top:0;bottom:auto;left:calc(100% + 40px);flex-direction:column;align-items:stretch;gap:12px;width:var(--insp);max-width:none;padding:14px 12px 8px 14px}

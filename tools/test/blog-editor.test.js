@@ -450,6 +450,30 @@ const E = RULES.BLOG_ENUMS;
   test('paste-text', 'every piece converts to a plain-string Inline', () => {
     for (const p of piecesFromText('A b\n\n- c\n- d\n\n3. e')) assert.equal(typeof toInline(p.runs), 'string');
   });
+  // A chunk that mixes prose lines and list lines (no blank line between them) splits
+  // at the boundary: prose → paragraph, consecutive marker lines → list items.
+  const MIXED = [
+    ['lead-in line then bullets → paragraph + bullet list', 'Intro:\n- a\n- b',
+      [P('Intro:'), LI('bullet', 'a'), LI('bullet', 'b')]],
+    ['lead-in line then "1." items → paragraph + numbered list', 'Steps:\n1. one\n2. two',
+      [P('Steps:'), LI('number', 'one'), LI('number', 'two')]],
+    ['lead-in line then "1)" items → paragraph + numbered list', 'Steps:\n1) one\n2) two',
+      [P('Steps:'), LI('number', 'one'), LI('number', 'two')]],
+    ['bullets only → exactly one bulleted list, nothing else', '- a\n- b',
+      [LI('bullet', 'a'), LI('bullet', 'b')]],
+    ['bullets then a trailing prose line → bullet list + paragraph', '- a\n- b\nAfter',
+      [LI('bullet', 'a'), LI('bullet', 'b'), P('After')]],
+    ['lead-in, blank line, bullet → paragraph + list (unchanged)', 'Intro:\n\n- a',
+      [P('Intro:'), LI('bullet', 'a')]],
+    ['no list lines → one joined paragraph (regression, as before the split)', 'Just a line\nanother line',
+      [P('Just a line another line')]],
+  ];
+  for (const [name, input, want] of MIXED) {
+    test('paste-text', `mixed chunk: ${name}`, () => {
+      const got = piecesFromText(input);
+      assert.deepStrictEqual(got.map((p) => (p.kind === 'li' ? p : { kind: p.kind, runs: p.runs })), want);
+    });
+  }
 
   // ======================================================== 7. new blocks
   const SHAPES = {

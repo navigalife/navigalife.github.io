@@ -317,18 +317,26 @@ function sanitizeHtml(html) {
   const doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
   const pieces = [];
   let cur = null;
+  let seam = false; // a footnote marker was just dropped: "word ¹ next" must not keep both spaces
   const flush = () => {
     if (cur) {
       const runs = trimRuns(cur.runs);
       if (runs.some((r) => !isCiteRun(r) && r.t.trim())) pieces.push({ kind: cur.kind, style: cur.style, runs });
     }
     cur = null;
+    seam = false;
   };
   const walk = (node, marks, ctx) => {
     for (const c of node.childNodes) {
       if (c.nodeType === 3) {
-        const t = c.data.replace(/[\s ]+/g, ' ');
+        let t = c.data.replace(/[\s ]+/g, ' ');
         if (!t) continue;
+        if (seam) {
+          seam = false;
+          const last = cur && cur.runs[cur.runs.length - 1];
+          if (t[0] === ' ' && last && typeof last.t === 'string' && last.t.endsWith(' ')) t = t.slice(1);
+          if (!t) { seam = true; continue; } // only the seam's own space: the next text still meets it
+        }
         if (!cur) {
           if (!t.trim()) continue;
           cur = { kind: ctx.kind, style: ctx.style, runs: [] };
@@ -342,7 +350,7 @@ function sanitizeHtml(html) {
       const style = c.getAttribute('style') || '';
       if (/mso-list\s*:\s*ignore/i.test(style)) continue;
       if (tag === 'br') { flush(); continue; }
-      if (tag === 'sup' && /^\s*\[?\d+\]?\s*$/.test(c.textContent)) continue; // foreign footnote markers
+      if (tag === 'sup' && /^\s*\[?\d+\]?\s*$/.test(c.textContent)) { seam = true; continue; } // foreign footnote markers
       const m = marksFor(c, marks);
       if (!PIECE_TAGS.has(tag)) { walk(c, m, ctx); continue; }
       let { kind, style: st } = ctx;
@@ -365,20 +373,27 @@ function sanitizeHtml(html) {
   return pieces;
 }
 // text/plain → pieces: blank lines separate paragraphs; "- x" / "1. x" lines become list items.
+// Inside a chunk, each run of prose lines joins into one paragraph and each marker line is an item,
+// so "Intro:\n- a\n- b" is a paragraph then a list; a chunk with no marker lines stays one paragraph.
 function piecesFromText(text) {
   const pieces = [];
   const chunks = String(text || '').replace(/\r\n?/g, '\n').split(/\n\s*\n/);
+  const bullet = /^([-*•●▪◦–])\s+/;
+  const num = /^\d{1,3}[.)]\s+/;
   for (const chunk of chunks) {
     const lines = chunk.split('\n').map((l) => l.replace(/[\t ]+/g, ' ').trim()).filter(Boolean);
-    if (!lines.length) continue;
-    const bullet = /^([-*•●▪◦–])\s+/;
-    const num = /^\d{1,3}[.)]\s+/;
-    if (lines.every((l) => bullet.test(l) || num.test(l))) {
-      for (const l of lines) {
-        const isNum = num.test(l);
-        pieces.push({ kind: 'li', style: isNum ? 'number' : 'bullet', runs: [{ t: l.replace(isNum ? num : bullet, '') }] });
-      }
-    } else pieces.push({ kind: 'p', runs: [{ t: lines.join(' ').replace(/\s+/g, ' ') }] });
+    let prose = [];
+    const flushProse = () => {
+      if (prose.length) pieces.push({ kind: 'p', runs: [{ t: prose.join(' ').replace(/\s+/g, ' ') }] });
+      prose = [];
+    };
+    for (const l of lines) {
+      const isNum = num.test(l);
+      if (!isNum && !bullet.test(l)) { prose.push(l); continue; }
+      flushProse();
+      pieces.push({ kind: 'li', style: isNum ? 'number' : 'bullet', runs: [{ t: l.replace(isNum ? num : bullet, '') }] });
+    }
+    flushProse();
   }
   return pieces;
 }
@@ -899,6 +914,7 @@ export function mountBlockEditor(root, opts = {}) {
     page.append(headEl, flowEl, refsEl);
     renderBar();
     renderTypo();
+    placeStrip(true);
   }
   function renderBar() {
     bar.textContent = '';
@@ -993,7 +1009,12 @@ export function mountBlockEditor(root, opts = {}) {
     const w = el('section', { class: `bed-block${layoutClass(b)}${key === selKey ? ' is-selected' : ''}`, 'data-key': key, 'data-type': b.type, 'aria-label': labelOf(b.type) });
     w.append(el('div', { class: 'bed-gutter' }, el('button', { type: 'button', class: 'bed-handle', tabindex: '-1', 'data-act': 'handle', 'aria-label': `Move ${labelOf(b.type)}`, title: 'Drag to move' }, svg('drag'))));
     w.append(el('div', { class: 'bed-content' }, bodyOf(b, key, first)));
-    if (key === selKey) w.append(stripOf(b, i));
+    if (key === selKey) {
+      const was = wrapOf(key);
+      const s = stripOf(b, i);
+      if (was && was.querySelector(':scope > .bed-strip.is-above')) s.classList.add('is-above');
+      w.append(s);
+    }
     return w;
   }
   function renderBlock(key) {
@@ -1276,6 +1297,7 @@ export function mountBlockEditor(root, opts = {}) {
     return f.value.trim();
   }
   function onInput(e) {
+    typedAt = performance.now();
     const f = e.target.closest && e.target.closest('[data-f]');
     if (!f || !page.contains(f)) return;
     const t = targetOf(f);
@@ -2047,7 +2069,32 @@ export function mountBlockEditor(root, opts = {}) {
       const i = keys.indexOf(key);
       w.classList.add('is-selected');
       w.append(stripOf(doc.blocks[i], i));
+      placeStrip(true);
     }
+  }
+  // Pane <1080px (CSS): the strip hangs BELOW the selected block, clear of its text. When that
+  // would leave the viewport it flips above, if the block's head has room under the sticky bar;
+  // with no room either side it stays put rather than cover the block. Decided on select, scroll
+  // and resize only; the scroll the browser makes to keep a typed caret in view is ignored, so the
+  // strip never jumps mid-sentence.
+  let typedAt = 0;
+  function placeStrip(force) {
+    const w = selKey && wrapOf(selKey);
+    const s = w && w.querySelector(':scope > .bed-strip');
+    if (!s) return;
+    if (getComputedStyle(s).getPropertyValue('--below').trim() !== '1') { s.classList.remove('is-above'); return; }
+    if (!force && performance.now() - typedAt < 500) return;
+    const h = s.offsetHeight + 8;
+    root.style.setProperty('--bed-strip-room', `${h}px`); // the end-of-post "Add block" clears it
+    const r = w.getBoundingClientRect();
+    const vv = window.visualViewport;
+    const floor = (vv ? vv.offsetTop + vv.height : innerHeight) - 8;
+    const ceil = Math.max(vv ? vv.offsetTop : 0, (typePanel.hidden ? bar : typePanel).getBoundingClientRect().bottom) + 8;
+    const was = s.classList.contains('is-above');
+    const fitsBelow = r.bottom + h <= floor - (was ? 24 : 0); // 24px of hysteresis: no flip-flop at the edge
+    const fitsAbove = r.top - h >= ceil;
+    const above = fitsBelow ? false : fitsAbove ? true : was;
+    if (above !== was) s.classList.toggle('is-above', above);
   }
   function moveBlock(from, to, o = {}) {
     if (from < 0 || to < 0 || to >= doc.blocks.length || to === from) return;
@@ -2474,6 +2521,7 @@ export function mountBlockEditor(root, opts = {}) {
       else if (pop.hidden) hideToolbar();
     }
     if (!menu.hidden) placeMenu();
+    placeStrip(false);
   }
 
   const listeners = [
@@ -2482,6 +2530,7 @@ export function mountBlockEditor(root, opts = {}) {
     [root, 'pointerdown', onPointerDown], [root, 'pointermove', onPointerMove], [root, 'pointerup', onPointerUp],
     [root, 'pointercancel', onPointerUp], [root, 'dragover', onDragOver], [root, 'dragleave', onDragLeave], [root, 'drop', onDrop],
     [document, 'selectionchange', onSelectionChange], [window, 'resize', reposition], [window, 'scroll', reposition, true],
+    ...(window.visualViewport ? [[window.visualViewport, 'resize', reposition], [window.visualViewport, 'scroll', reposition]] : []),
   ];
   for (const [t, ev, fn, cap] of listeners) t.addEventListener(ev, fn, cap || false);
   const onDocDown = (e) => {
@@ -2535,6 +2584,7 @@ export function mountBlockEditor(root, opts = {}) {
       delete root.dataset.title;
       delete root.dataset.body;
       delete root.dataset.leadin;
+      root.style.removeProperty('--bed-strip-room');
     },
   };
 }
