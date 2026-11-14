@@ -647,6 +647,61 @@ test('og internals: a hyphen-broken word fits, ends pieces in "-", keeps every l
 });
 
 // ---------------------------------------------------------------------------
+// Blog integration pins (713481f cover caption; U1/U2 "updated" rule; E1 fail-closed)
+// ---------------------------------------------------------------------------
+test('updatedAtOf (U1/U2): only an updatedAt on a later India day than the publish day counts', () => {
+  const at = (publishAt, updatedAt) => seo.updatedAtOf({ publishAt, updatedAt });
+  const PUB = '2026-11-04T09:00:00+05:30';
+  assert.equal(seo.updatedAtOf, require(path.join(ROOT, 'admin/content-rules.js')).updatedAtOf, 'one rule');
+  assert.equal(at(PUB, '2026-11-04T23:30:00+05:30'), '', 'same-day republish');
+  assert.equal(at(PUB, PUB), '');
+  assert.equal(at(PUB, '2026-11-03T10:00:00+05:30'), '', 'earlier than the publish (left from before a reschedule)');
+  assert.equal(at('2026-11-20T09:00:00+05:30', '2026-11-13T12:00:00+05:30'), '', 'a rescheduled once-live post');
+  assert.equal(at(PUB, '2026-11-05T00:10:00+05:30'), '2026-11-05T00:10:00+05:30', 'next India day, offset kept');
+  assert.equal(at(PUB, '2026-11-04T19:00:00Z'), '2026-11-04T19:00:00Z', 'UTC same day, India next day');
+  assert.equal(at('2026-11-04T20:00:00Z', '2026-11-05T10:00:00+05:30'), '', 'UTC next day, India same day');
+  assert.equal(at(PUB, ''), '');
+  assert.equal(at(PUB, 'not a date'), '');
+  assert.equal(at('', '2026-11-06T10:00:00+05:30'), '', 'no publish date');
+  assert.equal(seo.updatedAtOf(null), '');
+  // The outputs agree: no dateModified / lastmod from an ignored stamp.
+  const same = { ...p1, updatedAt: '2026-11-04T22:00:00+05:30' };
+  assert.equal(node(graphOf(seo.postJsonLd(ctx, same)), 'BlogPosting').dateModified, same.publishAt);
+  const entry = seo.sitemapEntries(makeCtx({ posts: [same] })).find((e) => e.includes(same.absUrl + '<'));
+  assert.ok(entry && entry.includes(`<lastmod>${same.publishAt}</lastmod>`), entry);
+});
+
+test('713481f: a cover caption stored as inline runs renders as text in every layout', () => {
+  const { renderPost } = require(path.join(ROOT, 'src/blog/render-post.js'));
+  const rctx = { depth: '../../', img: (src) => `<img src="${src}">`, films: [], contactHref: {}, postLinks: new Map(), blog: config, related: () => [], featured: [] };
+  const caption = (layout, cover) => {
+    const html = renderPost(rctx, { ...p1, layout, related: [], cover: { ...p1.cover, ...cover } });
+    assert.doesNotMatch(html, /\[object Object\]/, layout);
+    return (html.match(/<figcaption class="post-cover__caption">[\s\S]*?<\/figcaption>/) || [''])[0];
+  };
+  for (const layout of ['editorial', 'cover', 'split', 'guide']) {
+    assert.equal(caption(layout, { caption: [{ t: 'Checked at the ' }, { t: 'clinic', b: true }, { t: ' & home' }], credit: 'Photo: R' }),
+      '<figcaption class="post-cover__caption"><span>Checked at the <strong>clinic</strong> &amp; home</span><span class="post-cover__credit">Photo: R</span></figcaption>', layout);
+    assert.match(caption(layout, { caption: 'Plain <words>', credit: '' }), /<span>Plain &(?:lt|#60);words&(?:gt|#62);<\/span><\/figcaption>$/, layout);
+    assert.equal(caption(layout, { caption: [], credit: '' }), '', `${layout}: an empty caption and no credit: no caption at all`);
+  }
+});
+
+test('E1: a patient photo still waiting for the consent tick never goes outward', () => {
+  const pending = enrich({
+    ...base, id: 'p_pend', slug: 'pending-consent', status: 'published', publishAt: '2026-11-02T09:00:00+05:30',
+    category: 'c_foot', title: 'Pending', dek: 'Pending.', author: 'a_team',
+    cover: { src: 'assets/blog/pending-consent/cover.webp', alt: 'A wound', caption: '', credit: '', focal: { x: 0.5, y: 0.5 }, patient: true, consent: false },
+    blocks: [{ type: 'image', src: 'assets/blog/pending-consent/heel.webp', alt: 'Heel', width: 'column', align: 'center', patient: true, consent: false }],
+  });
+  const out = seo.sitemapEntries(makeCtx({ posts: [pending] })).join('');
+  assert.ok(out.includes(pending.absUrl), 'the post itself is listed');
+  assert.doesNotMatch(out, /pending-consent\/(cover|heel)/);
+  assert.doesNotMatch(JSON.stringify(seo.postJsonLd(ctx, pending)), /pending-consent\/cover/);
+  assert.doesNotMatch(JSON.stringify(seo.metaFor(ctx, { kind: 'post', post: pending })), /pending-consent\/cover/);
+});
+
+// ---------------------------------------------------------------------------
 (async () => {
   let failed = 0;
   for (const { name, fn } of tests) {

@@ -761,8 +761,10 @@ export const createPageEditor = ({ state, root, h, icon, markDirty, showStatus, 
     { file: 'films', tab: 'films', name: 'Videos', check: (draft) => rules.validateFilms(draft.films) },
     { file: 'company', tab: 'company', name: 'Company', check: (draft) => rules.validateCompanyLocation(draft.company) },
     { file: 'config', tab: 'appearance', name: 'Appearance', check: (draft) => rules.validateSeo(draft.config.seo) },
-    { file: 'blogPosts', tab: 'blog', name: 'Blog posts', check: (draft) => rules.validateBlogPosts(draft.blogPosts, draft.blogConfig, draft.films) },
-    { file: 'blogConfig', tab: 'blog', name: 'Blog settings', check: (draft) => rules.validateBlogConfig(draft.blogConfig) },
+    // The Blog tab has views, not sub-tabs: `heading` names the place, `view` and
+    // `action` make the toast's button open Blog > Settings (app.js open-tab).
+    { file: 'blogPosts', tab: 'blog', name: 'Blog', heading: 'Blog, Posts', check: (draft) => rules.validateBlogPosts(draft.blogPosts, draft.blogConfig, draft.films) },
+    { file: 'blogConfig', tab: 'blog', name: 'Blog', heading: 'Blog, Settings', view: 'settings', action: 'Open Blog settings', check: (draft) => rules.validateBlogConfig(draft.blogConfig) },
   ];
   const PER_GROUP = 3;
   const publishBlock = () => {
@@ -776,10 +778,10 @@ export const createPageEditor = ({ state, root, h, icon, markDirty, showStatus, 
     if (!groups.length) return null;
     // Each group is its own block so the heading sits on its errors and the
     // space falls between groups (styles.css .status-group).
-    const message = groups.map((group) => '<span class="status-group"><strong>' + h(group.name) + ' tab</strong>' +
+    const message = groups.map((group) => '<span class="status-group"><strong>' + h(group.heading || group.name + ' tab') + '</strong>' +
       group.errors.slice(0, PER_GROUP).map((error) => h(error)).join('<br>') +
       (group.errors.length > PER_GROUP ? '<br>…and ' + (group.errors.length - PER_GROUP) + ' more there.' : '') + '</span>').join('');
-    return { title: 'Cannot publish yet', message, tab: groups[0].tab, tabName: groups[0].name };
+    return { title: 'Cannot publish yet', message, tab: groups[0].tab, tabName: groups[0].name, view: groups[0].view, actionLabel: groups[0].action };
   };
 
   // After a blocked publish: open every part with an error and go to the

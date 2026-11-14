@@ -65,11 +65,17 @@ const istDate = (ms) => new Date(ms + IST_OFFSET_MS).toISOString().slice(0, 10);
 // <input type="datetime-local"> holds India wall-clock time, whatever the device's zone.
 const toLocalInput = (iso) => (validTime(iso) ? new Date(Date.parse(iso) + IST_OFFSET_MS).toISOString().slice(0, 16) : '');
 const fromLocalInput = (value) => (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) ? value + ':00+05:30' : '');
-const dayFormat = new Intl.DateTimeFormat('en-GB', { timeZone: IST, day: 'numeric', month: 'short' });
-const yearFormat = new Intl.DateTimeFormat('en-GB', { timeZone: IST, day: 'numeric', month: 'short', year: 'numeric' });
 const timeFormat = new Intl.DateTimeFormat('en-US', { timeZone: IST, hour: 'numeric', minute: '2-digit' });
 const clockFormat = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
-const shortDate = (ms) => (new Date(ms).getFullYear() === new Date().getFullYear() ? dayFormat : yearFormat).format(ms);
+// "30 Sep", with the year only when it isn't this year (India time). Fixed
+// 3-letter months: Chrome's own short month for September is "Sept", which
+// sat oddly next to "28 Oct".
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const shortDate = (ms) => {
+  const day = new Date(ms + IST_OFFSET_MS);
+  const year = day.getUTCFullYear();
+  return day.getUTCDate() + ' ' + MONTHS[day.getUTCMonth()] + (year === new Date(Date.now() + IST_OFFSET_MS).getUTCFullYear() ? '' : ' ' + year);
+};
 const whenIst = (iso) => (validTime(iso) ? shortDate(Date.parse(iso)) + ', ' + timeFormat.format(Date.parse(iso)).toLowerCase() + ' IST' : '');
 const slugify = (text) => (typeof blogBlocks().slugify === 'function'
   ? blogBlocks().slugify(String(text || ''))
@@ -82,15 +88,207 @@ const mapStrings = (value, fn) => {
   if (isObject(value)) return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, mapStrings(item, fn)]));
   return value;
 };
+// Every string in a value, read only (the delete's photo and reference scan).
+const eachString = (value, fn) => {
+  if (typeof value === 'string') fn(value);
+  else if (Array.isArray(value)) for (const item of value) eachString(item, fn);
+  else if (isObject(value)) for (const item of Object.values(value)) eachString(item, fn);
+};
+// Every inline link target in a value (runs carry { t, href }), like check-refs linksIn.
+const hrefsIn = (value, out = []) => {
+  if (Array.isArray(value)) for (const item of value) hrefsIn(item, out);
+  else if (isObject(value)) {
+    if (typeof value.href === 'string') out.push(value.href);
+    for (const [key, item] of Object.entries(value)) if (key !== 'href' && item && typeof item === 'object') hrefsIn(item, out);
+  }
+  return out;
+};
+// A link to a post (src/blog/check-refs.js INTERNAL): blog/<slug>/ with an optional #anchor.
+const POST_LINK = /^blog\/([a-z0-9]+(?:-[a-z0-9]+)*)\/(?:#.*)?$/;
+// A post's own photo; author photos (assets/blog/authors/) are shared, never deleted with a post.
+const POST_PHOTO = /^assets\/blog\/(?!authors\/)[A-Za-z0-9_-][A-Za-z0-9._-]*(?:\/[A-Za-z0-9_-][A-Za-z0-9._-]*)+$/;
+// On the site right now: published, or scheduled and its time has come (the
+// scheduled deploy builds it; nothing flips its status in posts.json). Drives the
+// status chip, list rows, filters, actions and confirm texts.
+const isLiveNow = (record, now = Date.now()) => Boolean(record) && (record.status === 'published' ||
+  (record.status === 'scheduled' && validTime(record.publishAt) && Date.parse(record.publishAt) <= now));
 // A post that may have been seen by readers: its old address must keep working.
-const everLive = (live) => Boolean(live) && (live.status === 'published' || live.status === 'unpublished' ||
-  (live.status === 'scheduled' && validTime(live.publishAt) && Date.parse(live.publishAt) <= Date.now()));
+// An unpublished record with no publish date was unscheduled before it ever went
+// live (buildNext clears the date then), so it never had readers. A scheduled
+// record that carries an "updated" date or an old address was on the site before
+// it was rescheduled (buildNext stamps updatedAt then; the site ignores an
+// updatedAt that is not after publishAt).
+const hadReaders = (live) => validTime(live.updatedAt) || (Array.isArray(live.previousSlugs) && live.previousSlugs.length > 0);
+const everLive = (live) => isLiveNow(live) || (Boolean(live) && ((live.status === 'unpublished' && validTime(live.publishAt)) ||
+  (live.status === 'scheduled' && hadReaders(live))));
+// The status the admin sees: a due scheduled post is Published, and a post taken
+// off the schedule before it ever went live is a Draft again.
+const shownStatus = (live) => {
+  if (!live) return 'draft';
+  if (isLiveNow(live)) return 'published';
+  if (live.status === 'scheduled') return 'scheduled';
+  return everLive(live) ? 'unpublished' : 'draft';
+};
+// The post's address on the live site (blog-seo.js SITE).
+const SITE = 'https://medivasc.in/';
+const liveUrl = (slug) => SITE + 'blog/' + slug + '/';
 // "Blog post “X”: the image …" → "The image …", "Blog post “X” needs …" → "This post needs …".
 const ownWords = (message) => {
   const match = /^Blog post (?:“[^”]*”|\d+)(,\s*|:\s*|\s+)/.exec(message);
   if (!match) return message;
   const rest = message.slice(match[0].length);
   return match[1].trim() ? rest.charAt(0).toUpperCase() + rest.slice(1) : 'This post ' + rest;
+};
+
+// Named like failCopy, for what the post was when the button was pressed.
+const notSent = (intent, was) => (intent === 'schedule' ? 'Not scheduled yet'
+  : intent === 'unpublish' ? (isLiveNow(was) ? 'Not taken off the site yet' : 'Not taken off the schedule yet')
+    : intent === 'delete-post' ? 'Not deleted yet'
+      : isLiveNow(was) ? 'Changes not published yet' : 'Not published yet');
+// A failed commit, named for what was tried (app.js publish `failed`). Nothing
+// reached the site and the post is still in the editor, so the retry is the
+// same button, not the header's Save & Publish.
+const failCopy = (intent, c) => ({
+  title: intent === 'schedule' ? 'Not scheduled'
+    : intent === 'unpublish' ? (isLiveNow(c.live) ? 'Not taken off the site' : 'Not taken off the schedule')
+      : intent === 'delete' ? 'Not deleted'
+        : isLiveNow(c.live) ? 'Changes not published' : 'Not published',
+  // app.js describeApiError adds what to do (once) and the error number.
+  reassure: 'Nothing changed on the site, and your post is still here.',
+});
+
+// The posts.json that a publish / schedule / unpublish of post `c` would commit,
+// from the committed posts `before` at `now` (ms). Pure: buildNext feeds it.
+const planNext = (before, c, intent, now) => {
+  const index = before.findIndex((post) => post.id === c.id);
+  const live = index >= 0 ? before[index] : null;
+  const images = [];
+  let next;
+  if (intent === 'unpublish') {
+    if (!live) return null;
+    next = { ...clone(live), status: 'unpublished' };
+    // Taken off the schedule before it ever went live (no update on the site,
+    // no old address): it has had no readers, so it is a Draft again (no
+    // publish date), not "Unpublished".
+    if (live.status === 'scheduled' && !isLiveNow(live, now) && !hadReaders(live)) next.publishAt = '';
+  } else {
+    next = clone(c.post);
+    next.id = c.id;
+    if (!next.slug) next.slug = slugify(next.title);
+    // Redirect baseline = the committed record, not this draft's copy. posts() is
+    // what the last successful publish committed (a failed one rolls back to it),
+    // so every address it ever had carries forward even when the draft is older
+    // than that publish (a leftover draft, or one saved on another device).
+    const arr = (value) => (Array.isArray(value) ? value : []);
+    const previous = new Set([...arr(live?.previousSlugs), ...arr(next.previousSlugs)]);
+    if (live && everLive(live) && live.slug && live.slug !== next.slug) previous.add(live.slug);
+    previous.delete(next.slug);
+    next.previousSlugs = [...previous].filter(Boolean);
+    // Dates: a post already on the site keeps the date it went live (or the one
+    // set here, which commitPost has checked is not ahead) and is marked updated
+    // now. Anything else goes live now, with no "updated" date: an older one
+    // would read as a change made before the post was published. A scheduled
+    // post goes live on its own date, so it carries no "updated" date either.
+    if (intent === 'publish') {
+      if (isLiveNow(live, now)) {
+        next.publishAt = validTime(next.publishAt) ? next.publishAt : validTime(live.publishAt) ? live.publishAt : istIso(now);
+        next.updatedAt = istIso(now);
+      } else {
+        next.publishAt = istIso(now);
+        delete next.updatedAt;
+      }
+      next.status = 'published';
+    } else {
+      // Rescheduling a post readers have seen stamps "updated" now: that marks
+      // it as once live (everLive), so taking it off the schedule later keeps
+      // it Unpublished with its old address working, not a fresh Draft.
+      if (everLive(live)) next.updatedAt = istIso(now);
+      else delete next.updatedAt;
+      next.status = 'scheduled';
+    }
+    next = mapStrings(next, (value) => {
+      const name = draftName(value);
+      if (name === null) return value;
+      if (!images.includes(name)) images.push(name);
+      return 'assets/blog/' + next.slug + '/' + name;
+    });
+  }
+  const nextPosts = index >= 0 ? before.map((post, i) => (i === index ? next : post)) : [next, ...before];
+  return { next, nextPosts, index: index >= 0 ? index : 0, images, before };
+};
+
+// What deleting an UNPUBLISHED post would commit, or null for any other post.
+// posts.json loses the record (and its previousSlugs, so those addresses are
+// free again: an unpublished post's URLs already 404, so no redirects are
+// added); every other post's related list and the featured list lose its id;
+// redirects that lead to one of its addresses go (they would lead to a 404);
+// its photos under assets/blog/ go too, unless anything else still uses one.
+// A link to it from another post's text is never rewritten (see linkedFrom).
+// Pure: buildDelete feeds it the committed posts and settings, the admin's
+// working data (state.draft) and the saved drafts of other posts (id -> { post }),
+// and adds the publish checks.
+const planDelete = (before, cfg, c, draftData, otherDrafts) => {
+  const record = before.find((post) => post.id === c.id);
+  if (!record || record.status !== 'unpublished') return null;
+  const arr = (value) => (Array.isArray(value) ? value : []);
+  const gone = new Set([record.slug, ...arr(record.previousSlugs)].filter((slug) => typeof slug === 'string' && slug));
+  const leadsHere = (url) => {
+    const m = POST_LINK.exec(typeof url === 'string' ? url : '');
+    return Boolean(m) && gone.has(m[1]);
+  };
+
+  let nextConfig = cfg;
+  const featured = arr(cfg.featured).filter((id) => id !== c.id);
+  const redirects = arr(cfg.redirects).filter((r) => !(isObject(r) && leadsHere(r.to)));
+  if (featured.length !== arr(cfg.featured).length || redirects.length !== arr(cfg.redirects).length) {
+    nextConfig = { ...cfg };
+    if (Array.isArray(cfg.featured)) nextConfig.featured = featured;
+    if (Array.isArray(cfg.redirects)) nextConfig.redirects = redirects;
+  }
+
+  const nextPosts = before.filter((post) => post !== record)
+    .map((post) => (arr(post.related).includes(c.id) ? { ...post, related: post.related.filter((id) => id !== c.id) } : post));
+
+  // Which post a blog/<slug>/ link opens, exactly as check-refs resolves it.
+  const bySlug = new Map();
+  for (const post of before) {
+    for (const slug of [post.slug, ...arr(post.previousSlugs)]) if (typeof slug === 'string' && slug && !bySlug.has(slug)) bySlug.set(slug, post);
+  }
+  const redirectTo = new Map();
+  for (const r of arr(cfg.redirects)) {
+    const from = isObject(r) ? POST_LINK.exec(typeof r.from === 'string' ? r.from : '') : null;
+    const to = isObject(r) ? POST_LINK.exec(typeof r.to === 'string' ? r.to : '') : null;
+    if (from && to) redirectTo.set(from[1], to[1]);
+  }
+  const opens = (slug) => bySlug.get(slug) || (redirectTo.has(slug) ? bySlug.get(redirectTo.get(slug)) : undefined);
+  const linking = nextPosts.filter((post) => hrefsIn([post.cover, post.blocks]).some((href) => {
+    const m = POST_LINK.exec(href);
+    return Boolean(m) && opens(m[1]) === record;
+  }));
+
+  // Photos: this post's committed files, minus any path still named anywhere
+  // else (any data file, the settings that will be committed, another post's
+  // saved draft). Author photos never match POST_PHOTO.
+  const photos = new Set();
+  eachString(record, (value) => {
+    const path = value.replace(/^\/+/, '');
+    if (POST_PHOTO.test(path) && !path.split('/').includes('..')) photos.add(path);
+  });
+  const elsewhere = [];
+  const collect = (value) => eachString(value, (text) => elsewhere.push(text));
+  for (const [key, value] of Object.entries(draftData)) {
+    if (key === 'blogPosts') collect(nextPosts);
+    else if (key === 'blogConfig') collect(nextConfig);
+    else collect(value);
+  }
+  for (const [id, cached] of otherDrafts) if (id !== c.id) collect(cached.post);
+  const deletes = [...photos].filter((path) => !elsewhere.some((text) => text.includes(path)));
+
+  // A link to it from another post's text is never rewritten and never blocks:
+  // the build shows a link to a post that isn't live as plain words. The
+  // confirm names those posts so nothing changes silently.
+  const linkedFrom = linking.map((post) => String(post.title || '').trim() || 'Untitled post');
+  return { before, nextPosts, nextConfig, configChanged: nextConfig !== cfg, deletes, linkedFrom };
 };
 
 // The type settings validateBlogPosts requires on every post.
@@ -145,7 +343,8 @@ const layoutArt = (id) => {
 
 /**
  * @param {object} ctx from app.js: { state, h, icon, markDirty, clearDirty, renderUnsaved,
- *   showStatus, stageBlob, committedAssetUrl, publish({ message }) → Promise<boolean>,
+ *   showStatus, stageBlob, committedAssetUrl, unstageAsset(path), deleteAsset(path),
+ *   publish({ message, ownStatus?, done?: { title, message }, failed?: { title, note } }) → Promise<boolean>,
  *   otherUnsavedTabs() → [tab names], apiBase(), sessionToken() }
  * @returns {{ mount(root), owns(node), hasUnsavedDraft() }}
  */
@@ -173,7 +372,15 @@ export const createBlogTab = (ctx) => {
   let viewParts = {}; // settings / calendar component handles
   let alert = { handle: null, api: null };
   let busy = false;
+  // Set from a click on Publish/Schedule/Unpublish/Delete until it is sent or
+  // given up: the checks before `busy` await, and a second click must not slip in.
+  let starting = false;
   let seenPosts = null;
+  // The config and company the open Blog settings view last read: when either is
+  // replaced elsewhere (the Company tab renames the clinic author, a reload), the
+  // view refreshes the next time the Blog tab shows.
+  let seenSettings = { config: null, company: null };
+  const noteSettings = () => { seenSettings = { config: state.draft.blogConfig, company: state.draft.company }; };
 
   // ---------------------------------------------------------------- data
 
@@ -207,7 +414,7 @@ export const createBlogTab = (ctx) => {
     }
     return [...map.values()].map((entry) => ({ ...entry, post: draftPosts.get(entry.id)?.post || entry.live || null }));
   };
-  const statusOf = (entry) => (entry.live ? entry.live.status : 'draft');
+  const statusOf = (entry) => shownStatus(entry.live);
   // Sort key: a post scheduled ahead sorts by its date, so upcoming posts lead.
   const updatedOf = (entry) => Math.max(entry.draft?.updated_at || 0, Date.parse(entry.live?.updatedAt || '') || 0, Date.parse(entry.live?.publishAt || '') || 0);
   // The row's date line: the last real change. A publish date still ahead is not
@@ -227,6 +434,12 @@ export const createBlogTab = (ctx) => {
     draftPosts.set(id, { updated_at: updatedAt, post: clone(post), assets: draftPosts.get(id)?.assets || [] });
     const meta = { id, slug: post.slug || '', title: post.title || '', updated_at: updatedAt };
     draftList = [meta, ...(draftList || []).filter((row) => row.id !== id)];
+    // A save that lands after the list is back (the editor's last change flushed
+    // as a post closed) must show as "Changes not on the site yet" right away.
+    if (tab.view === 'list' && !cur) {
+      if (viewEl.querySelector('[data-bt-rows]')) paintRows();
+      else paintList(); // the empty state has no rows to update
+    }
   };
   const forgetDraft = (id) => {
     draftPosts.delete(id);
@@ -351,11 +564,15 @@ export const createBlogTab = (ctx) => {
     (extra.tint ? ' data-tint="' + h(extra.tint) + '"' : '') + (extra.attrs || '') + '>' +
     (extra.tint ? '<span class="bt-dot" aria-hidden="true"></span>' : '') + h(label) +
     (extra.count != null ? '<span class="bt-chip__n">' + extra.count + '</span>' : '') + '</button>';
+  // "View on site": the live post in a new tab (the name starts with the visible words).
+  const viewLink = (slug, cls, title = '') => '<a class="bt-view-site ' + cls + '" href="' + h(liveUrl(slug)) + '" target="_blank" rel="noopener"' +
+    ' aria-label="View on site' + (title ? ': “' + h(title) + '”' : '') + ' (opens a new tab)">View on site</a>';
   const tintChip = (category) => '<span class="bt-tint" data-tint="' + h(category.tint || 'slate') + '">' + h(category.name) + '</span>';
-  // `publishedOn` (a list row of a live post with no pending edits): the status and
-  // its date are one line, "● Published 4 Nov", read once by a screen reader.
-  const statusChip = (status, publishAt, publishedOn = '') => (publishedOn
-    ? '<span class="bt-status bt-status--dated" data-status="published">Published ' + h(publishedOn) + '</span>'
+  // `publishedOn` (a list row of a live post): the status and its dates are one
+  // line, "● Published 30 Sep · updated 2 Nov", read once by a screen reader.
+  const statusChip = (status, publishAt, publishedOn = '', updatedOn = '') => (publishedOn
+    ? '<span class="bt-status bt-status--dated" data-status="published"><span>Published ' + h(publishedOn) +
+      (updatedOn ? '<span class="bt-status__when"> · updated ' + h(updatedOn) + '</span>' : '') + '</span></span>'
     : '<span class="bt-status" data-status="' + h(status) + '"><span>' + h(STATUS[status] || 'Draft') +
       (status === 'scheduled' && validTime(publishAt) ? '<span class="bt-status__when"> · ' + h(whenIst(publishAt)) + '</span>' : '') + '</span></span>');
 
@@ -385,15 +602,24 @@ export const createBlogTab = (ctx) => {
     const category = categoryById(post.category);
     const updated = touchedOf(entry);
     const title = titleOf(entry);
-    const publishedOn = status === 'published' && !entry.draft && updated ? shortDate(updated) : '';
-    return '<li><button class="bt-row" type="button" data-bt="open" data-id="' + h(entry.id) + '">' + thumb(entry) +
+    // A live post's dates are its publish date and, when later, its last published
+    // update; a pending draft is flagged, not dated (it isn't on the site).
+    const live = isLiveNow(entry.live);
+    const publishedMs = live ? Date.parse(entry.live.publishAt || '') : NaN;
+    const updatedMs = live ? Date.parse(entry.live.updatedAt || '') : NaN;
+    const publishedOn = Number.isFinite(publishedMs) ? shortDate(publishedMs) : '';
+    const updatedOn = publishedOn && Number.isFinite(updatedMs) && updatedMs > publishedMs && shortDate(updatedMs) !== publishedOn ? shortDate(updatedMs) : '';
+    // The row is one button; "View on site" sits beside it in the item (a link
+    // can't live inside a button), over room the row keeps free for it.
+    return '<li' + (live && entry.live.slug ? ' class="bt-rows__live"' : '') + '><button class="bt-row" type="button" data-bt="open" data-id="' + h(entry.id) + '">' + thumb(entry) +
       '<span class="bt-row__body"><span class="bt-row__title' + (title ? '' : ' bt-row__title--empty') + '">' + h(title || 'Untitled post') + '</span>' +
       '<span class="bt-row__meta">' + (category ? tintChip(category) : '') +
       (post.slug ? '<span class="bt-row__slug">blog/' + h(post.slug) + '/</span>' : '') + '</span></span>' +
-      '<span class="bt-row__side">' + statusChip(status, entry.live?.publishAt, publishedOn) +
-      (entry.live && entry.draft ? '<span class="bt-edits">Unpublished edits</span>' : '') +
+      '<span class="bt-row__side">' + statusChip(status, entry.live?.publishAt, publishedOn, updatedOn) +
+      (entry.live && entry.draft ? '<span class="bt-edits">Changes not on the site yet</span>' : '') +
       (updated && !publishedOn ? '<span class="bt-row__date">Updated ' + h(shortDate(updated)) + '</span>' : '') +
-      '</span></button></li>';
+      '</span></button>' +
+      (live && entry.live.slug ? viewLink(entry.live.slug, 'bt-row__view', title) : '') + '</li>';
   };
 
   const filtered = (all) => {
@@ -449,6 +675,7 @@ export const createBlogTab = (ctx) => {
     const key = focused && focused.dataset.bt ? '[data-bt="' + focused.dataset.bt + '"][data-value="' + CSS.escape(focused.dataset.value || '') + '"]' : null;
     viewEl.innerHTML = '<section class="bt-list">' + toolbar() + body + '</section>';
     if (key) viewEl.querySelector(key)?.focus();
+    ctx.renderUnsaved();
   };
 
   const paintRows = () => {
@@ -466,6 +693,7 @@ export const createBlogTab = (ctx) => {
         layoutArt(layout.id) + '<span class="bt-layout__name">' + h(layout.name) + '</span><span class="bt-layout__note">' + h(layout.note) + '</span></button>').join('') +
       '</div></section>';
     viewEl.querySelector('.bt-layout')?.focus();
+    ctx.renderUnsaved();
   };
 
   // ---------------------------------------------------------------- settings / calendar views
@@ -508,6 +736,7 @@ export const createBlogTab = (ctx) => {
   const paintManaged = async (view) => {
     destroyViewParts();
     viewEl.innerHTML = '<section class="bt-list">' + toolbar() + '<div class="bt-managed" data-part="' + view + '"><p class="bt-loading">Opening…</p></div></section>';
+    ctx.renderUnsaved();
     const el = viewEl.querySelector('[data-part]');
     const wanted = () => tab.view === view && el.isConnected;
     const handle = view === 'settings'
@@ -515,24 +744,27 @@ export const createBlogTab = (ctx) => {
         getConfig: () => state.draft.blogConfig,
         onChange: (next) => {
           state.draft.blogConfig = next;
+          seenSettings.config = next;
           ctx.markDirty('blogConfig');
         },
         posts: allPosts,
         stageAsset,
         unstageAsset: (src) => ctx.unstageAsset?.(src),
         onMovePosts: movePosts,
+        getCompany: () => state.draft.company,
         h,
         icon,
       }, 'Blog settings', wanted)
       : await mountPart('manage', 'mountCalendar', el, { posts: allPosts, onOpen: (id) => openPost(id) }, 'The calendar', wanted);
     if (handle) viewParts[view] = handle;
+    if (handle && view === 'settings') noteSettings();
   };
 
   // Blog settings photos (authors) are committed files, not drafts: they are
   // staged straight into the next publish. The pinned form is
   // stageAsset(file, { purpose }) → { src }; an older (path, blob) call still works.
-  // blog-manage.js has already resized the photo and named it <author-slug>.<ext>,
-  // so the blob is staged as it is, at assets/blog/authors/<author-slug>.<ext>.
+  // blog-manage.js has already resized the photo and named it <author-slug>-<id>.<ext>,
+  // so the blob is staged as it is, at assets/blog/authors/<author-slug>-<id>.<ext>.
   // The same author uploading again lands on the same path, and the newer bytes
   // replace the staged ones (app.js stageEncoded keys staged files by path).
   const stageAsset = async (file, options) => {
@@ -559,7 +791,7 @@ export const createBlogTab = (ctx) => {
     const mod = await loadModule('manage');
     if (alert.api !== state.api || !mod || typeof mod.mountScheduleAlert !== 'function') return;
     try {
-      alert.handle = mod.mountScheduleAlert(alertSlot, { gh: state.api }) || null;
+      alert.handle = mod.mountScheduleAlert(alertSlot, { gh: state.api, posts }) || null;
     } catch (error) {
       console.warn('[blog] mountScheduleAlert failed', error);
     }
@@ -579,7 +811,8 @@ export const createBlogTab = (ctx) => {
     else if (mode === 'conflict') html = 'Changed elsewhere';
     else {
       mode = 'idle';
-      html = c.hasDraft ? 'Saved' : c.live ? 'No unpublished edits' : 'Not saved yet';
+      // No draft: the editor holds the post exactly as published or scheduled.
+      html = c.hasDraft ? 'Saved' : isLiveNow(c.live) ? 'Matches the live post' : c.live?.status === 'scheduled' ? 'Matches the scheduled post' : c.live ? 'Saved' : 'Not saved yet';
     }
     el.dataset.state = mode;
     el.innerHTML = html;
@@ -658,13 +891,33 @@ export const createBlogTab = (ctx) => {
   const paintConflict = (c) => {
     if (c.saveState !== 'conflict') return setNote(c, 'conflict', '');
     const deleted = c.conflict && c.conflict.serverUpdatedAt == null;
-    const who = c.conflict && c.conflict.updatedBy ? ' by ' + h(c.conflict.updatedBy) : '';
+    // No "by …": the drafts service records the GitHub account name, which is
+    // the owner's own on every device, not a name they chose.
+    if (c.conflict && c.conflict.blocked) return setNote(c, 'conflict', blockedHtml(c, deleted));
     setNote(c, 'conflict', '<div class="bt-conflict" role="alert"><div><strong>' +
-      (deleted ? 'This draft was deleted on another device or tab.' : 'This draft was changed on another device or tab' + who + '.') + '</strong>' +
+      (deleted ? 'This draft was deleted on another device or tab.' : 'This draft was changed on another device or tab.') + '</strong>' +
       '<span>' + (deleted ? 'Keep your copy to save it again, or close it.' : 'Choose which version to keep. Your edits here are not lost until you choose.') + '</span></div>' +
       '<div class="bt-conflict__actions"><button class="button button--primary" type="button" data-bt="keep-mine">Keep mine</button>' +
       (deleted ? '<button class="button button--quiet" type="button" data-bt="back">Close it</button>'
         : '<button class="button button--quiet" type="button" data-bt="load-theirs">Load theirs</button>') + '</div></div>');
+  };
+
+  // The note after an action was stopped because another device or tab saved
+  // this post after this one last did (draftIsCurrent). Nothing was done, so
+  // the safe way on is their version; "Keep mine" only when there is more here
+  // than this device last saved (else it would only put an older copy back).
+  const blockedHtml = (c, deleted) => {
+    const keep = c.dirty ? '<button class="button button--quiet" type="button" data-bt="keep-mine">Keep mine</button>' : '';
+    if (deleted && !c.live) {
+      return '<div class="bt-conflict" role="alert"><div><strong>This draft was deleted on another device or tab.</strong>' +
+        '<span>' + (c.dirty ? 'Nothing was changed here. Keep your copy to save it again, or close it.' : 'Nothing was changed here. Close it to go back to your posts.') + '</span></div>' +
+        '<div class="bt-conflict__actions">' + keep + '<button class="button button--quiet" type="button" data-bt="back">Close it</button></div></div>';
+    }
+    return '<div class="bt-conflict" role="alert"><div><strong>' +
+      (deleted ? 'The unpublished changes to this post were published or discarded on another device or tab.' : 'A newer version of this post was saved on another device or tab.') + '</strong>' +
+      '<span>Nothing was changed here, so that work is safe. Load the newer version, then try again.' +
+      (c.dirty ? (deleted ? ' Or keep yours to save them again.' : ' Or keep yours to save it in place of theirs.') : '') + '</span></div>' +
+      '<div class="bt-conflict__actions"><button class="button button--primary" type="button" data-bt="load-newer">Load newer version</button>' + keep + '</div></div>';
   };
 
   const keepMine = async (c) => {
@@ -701,6 +954,119 @@ export const createBlogTab = (ctx) => {
     } catch (error) {
       showStatus('Couldn’t load their version', h(error.message));
     }
+  };
+
+  // "Load newer version" in the note an action was stopped by (blockedHtml).
+  const loadNewer = async (c) => {
+    if (!(c.conflict && c.conflict.serverUpdatedAt == null && c.live)) return loadTheirs(c);
+    // Their draft is gone (published or discarded there): open the post as it is on the site.
+    clearTimeout(c.timer);
+    c.timer = null;
+    c.dirty = false;
+    c.saveState = 'idle';
+    c.savedAt = null;
+    c.conflict = null;
+    forgetDraft(c.id);
+    await replacePost(c, c.live, { version: null, hasDraft: false });
+    paintSave(c);
+  };
+
+  // ---------------------------------------------------------------- post view: before an action
+
+  // The editor batches typing for ~240 ms before it reaches c.post: hand the last
+  // keystrokes over before an action reads c.post. Without a flush() on the
+  // handle, setPost does it: it flushes first, then finds the post unchanged and
+  // returns. It gets c.post itself, never a clone: a clone taken before that
+  // flush lacks those keystrokes and would reset the editor to the older text.
+  const flushEditor = (c) => {
+    const editor = c && c.handles && c.handles.editor;
+    if (!editor) return;
+    if (typeof editor.flush === 'function') call(editor, 'flush');
+    else call(editor, 'setPost', c.post);
+  };
+
+  // Stops an action: another device or tab saved this post (or removed its
+  // draft) after this one last did. Nothing is published or deleted; the
+  // conflict note offers the newer version (blockedHtml).
+  const blockStale = (c, server) => {
+    clearTimeout(c.timer);
+    c.timer = null;
+    c.saveState = 'conflict';
+    c.conflict = { serverUpdatedAt: server ? server.updated_at : null, updatedBy: (server && server.updated_by) || '', blocked: true };
+    paintSave(c);
+    if (c === cur) paintBar();
+  };
+  const showConflictNote = (c) => {
+    if (c === cur && narrowQuery.matches) viewEl.querySelector('[data-note="conflict"]')?.scrollIntoView({ block: 'center' });
+  };
+
+  // Before publishing, scheduling or deleting: is the draft in the drafts store
+  // still the one this device saved last? If another device saved a newer one,
+  // or it is gone while this one had saved it, acting would put an old copy
+  // live and then delete their work, so the action stops (blockStale). If the
+  // check itself fails (offline), the action goes ahead with c.keepDraft set,
+  // and the draft is then never removed afterwards (removeOwnDraft).
+  const draftIsCurrent = async (c) => {
+    busy = true;
+    paintBar();
+    c.keepDraft = false;
+    c.checkError = null;
+    let rearm = false;
+    try {
+      for (let round = 0; round < 3; round += 1) {
+        // No autosave may land mid-check: its new version would read as someone else's.
+        if (c.timer) rearm = true;
+        clearTimeout(c.timer);
+        c.timer = null;
+        if (c.saving) await c.saving;
+        if (c.saveState === 'conflict') {
+          showConflictNote(c);
+          return false;
+        }
+        const mine = c.version ?? null;
+        let server;
+        try {
+          server = await api().version(c.id);
+        } catch (error) {
+          c.keepDraft = true;
+          c.checkError = error;
+          return true;
+        }
+        if (c.saving || (c.version ?? null) !== mine) continue; // our own save landed meanwhile
+        if ((server ? server.updated_at : null) === mine) return true;
+        blockStale(c, server);
+        showConflictNote(c);
+        return false;
+      }
+      c.keepDraft = true;
+      return true;
+    } finally {
+      busy = false;
+      // A change typed before the check still saves on the usual pause.
+      if (rearm && c.dirty && !c.timer && !c.saving && (c.saveState === 'pending' || c.saveState === 'error')) {
+        c.timer = setTimeout(() => saveNow(c), c.saveState === 'error' ? RETRY_MS : AUTOSAVE_MS);
+      }
+      paintBar();
+    }
+  };
+
+  // After an action that ends this post's draft: deletes it from the drafts
+  // store only while it is still the version this device saved last.
+  // -> null when no draft of this device's is left; otherwise what was kept:
+  // the newer draft's { updated_at, updated_by }, or true when it wasn't
+  // checked (c.keepDraft). Throws when the drafts store can't be reached.
+  const removeOwnDraft = async (c) => {
+    if (c.keepDraft) return true;
+    if (c.version == null) return null;
+    const server = await api().version(c.id);
+    if (!server) return null;
+    if (server.updated_at !== c.version) return server;
+    try {
+      await api().remove(c.id);
+    } catch (error) {
+      if (error.code !== 'not-found') throw error;
+    }
+    return null;
   };
 
   // ---------------------------------------------------------------- post view: changes
@@ -763,6 +1129,7 @@ export const createBlogTab = (ctx) => {
   const stats = (post) => {
     try {
       const words = (String(blogBlocks().plainText ? blogBlocks().plainText(post) : '').match(/\S+/g) || []).length;
+      if (!words) return 'No words yet';
       const minutes = blogBlocks().readingMinutes ? blogBlocks().readingMinutes(post) : Math.max(1, Math.round(words / 220));
       return words.toLocaleString('en-IN') + ' word' + (words === 1 ? '' : 's') + ' · ' + minutes + ' min read';
     } catch {
@@ -770,25 +1137,33 @@ export const createBlogTab = (ctx) => {
     }
   };
 
+  // What the committed record is right now: on the site (published, or scheduled
+  // and its time has come), waiting on the schedule, or off the site.
+  const stageOf = (live) => (!live ? 'none' : isLiveNow(live) ? 'live' : live.status === 'scheduled' ? 'waiting' : 'off');
   const actionsFor = (c) => {
-    const status = c.live ? c.live.status : 'draft';
+    const stage = stageOf(c.live);
     const edits = c.hasDraft || c.dirty;
     const out = [];
+    // Only a post that is off the site can be deleted for good. It leads the
+    // actions, as far from Publish as the bar allows.
+    if (stage === 'off') out.push(['delete-post', 'Delete permanently', 'button--text bt-danger']);
     if (!c.live) out.push(['delete', 'Delete draft', 'button--text']);
     else if (edits) out.push(['discard', 'Discard edits', 'button--text']);
-    if (c.live && status !== 'unpublished') out.push(['unpublish', status === 'scheduled' ? 'Unschedule' : 'Unpublish', 'button--quiet']);
-    out.push(['schedule', status === 'scheduled' ? 'Reschedule' : 'Schedule', 'button--quiet']);
-    if (status === 'published') out.push(['publish', 'Publish changes', 'button--primary', !edits]);
+    if (stage === 'live') out.push(['unpublish', 'Unpublish', 'button--quiet']);
+    else if (stage === 'waiting') out.push(['unpublish', 'Unschedule', 'button--quiet']);
+    out.push(['schedule', stage === 'waiting' ? 'Reschedule' : 'Schedule', 'button--quiet']);
+    if (stage === 'live') out.push(['publish', 'Publish changes', 'button--primary', !edits]);
     else out.push(['publish', 'Publish now', 'button--primary']);
     return out;
   };
+  const publishLabel = (c) => (actionsFor(c).find(([action]) => action === 'publish') || [])[1] || 'Publish now';
 
   const paintBar = () => {
     const c = cur;
     if (!c) return;
     const status = viewEl.querySelector('[data-bt-status]');
     if (!status) return;
-    const statusHtml = statusChip(c.live ? c.live.status : 'draft', c.live?.publishAt) + (c.live && (c.hasDraft || c.dirty) ? '<span class="bt-edits">Unpublished edits</span>' : '');
+    const statusHtml = statusChip(shownStatus(c.live), c.live?.publishAt) + (c.live && (c.hasDraft || c.dirty) ? '<span class="bt-edits">Changes not on the site yet</span>' : '');
     if (status.innerHTML !== statusHtml) status.innerHTML = statusHtml;
     viewEl.querySelector('[data-bt-meta]').textContent = stats(c.post);
     const actions = viewEl.querySelector('[data-bt-actions]');
@@ -845,6 +1220,12 @@ export const createBlogTab = (ctx) => {
 
   const historyAvailable = (c) => everLive(c.live);
 
+  // The post bar wraps to two or three rows on a phone (and while it says "Saving"), so its real
+  // height goes to --bt-bar-h on <html>; blog-admin.css stacks the editor's sticky bars under it
+  // and widens scroll-padding so a typed caret or a focused field never hides behind them.
+  const barSize = new ResizeObserver((entries) => {
+    for (const e of entries) document.documentElement.style.setProperty('--bt-bar-h', e.target.offsetHeight + 'px');
+  });
   const paintPost = () => {
     const c = cur;
     const panes = PANES.filter(([key]) => key !== 'history' || historyAvailable(c));
@@ -866,9 +1247,12 @@ export const createBlogTab = (ctx) => {
       '<div data-part="preview" class="bt-preview"><p class="bt-loading">Opening…</p></div></section>' +
       (historyAvailable(c) ? '<section class="bt-pane" data-pane-id="history"><div data-part="history"><p class="bt-loading">Opening…</p></div></section>' : '') +
       '</aside></section>';
+    barSize.disconnect();
+    barSize.observe(viewEl.querySelector('.bt-bar'));
     syncPanes();
     paintSave(c);
     paintBar();
+    ctx.renderUnsaved();
     mountComponents(c);
   };
 
@@ -901,6 +1285,8 @@ export const createBlogTab = (ctx) => {
       stageImage: (file, options) => stageImage(c, file, options),
       resolveSrc,
       films: films(),
+      hasPhone: () => Boolean(contactHref().call),
+      posts: allPosts,
       historyButtons: false,
       h,
       icon,
@@ -917,6 +1303,9 @@ export const createBlogTab = (ctx) => {
       allPosts,
       config: config(),
       resolveSrc,
+      // The committed record decides whether readers have seen this address (the
+      // draft's own status can't tell a reopened draft from a post taken down).
+      everLive: () => everLive(c.live),
       h,
       icon,
     }, 'The SEO panel', wanted).then((handle) => { c.handles.seo = handle; });
@@ -929,6 +1318,7 @@ export const createBlogTab = (ctx) => {
         postId: c.id,
         gh: state.api,
         onRestore: (post) => restoreRevision(c, post),
+        isLive: () => isLiveNow(c.live),
       }, 'History', wanted).then((handle) => { c.handles.revisions = handle; });
     }
   };
@@ -943,7 +1333,7 @@ export const createBlogTab = (ctx) => {
     const keep = { id: c.id };
     await replacePost(c, { ...post, ...keep });
     scheduleSave(c);
-    showStatus('Older version restored as a draft', 'It is not live yet. Check it, then press Publish changes to put it on the site.');
+    showStatus('Older version restored as a draft', 'It is not live yet. Check it, then press ' + publishLabel(c) + ' to put it on the site.');
   };
 
   // ---------------------------------------------------------------- open / close
@@ -1019,7 +1409,12 @@ export const createBlogTab = (ctx) => {
       paintList();
       refreshDrafts();
     } else if (view === 'new') paintPicker();
-    else paintManaged(view);
+    else return paintManaged(view);
+  };
+  // The publish gate's "Open Blog settings" (app.js): Settings, on its first problem.
+  const showSettings = async () => {
+    await setView('settings');
+    call(viewParts.settings, 'revealErrors');
   };
 
   const createPost = (layout) => {
@@ -1038,15 +1433,22 @@ export const createBlogTab = (ctx) => {
   };
 
   const deleteDraft = async (c) => {
+    if (busy || !c) return;
+    flushEditor(c);
+    if (!(await draftIsCurrent(c))) return;
+    // Deleting is the whole action, so an unchecked draft is left alone.
+    if (c.keepDraft) return showStatus('Draft not deleted', h(c.checkError ? c.checkError.message : 'Try again in a minute.'));
     if (!confirm('Delete this draft? It can’t be brought back.')) return;
     await stopSaving(c);
     try {
-      if (c.hasDraft || c.version != null) await api().remove(c.id);
-    } catch (error) {
-      if (error.code !== 'not-found') {
-        showStatus('Draft not deleted', h(error.message));
-        return;
+      const kept = await removeOwnDraft(c);
+      if (kept) { // saved on another device or tab while the question was open
+        blockStale(c, kept);
+        return showConflictNote(c);
       }
+    } catch (error) {
+      showStatus('Draft not deleted', h(error.message));
+      return;
     }
     forgetDraft(c.id);
     releaseAssets(c.id);
@@ -1056,15 +1458,21 @@ export const createBlogTab = (ctx) => {
   };
 
   const discardEdits = async (c) => {
+    if (busy || !c) return;
+    flushEditor(c);
+    if (!(await draftIsCurrent(c))) return;
+    if (c.keepDraft) return showStatus('Edits not discarded', h(c.checkError ? c.checkError.message : 'Try again in a minute.'));
     if (!confirm('Discard your unpublished edits? The post on the site stays as it is.')) return;
     await stopSaving(c);
     try {
-      if (c.hasDraft) await api().remove(c.id);
-    } catch (error) {
-      if (error.code !== 'not-found') {
-        showStatus('Edits not discarded', h(error.message));
-        return;
+      const kept = await removeOwnDraft(c);
+      if (kept) { // saved on another device or tab while the question was open
+        blockStale(c, kept);
+        return showConflictNote(c);
       }
+    } catch (error) {
+      showStatus('Edits not discarded', h(error.message));
+      return;
     }
     forgetDraft(c.id);
     releaseAssets(c.id);
@@ -1076,26 +1484,48 @@ export const createBlogTab = (ctx) => {
 
   // ---------------------------------------------------------------- publish / schedule / unpublish
 
+  // The post another post's problem is about. The rules name it “Title”
+  // (content-rules.js shortTitle cuts a title over 60 characters to its start
+  // plus “…”); only a single match among the other site posts gets a button.
+  const namedPost = (message, c) => {
+    const match = /^Blog post “([^”]*)”/.exec(String(message));
+    if (!match) return null;
+    const named = match[1];
+    const start = named.endsWith('…') ? named.slice(0, -1) : null;
+    const found = posts().filter((post) => {
+      const title = String(post.title || '').trim();
+      return post.id && post.id !== c.id && (title === named || (start !== null && title.length > 60 && title.startsWith(start)));
+    });
+    return found.length === 1 ? found[0] : null;
+  };
+
   const showProblems = (c, intent, problems = null) => {
+    if (!problems && intent === 'delete') problems = buildDelete(c)?.problems || { mine: [], others: [], config: [] };
     if (!problems) {
       const next = buildNext(c, intent);
       problems = next ? check(next.nextPosts, next.index) : { mine: [], others: [], config: [] };
     }
-    const all = [...problems.mine, ...problems.config.map((message) => ({ message, path: '' })), ...problems.others.map((message) => ({ message, path: '' }))];
+    const all = [...problems.mine, ...problems.config.map((message) => ({ message, path: '' })), ...problems.others.map((message) => ({ message, path: '', openId: namedPost(message, c)?.id || '' }))];
     c.problems = all.length ? { intent } : null;
     if (!all.length) return setNote(c, 'problems', '');
     const shown = all.slice(0, 6);
-    setNote(c, 'problems', '<div class="bt-problems" role="alert"><strong>' + (intent === 'schedule' ? 'Before this can be scheduled' : 'Before this can go live') + '</strong><ul>' +
-      shown.map(({ message, path }) => '<li>' + h(message) +
-        (path ? ' <button class="button button--text bt-inline" type="button" data-bt="jump" data-value="' + h(path) + '">Fix this</button>' : '') + '</li>').join('') + '</ul>' +
+    const heading = intent === 'schedule' ? 'Before this can be scheduled'
+      : intent === 'delete' ? 'Before this can be deleted'
+        : intent === 'unpublish' ? (isLiveNow(c.live) ? 'Before this can be taken off the site' : 'Before this can be taken off the schedule')
+          : 'Before this can go live';
+    setNote(c, 'problems', '<div class="bt-problems" role="alert"><strong>' + heading + '</strong><ul>' +
+      shown.map(({ message, path, openId }) => '<li>' + h(message) +
+        (path ? ' <button class="button button--text bt-inline" type="button" data-bt="jump" data-value="' + h(path) + '">Fix this</button>' : '') +
+        (openId ? ' <button class="button button--text bt-inline" type="button" data-bt="open" data-id="' + h(openId) + '">Open that post</button>' : '') + '</li>').join('') + '</ul>' +
       (all.length > shown.length ? '<span>…and ' + (all.length - shown.length) + ' more.</span>' : '') + '</div>');
     return undefined;
   };
 
-  const check = (nextPosts, index) => {
+  // cfg: the settings the commit would carry (a delete also edits featured / redirects).
+  const check = (nextPosts, index, cfg = config()) => {
     const detailed = typeof rules.validateBlogPostsDetailed === 'function'
-      ? rules.validateBlogPostsDetailed(nextPosts, config(), films())
-      : rules.validateBlogPosts(nextPosts, config(), films()).map((message) => ({ path: '', message }));
+      ? rules.validateBlogPostsDetailed(nextPosts, cfg, films())
+      : rules.validateBlogPosts(nextPosts, cfg, films()).map((message) => ({ path: '', message }));
     const mine = [];
     const others = [];
     for (const problem of detailed) {
@@ -1103,7 +1533,7 @@ export const createBlogTab = (ctx) => {
       if (at === String(index)) mine.push({ message: ownWords(problem.message), path: rest.join('.') });
       else others.push(problem.message);
     }
-    return { mine, others, config: rules.validateBlogConfig(config()) };
+    return { mine, others, config: rules.validateBlogConfig(cfg) };
   };
 
   // "Fix this" in the problems list: show the pane that holds the field, then
@@ -1162,50 +1592,15 @@ export const createBlogTab = (ctx) => {
   };
 
   // The posts.json that a publish / schedule / unpublish of this post would commit.
-  const buildNext = (c, intent) => {
-    const now = Date.now();
-    const before = posts();
-    const index = before.findIndex((post) => post.id === c.id);
-    const live = index >= 0 ? before[index] : null;
-    const images = [];
-    let next;
-    if (intent === 'unpublish') {
-      if (!live) return null;
-      next = { ...clone(live), status: 'unpublished' };
-    } else {
-      next = clone(c.post);
-      next.id = c.id;
-      if (!next.slug) next.slug = slugify(next.title);
-      // Redirect baseline = the committed record, not this draft's copy. posts() is
-      // what the last successful publish committed (a failed one rolls back to it),
-      // so every address it ever had carries forward even when the draft is older
-      // than that publish (a leftover draft, or one saved on another device).
-      const arr = (value) => (Array.isArray(value) ? value : []);
-      const previous = new Set([...arr(live?.previousSlugs), ...arr(next.previousSlugs)]);
-      if (live && everLive(live) && live.slug && live.slug !== next.slug) previous.add(live.slug);
-      previous.delete(next.slug);
-      next.previousSlugs = [...previous].filter(Boolean);
-      if (intent === 'publish') {
-        if (live && live.status === 'published' && validTime(live.publishAt)) {
-          next.publishAt = validTime(next.publishAt) ? next.publishAt : live.publishAt;
-          next.updatedAt = istIso(now);
-        } else next.publishAt = istIso(now);
-        next.status = 'published';
-      } else next.status = 'scheduled';
-      next = mapStrings(next, (value) => {
-        const name = draftName(value);
-        if (name === null) return value;
-        if (!images.includes(name)) images.push(name);
-        return 'assets/blog/' + next.slug + '/' + name;
-      });
-    }
-    const nextPosts = index >= 0 ? before.map((post, i) => (i === index ? next : post)) : [next, ...before];
-    return { next, nextPosts, index: index >= 0 ? index : 0, images, before };
-  };
+  const buildNext = (c, intent) => planNext(posts(), c, intent, Date.now());
 
   const rollback = (snapshot) => {
     state.draft.blogPosts = snapshot.posts;
     if (!snapshot.wasDirty) ctx.clearDirty('blogPosts');
+    if ('config' in snapshot) {
+      state.draft.blogConfig = snapshot.config;
+      if (!snapshot.configWasDirty) ctx.clearDirty('blogConfig');
+    }
     const keep = new Set(snapshot.previews.values());
     for (const url of state.assetPreviews.values()) if (!keep.has(url)) URL.revokeObjectURL(url);
     state.assetChanges = snapshot.assets;
@@ -1213,30 +1608,127 @@ export const createBlogTab = (ctx) => {
     ctx.renderUnsaved();
   };
 
-  const commitPost = async (c, intent) => {
-    if (busy || !c) return;
-    const title = String(c.post.title || '').trim() || 'Untitled post';
+  // Someone else published while this was being sent: nothing of it went out,
+  // and the post was rolled back. Load the latest site (keeping the owner's
+  // other changes on top), then send it once more by itself, but only when that
+  // left this post's own record as it was, nothing else needs redoing, and the
+  // post is still open; else say plainly what to press.
+  const afterConflict = async (c, intent, built, retry) => {
+    const was = built.before.find((post) => post.id === c.id) || null;
+    const before = JSON.stringify(was);
+    busy = true;
+    paintBar();
+    let latest = null;
+    try {
+      latest = await ctx.reloadLatest();
+    } catch (error) {
+      console.warn('[blog] loading the latest site failed', error);
+    } finally {
+      busy = false;
+    }
+    const now = posts().find((post) => post.id === c.id) || null;
+    const same = JSON.stringify(now) === before;
+    c.live = now;
+    if (cur === c) paintBar();
+    const loaded = Boolean(latest && latest.ok);
+    const conflicts = loaded && Array.isArray(latest.conflicts) ? latest.conflicts : [];
+    if (!retry && loaded && !conflicts.length && same && cur === c) return commitPost(c, intent, { retry: true });
+    const label = h((actionsFor(c).find(([action]) => action === intent) || [])[1] || 'the button');
+    const again = cur === c ? 'press ' + label + ' again' : 'open the post and press ' + label + ' again';
+    let message;
+    if (conflicts.length) {
+      message = 'Someone else published changes while you were working, so this wasn’t sent. Their changes are loaded, but they also changed these, so please redo your change to:' +
+        conflicts.map((item) => '<br>• ' + h(item)).join('') + '<br>Then ' + again + '.';
+    } else if (loaded && !same) {
+      message = 'Someone else changed this post on the site while you were working, so this wasn’t sent. Your edits are still here. Check the post, then ' + again + '.';
+    } else {
+      message = 'Someone else published changes while you were working, so this wasn’t sent. Nothing of yours is lost. Please ' + again + '.';
+    }
+    showStatus(notSent(intent, was), message, conflicts.length ? { action: 'dismiss-status', actionLabel: 'Got it' } : {});
+  };
+
+  // What the publish toast ends on once the site has rebuilt: what happened to
+  // this post, never a bare "Published" (an Unpublish or Schedule said that).
+  // Called before c.live moves on, so c.live is still what readers had.
+  // `message` is HTML for app.js showStatus. Carries failCopy for a failed commit.
+  const doneCopy = (intent, c, next) => {
+    const name = '“' + h(String(next.title || '').trim() || 'Untitled post') + '”';
+    const refresh = (what) => ' If you don’t see ' + what + ', pull down to refresh; changes can take up to 10 minutes to show.';
+    const view = next.slug ? ' ' + viewLink(next.slug, 'bt-view-site--status', next.title) : '';
+    let done;
     if (intent === 'schedule') {
-      const at = Date.parse(c.post.publishAt || '');
-      const error = viewEl.querySelector('[data-bt-error="publishAt"]');
+      done = { title: 'Scheduled', message: name + ' goes live on ' + h(whenIst(next.publishAt)) + ' (within about 30 minutes of that time). You don’t need to keep the admin open.' };
+    } else if (intent === 'unpublish') {
+      done = isLiveNow(c.live)
+        ? { title: 'Taken off the site', message: name + ' is off the site. It stays here, and you can publish it again any time. If you still see it, pull down to refresh; changes can take up to 10 minutes to show.' }
+        : { title: 'Taken off the schedule', message: name + ' won’t go live. It stays here, ready to schedule or publish when you like.' };
+    } else if (isLiveNow(c.live)) {
+      done = { title: 'Changes published', message: 'Your changes to ' + name + ' are live.' + refresh('them') + view };
+    } else {
+      done = { title: 'Published', message: name + ' is live.' + refresh('it') + view };
+    }
+    return { ownStatus: true, done, failed: failCopy(intent, c) };
+  };
+
+
+  const commitPost = async (c, intent, { retry = false } = {}) => {
+    if (busy || !c || (starting && !retry)) return;
+    if (retry) return runCommit(c, intent, true);
+    starting = true;
+    try {
+      return await runCommit(c, intent, false);
+    } finally {
+      starting = false;
+    }
+  };
+
+  const runCommit = async (c, intent, retry) => {
+    if (busy || !c) return;
+    flushEditor(c);
+    // Publish and schedule put this draft on the site and then delete it, so it
+    // must still be the newest one. Unpublish never touches the draft.
+    if (intent !== 'unpublish' && !(await draftIsCurrent(c))) return;
+    const title = String(c.post.title || '').trim() || 'Untitled post';
+    const onSite = isLiveNow(c.live);
+    const at = Date.parse(c.post.publishAt || '');
+    const error = viewEl.querySelector('[data-bt-error="publishAt"]');
+    // A date problem is shown under "Publish date and time", with Settings open.
+    const dateProblem = (message) => {
+      c.pane = 'settings';
+      c.sidePane = 'settings';
+      syncPanes();
+      const field = viewEl.querySelector('[data-bt-field="publishAt"]');
+      const slot = viewEl.querySelector('[data-bt-error="publishAt"]');
+      if (slot) {
+        slot.textContent = message;
+        slot.hidden = false;
+      }
+      field?.setAttribute('aria-invalid', 'true');
+      field?.focus();
+    };
+    if (intent === 'schedule') {
       if (!Number.isFinite(at) || at <= Date.now() + 60 * 1000) {
-        c.pane = 'settings';
-        c.sidePane = 'settings';
-        syncPanes();
-        const field = viewEl.querySelector('[data-bt-field="publishAt"]');
-        const message = validTime(c.post.publishAt) ? 'That time has already passed. Choose a date and time in the future, then press Schedule.' : 'Choose the date and time it should go live, then press Schedule.';
-        if (error) {
-          error.textContent = message;
-          error.hidden = false;
-        }
-        field?.setAttribute('aria-invalid', 'true');
-        field?.focus();
+        dateProblem(validTime(c.post.publishAt) ? 'That time has already passed. Choose a date and time in the future, then press Schedule.' : 'Choose the date and time it should go live, then press Schedule.');
         return;
       }
       if (error) error.hidden = true;
-      if (c.live && c.live.status === 'published' && !confirm('“' + title + '” is live now. Scheduling it takes it off the site until ' + whenIst(c.post.publishAt) + '. Continue?')) return;
+      if (onSite && !retry && !confirm('“' + title + '” is live now. Scheduling it takes it off the site until ' + whenIst(c.post.publishAt) + '. Continue?')) return;
     }
-    if (intent === 'unpublish' && !confirm('Take “' + title + '” off the site? It stays here, and you can publish it again any time.')) return;
+    // A post on the site can't have a publish date ahead: the site would hide it
+    // until then. Taking it off until a date is what Schedule is for.
+    if (intent === 'publish') {
+      if (onSite && Number.isFinite(at) && at > Date.now()) {
+        dateProblem('This post is already on the site, so its publish date can’t be in the future. Pick a date that has passed, or press Schedule to take it off the site until then.');
+        return;
+      }
+      if (error) error.hidden = true;
+    }
+    if (intent === 'unpublish' && !retry) {
+      const ask = onSite
+        ? 'Take “' + title + '” off the site? It stays here, and you can publish it again any time.'
+        : 'Take “' + title + '” off the schedule?' + (validTime(c.live?.publishAt) ? ' It won’t go live on ' + whenIst(c.live.publishAt) + '.' : '') + ' It stays here, and you can schedule or publish it any time.';
+      if (!confirm(ask)) return;
+    }
     if (c.saving) await c.saving;
     const built = buildNext(c, intent);
     if (!built) return;
@@ -1248,11 +1740,21 @@ export const createBlogTab = (ctx) => {
     }
     setNote(c, 'problems', '');
     c.problems = null;
+    // The first time a post goes on the site, ask once (asked after the checks,
+    // so it is only asked when it can go).
+    if (intent === 'publish' && !retry && !everLive(c.live)) {
+      const waiting = c.live && c.live.status === 'scheduled' && validTime(c.live.publishAt);
+      const ask = waiting
+        ? 'Publish “' + title + '” now, instead of on ' + whenIst(c.live.publishAt) + '? Everyone visiting the site will be able to read it.'
+        : 'Publish “' + title + '” now? Everyone visiting the site will be able to read it.';
+      if (!confirm(ask)) return;
+    }
     const others = ctx.otherUnsavedTabs();
-    if (others.length && !confirm('This also publishes your unsaved changes on the ' + others.join(', ') + (others.length === 1 ? ' tab' : ' tabs') + '. Continue?')) return;
+    if (others.length && !retry && !confirm('This also publishes your unsaved changes on the ' + others.join(', ') + (others.length === 1 ? ' tab' : ' tabs') + '. Continue?')) return;
 
     busy = true;
     paintBar();
+    let conflicted = false;
     const snapshot = { posts: built.before, wasDirty: state.dirty.has('blogPosts'), assets: new Map(state.assetChanges), previews: new Map(state.assetPreviews) };
     let ok = false;
     try {
@@ -1261,10 +1763,10 @@ export const createBlogTab = (ctx) => {
       setNote(c, 'progress', '');
       state.draft.blogPosts = built.nextPosts;
       ctx.markDirty('blogPosts');
-      const verb = intent === 'publish' ? (c.live && c.live.status === 'published' ? 'Update' : 'Publish') : intent === 'schedule' ? 'Schedule' : 'Unpublish';
-      ok = await ctx.publish({ message: 'Blog: ' + verb + ' “' + title.slice(0, 72) + '”' });
+      const verb = intent === 'publish' ? (onSite ? 'Update' : 'Publish') : intent === 'schedule' ? 'Schedule' : 'Unpublish';
+      ok = await ctx.publish({ message: 'Blog: ' + verb + ' “' + title.slice(0, 72) + '”', ...doneCopy(intent, c, built.next), onConflict: () => { conflicted = true; } });
     } catch (error) {
-      showStatus('Not published', h(error.message) + ' Nothing changed on the site.');
+      showStatus(failCopy(intent, c).title, h(error.message) + ' Nothing changed on the site.');
     } finally {
       busy = false;
       if (!ok) {
@@ -1273,16 +1775,22 @@ export const createBlogTab = (ctx) => {
         paintBar();
       }
     }
-    if (!ok) return;
+    if (!ok) {
+      if (conflicted) await afterConflict(c, intent, built, retry);
+      return;
+    }
     c.live = built.next;
     if (intent !== 'unpublish') {
       await stopSaving(c);
+      let kept = true;
       try {
-        if (c.hasDraft) await api().remove(c.id);
+        kept = await removeOwnDraft(c);
       } catch {
-        // The post is live; a leftover draft only shows as "Unpublished edits".
+        kept = true;
       }
-      forgetDraft(c.id);
+      // The post is live. A draft that was kept (saved on another device or tab
+      // meanwhile, or not checked) shows in the list as changes not on the site yet.
+      if (!kept) forgetDraft(c.id);
       releaseAssets(c.id);
       c.hasDraft = false;
       c.version = null;
@@ -1296,6 +1804,111 @@ export const createBlogTab = (ctx) => {
     tab.filter.status = 'all';
     paintList();
     refreshDrafts();
+  };
+
+  // ---------------------------------------------------------------- delete for good
+
+  // What deleting an UNPUBLISHED post would commit, or null for any other post.
+  const buildDelete = (c) => {
+    const plan = planDelete(posts(), config(), c, state.draft, draftPosts);
+    return plan && { ...plan, problems: check(plan.nextPosts, -1, plan.nextConfig) };
+  };
+
+  const deletePost = async (c) => {
+    if (busy || starting || !c || !c.live || c.live.status !== 'unpublished') return;
+    starting = true;
+    try {
+      await runDelete(c);
+    } finally {
+      starting = false;
+    }
+  };
+
+  const runDelete = async (c) => {
+    flushEditor(c);
+    // Newer edits saved elsewhere would be deleted with it.
+    if (!(await draftIsCurrent(c))) return;
+    const title = String(c.post.title || '').trim() || 'Untitled post';
+    if (c.saving) await c.saving;
+    const built = buildDelete(c);
+    if (!built) return;
+    const { problems } = built;
+    if (problems.mine.length || problems.others.length || problems.config.length) {
+      showProblems(c, 'delete', problems);
+      if (narrowQuery.matches) viewEl.querySelector('[data-note="problems"]')?.scrollIntoView({ block: 'center' });
+      return;
+    }
+    setNote(c, 'problems', '');
+    c.problems = null;
+    const edits = c.hasDraft || c.dirty;
+    const names = built.linkedFrom.map((name) => '“' + name + '”');
+    const linkNote = !names.length ? ''
+      : ' ' + (names.length <= 2 ? names.join(' and ') : names.slice(0, 2).join(', ') + ' and ' + (names.length - 2) + ' more') +
+        (names.length === 1 ? ' links' : ' link') + ' to this post; ' + (names.length === 1 ? 'that link' : 'those links') + ' will show as plain words.';
+    if (!confirm('Delete “' + title + '” for good? The post and its photos will be removed and can’t be brought back.' + (edits ? ' Your unpublished edits will be deleted too.' : '') + linkNote)) return;
+    const others = ctx.otherUnsavedTabs();
+    if (others.length && !confirm('This also publishes your unsaved changes on the ' + others.join(', ') + (others.length === 1 ? ' tab' : ' tabs') + '. Continue?')) return;
+
+    busy = true;
+    paintBar();
+    const snapshot = {
+      posts: built.before,
+      wasDirty: state.dirty.has('blogPosts'),
+      config: state.draft.blogConfig,
+      configWasDirty: state.dirty.has('blogConfig'),
+      assets: new Map(state.assetChanges),
+      previews: new Map(state.assetPreviews),
+    };
+    let ok = false;
+    let conflicted = false;
+    try {
+      state.draft.blogPosts = built.nextPosts;
+      ctx.markDirty('blogPosts');
+      if (built.configChanged) {
+        state.draft.blogConfig = built.nextConfig;
+        ctx.markDirty('blogConfig');
+      }
+      for (const path of built.deletes) ctx.deleteAsset(path);
+      ok = await ctx.publish({ message: 'Blog: Delete “' + title.slice(0, 72) + '”', ownStatus: true, failed: failCopy('delete', c), onConflict: () => { conflicted = true; } });
+    } catch (error) {
+      showStatus('Not deleted', h(error.message) + ' Nothing changed on the site.');
+    } finally {
+      busy = false;
+      if (!ok) {
+        rollback(snapshot);
+        paintBar();
+      }
+    }
+    if (!ok) {
+      // Someone else published meanwhile: load theirs and say to press Delete
+      // permanently again (never retried on its own: it can't be undone).
+      if (conflicted) await afterConflict(c, 'delete-post', built, true);
+      return;
+    }
+
+    // Committed. The private copy (D1 draft + its photos) goes only now, so a
+    // failed commit never loses the owner's edits.
+    await stopSaving(c);
+    let leftover = false;
+    try {
+      leftover = Boolean(await removeOwnDraft(c)); // kept when newer, or not checked
+    } catch {
+      leftover = true;
+    }
+    if (!leftover) forgetDraft(c.id);
+    releaseAssets(c.id);
+    c.live = null;
+    contexts.delete(c);
+    if (cur === c) {
+      cur = null;
+      destroyPost(c);
+    }
+    tab.view = 'list';
+    tab.filter.status = 'all';
+    paintList();
+    refreshDrafts();
+    if (leftover) showStatus('Deleted', 'A saved copy of your edits couldn’t be removed; it now shows under Drafts, where you can delete it.');
+    else showStatus('Deleted for good', '“' + h(title) + '” and its photos have been removed.');
   };
 
   // ---------------------------------------------------------------- events
@@ -1349,6 +1962,7 @@ export const createBlogTab = (ctx) => {
       }
       if (action === 'publish' || action === 'schedule' || action === 'unpublish') return commitPost(c, action);
       if (action === 'delete') return deleteDraft(c);
+      if (action === 'delete-post') return deletePost(c);
       if (action === 'discard') return discardEdits(c);
       if (action === 'retry-save') {
         c.saveState = 'pending';
@@ -1357,6 +1971,7 @@ export const createBlogTab = (ctx) => {
       if (action === 'jump') return jumpTo(c, value || '');
       if (action === 'keep-mine') return keepMine(c);
       if (action === 'load-theirs') return loadTheirs(c);
+      if (action === 'load-newer') return loadNewer(c);
       return undefined;
     };
     run().catch((error) => showStatus('Couldn’t do that', h(error.message)));
@@ -1406,10 +2021,10 @@ export const createBlogTab = (ctx) => {
   // Leaving or reloading inside the autosave pause: save now rather than in
   // 1.5 s. app.js's beforeunload prompt holds the page while the PUT lands, and
   // a hidden tab (phone switched apps) may never come back to finish the timer.
-  // (The editor batches its onChange ~240 ms; a flush() on its handle, when it
-  // has one, hands over the last keystrokes first.)
+  // (The editor batches its onChange ~240 ms; flushEditor hands over the last
+  // keystrokes first.)
   const saveBeforeLeaving = () => {
-    if (cur) call(cur.handles.editor, 'flush');
+    if (cur) flushEditor(cur);
     for (const c of contexts) if (c.dirty && !c.saving && c.timer && c.saveState === 'pending') saveNow(c);
   };
   window.addEventListener('beforeunload', saveBeforeLeaving);
@@ -1437,12 +2052,23 @@ export const createBlogTab = (ctx) => {
       } else if (tab.view === 'list') paintList();
     }
     if (tab.view === 'list') refreshDrafts();
+    if (tab.view === 'settings' && viewParts.settings
+      && (state.draft.blogConfig !== seenSettings.config || state.draft.company !== seenSettings.company)) {
+      call(viewParts.settings, 'refresh');
+      noteSettings();
+    }
   };
 
   return {
     mount,
+    showSettings,
     owns: (node) => Boolean(node && node.closest && node.closest('[data-blog-root]')),
     // A draft edit not yet in the drafts store (debounce, in flight, failed or in conflict).
-    hasUnsavedDraft: () => [...contexts].some((c) => c.dirty || c.saving || c.saveState === 'error' || c.saveState === 'conflict'),
+    // A stopped action with nothing new here (blockedHtml without "Keep mine") holds nothing unsaved.
+    hasUnsavedDraft: () => [...contexts].some((c) => c.dirty || c.saving || c.saveState === 'error' ||
+      (c.saveState === 'conflict' && !(c.conflict && c.conflict.blocked))),
   };
 };
+
+// Test seam (tools/test/blog-tab.test.js): pure helpers only.
+export const _internals = { isLiveNow, everLive, hadReaders, shownStatus, notSent, failCopy, planNext, planDelete };

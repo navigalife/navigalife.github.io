@@ -183,6 +183,17 @@
 .bed-meta{display:grid;gap:12px;margin-top:14px}
 .bed-patient{display:flex;flex-wrap:wrap;align-items:center;gap:2px 20px}
 .bed-patient .bed-warn{flex-basis:100%}
+.bed-hwarn{flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:8px;letter-spacing:0}
+.bed-hwarn .bed-btn{min-height:30px;padding:4px 11px}
+/* photo tools (Crop, Blur part of the photo): built after the credit so the
+   cover's nth-child rules keep their fields, shown first; only while the photo's
+   section is being edited. A patient photo leads with the blur. */
+.bed-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;order:-1}
+.bed-tools [aria-disabled="true"]{opacity:.55;cursor:progress}
+.bed-tools__h{flex-basis:100%;margin:0}
+.bed-cover .bed-meta>.bed-tools{grid-column:1/-1}
+.bed-block:not(.is-selected):not(:focus-within) .bed-meta>.bed-tools,
+.bed-cover:not(:focus-within) .bed-meta>.bed-tools{display:none}
 
 /* ---- block flow --------------------------------------------------------- */
 .bed-flow{position:relative;color:var(--ink);font-family:var(--serif);font-size:var(--body-fs);font-weight:400;line-height:1.68;font-kerning:normal;font-variant-ligatures:common-ligatures;font-optical-sizing:auto}
@@ -240,7 +251,9 @@
 .bed-strip__name{color:var(--ink);font:600 .6875rem/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
 .bed-strip__set{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
 .bed-strip__set:empty{display:none}
-.bed-strip__set .bed-field{grid-template-columns:auto minmax(0,7.5em);align-items:center;gap:8px}
+.bed-strip__set .bed-field{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+/* the heading link box fits its whole placeholder, and drops under its label when the row is short */
+.bed-strip__set .bed-field>.bed-input{flex:1 1 12rem;width:auto;max-width:14rem}
 .bed-strip__acts{display:flex;gap:1px;margin-left:auto}
 .bed-handle--strip{width:34px;height:34px;opacity:1;cursor:grab}
 /* narrower pane: the strip hangs BELOW the selected block, so it never sits on the text above or
@@ -258,7 +271,8 @@
   .bed-block:not(.is-wide):not(.is-full):not(.is-float)>.bed-strip .bed-strip__set{flex-direction:column;align-items:stretch;gap:12px}
   .bed-block:not(.is-wide):not(.is-full):not(.is-float)>.bed-strip .bed-chips__label{flex-basis:100%;margin:0 0 6px}
   .bed-block:not(.is-wide):not(.is-full):not(.is-float)>.bed-strip .bed-chips__label~.bed-chips__label{margin-top:8px}
-  .bed-block:not(.is-wide):not(.is-full):not(.is-float)>.bed-strip .bed-field{grid-template-columns:minmax(0,1fr);gap:6px}
+  .bed-block:not(.is-wide):not(.is-full):not(.is-float)>.bed-strip .bed-field{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+  .bed-block:not(.is-wide):not(.is-full):not(.is-float)>.bed-strip .bed-field>.bed-input{max-width:none}
   .bed-block:not(.is-wide):not(.is-full):not(.is-float)>.bed-strip .bed-strip__acts{margin:0 -4px 0 -6px;padding-top:6px;border-top:1px solid var(--hair);justify-content:space-between}
 }
 
@@ -326,7 +340,10 @@
 .bed-block.is-full .bed-meta,.bed-block.is-full .bed-drop{width:min(100% - 2 * var(--pad),var(--m));margin-inline:auto}
 .bed-block.is-full .bed-drop{display:grid}
 .bed-block.is-full .bed-media__acts{right:var(--pad)}
-.bed-block.is-float{clear:none;max-width:46%;margin-top:.4em;margin-bottom:1.1em}
+/* z-index: the next block's box runs under a float (only its lines wrap), so without it a tap on
+   the photo lands on that paragraph. Selected, it rises to the strip layer like any block's strip. */
+.bed-block.is-float{z-index:1;clear:none;max-width:46%;margin-top:.4em;margin-bottom:1.1em}
+.bed-block.is-float.is-selected{z-index:20}
 .bed-block.is-float.is-left{float:left;margin-right:1.75em}
 .bed-block.is-float.is-right{float:right;margin-left:1.75em}
 .bed-block.is-float.is-size-S{width:12em}
@@ -336,13 +353,22 @@
 .bed-block.is-float .bed-drop{min-height:150px}
 .bed-block.is-float>.bed-strip{left:0}
 .bed-block.is-float.is-right>.bed-strip{left:auto;right:0}
+/* phones collapse floats into the column by the site's own viewport rule (blog-blocks.css). Not a
+   pane query: the editor pane is under 760px even on a desktop, where readers do see the float.
+   .bed outranks the .is-left/.is-right/.is-size-* rules above. */
+@media (max-width:760px){
+  .bed .bed-block.is-float{float:none;width:auto;max-width:none;margin:2em 0}
+  .bed .bed-block.is-float>.bed-strip{left:-8px;right:auto}
+  .bed-block.is-float .bed-frame{border-radius:18px}
+}
 
 /* captions: published figcaption styling until the block is selected, then the
    full details (alt, credit, patient consent) open beneath the photo */
 .bed-figure .bed-meta,.bed-gallery__item .bed-meta,.bed-it__media .bed-meta{gap:10px}
 .bed-block:not(.is-selected):not(:focus-within) .bed-meta>.bed-field:not(:has(.bed-input--rich)):not(:has(.bed-warn:not([hidden]))),
 .bed-block:not(.is-selected):not(:focus-within) .bed-meta>.bed-patient:not(:has(.bed-warn)),
-.bed-block:not(.is-selected):not(:focus-within) .bed-meta .bed-field__l{display:none}
+.bed-block:not(.is-selected):not(:focus-within) .bed-meta .bed-field__l,
+.bed-block:not(.is-selected):not(:focus-within) .bed-meta .bed-field>.bed-help{display:none}
 .bed-block:not(.is-selected):not(:focus-within) .bed-meta>.bed-field:has(.bed-input--rich:empty){display:none}
 .bed-block:not(.is-selected):not(:focus-within) .bed-meta{margin-top:.95em}
 .bed-block:not(.is-selected):not(:focus-within) .bed-meta .bed-input--rich{min-height:0;padding:0;border-color:transparent;background:transparent;color:var(--ink-muted);font:400 .76em/1.5 var(--sans);font-size:max(.8125rem,.76em)}
@@ -451,6 +477,8 @@
 .bed-cta__text{max-width:30ch;color:var(--ink);font-family:var(--display);font-size:1.24em;font-weight:600;line-height:1.3;letter-spacing:-.012em}
 .bed-cta__btn{display:inline-flex;min-height:52px;align-items:center;padding:.8em 1.45em;border-radius:999px;background:var(--primary);color:var(--primary-ink);font:600 .9em/1.2 var(--sans);letter-spacing:.01em}
 .bed-cta__label{min-width:3ch;caret-color:var(--primary-ink)}
+.bed-cta__note{display:flex;align-items:flex-start;gap:6px;max-width:36ch;margin:-.35em 0 0}
+.bed-cta__note .bed-ic{width:15px;height:15px;margin-top:1px}
 .bed .bed-cta__label:empty::before{color:color-mix(in srgb,var(--primary-ink) 92%,transparent)}
 
 /* ---- references --------------------------------------------------------- */
@@ -490,6 +518,14 @@
 .bed-pop__n{display:grid;width:22px;height:22px;place-items:center;border-radius:50%;background:var(--primary-soft);color:var(--primary);font-weight:600;font-size:.75rem;font-variant-numeric:tabular-nums}
 .bed-pop__rt{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2}
 .bed-pop .bed-warn{margin-top:2px}
+.bed-pop__posts{display:grid;gap:6px}
+/* a hairline under the posts list, so a row cut at the bottom reads as more to scroll, not a clipped list */
+.bed-pop__list--posts{margin:0 -6px 4px;padding-bottom:4px;border-bottom:1px solid var(--hair)}
+.bed-pop__ref--post{grid-template-columns:minmax(0,1fr) auto;align-items:baseline}
+.bed-pop__ref--post[aria-current="true"]{background:var(--primary-soft)}
+.bed-pop__ref:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.bed-pop__tag{color:var(--ink-muted);font-size:.75rem;white-space:nowrap}
+.bed-pop__none{margin:0}
 
 /* ---- block inserter ----------------------------------------------------- */
 .bed-menu{position:fixed;z-index:75;display:flex;flex-direction:column;width:min(540px,100vw - 16px);max-height:min(560px,100vh - 16px);overflow:hidden;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:var(--shadow);font-family:var(--sans)}
@@ -526,8 +562,6 @@
   .bed-btn{min-height:44px}
 }
 @container bed (max-width:760px){
-  .bed-block.is-float{float:none;width:auto;max-width:none;margin:2em 0}
-  .bed-block.is-float .bed-frame{border-radius:18px}
   .bed-it{grid-template-columns:minmax(0,1fr);gap:1.1em}
   .bed-it[data-side="right"] .bed-it__media{order:0}
   .bed-gallery[data-count="3"] .bed-gallery__grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -573,7 +607,8 @@
 .bed-cover:not(:focus-within) .bed-meta>.bed-field:not(:first-child):has(.bed-input--rich:empty),
 .bed-cover:not(:focus-within) .bed-meta>.bed-patient:not(:has(.bed-warn)),
 .bed-cover:not(:focus-within) .bed-meta>.bed-field:not(:first-child)>.bed-field__l,
-.bed-cover:not(:focus-within) .bed-media--cover>.bed-help{display:none}
+.bed-cover:not(:focus-within) .bed-media--cover>.bed-help,
+.bed-cover:not(:focus-within) .bed-meta .bed-field>.bed-help{display:none}
 .bed-cover:not(:focus-within) .bed-meta>.bed-field:not(:first-child)>.bed-input,
 .bed-cover:not(:focus-within) .bed-meta>.bed-field:first-child:not(:has(.bed-warn:not([hidden])))>.bed-input{min-height:0;padding:0;border-color:transparent;border-radius:0;background:transparent;box-shadow:none;color:var(--ink-muted);font:400 .875rem/1.5 var(--sans);text-overflow:ellipsis;cursor:text}
 .bed-cover:not(:focus-within) .bed-meta>.bed-field:nth-child(3)>.bed-input{field-sizing:content;max-width:22em;text-align:right;font-size:.75rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;opacity:.85}

@@ -1,7 +1,7 @@
 {
   "name": "The MediVasc Journal",
   "navLabel": "Blog",
-  "intro": "Plain-spoken guidance on diabetic feet, circulation, wounds and swollen limbs — written to help you act early and keep walking.",
+  "intro": "Plain-spoken guidance on diabetic feet, circulation, wounds and swollen limbs, written to help you act early and keep walking.",
   "seo": { "title": "", "description": "" },
   "featured": [],
   "categories": [
@@ -10,7 +10,7 @@
       "name": "Diabetic foot",
       "slug": "diabetic-foot",
       "intro": "Diabetes can quietly dull the nerves and narrow the blood vessels of the feet. These articles explain the early signs, the daily checks and when a small problem needs a doctor the same day.",
-      "metaDescription": "Diabetic foot care explained simply: warning signs, daily foot checks, footwear and when to see a doctor — practical guidance from MediVasc, Delhi.",
+      "metaDescription": "Diabetic foot care explained simply: warning signs, daily foot checks, footwear and when to see a doctor. Practical guidance from MediVasc, Delhi.",
       "tint": "teal"
     },
     {
@@ -33,7 +33,7 @@
       "id": "c_lymph",
       "name": "Lymphoedema",
       "slug": "lymphoedema",
-      "intro": "Long-standing swelling of an arm or leg — including filarial elephantiasis — can be managed. Daily habits, skin care and compression, explained step by step.",
+      "intro": "Long-standing swelling of an arm or leg, including filarial elephantiasis, can be managed. Daily habits, skin care and compression, explained step by step.",
       "metaDescription": "Lymphoedema and elephantiasis explained: causes, skin care, compression, exercise and daily habits that help control limb swelling.",
       "tint": "plum"
     },

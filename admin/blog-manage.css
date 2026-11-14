@@ -272,6 +272,15 @@
 .bm .bm-alert__action{flex:none}
 .bm .bm-alert--done{border-color:color-mix(in srgb,var(--good) 30%,var(--line));background:color-mix(in srgb,var(--good) 7%,var(--surface))}
 .bm .bm-alert--done .bm-alert__icon{background:color-mix(in srgb,var(--good) 14%,var(--surface));color:var(--good)}
+.bm .bm-alert-wrap:not(:empty){margin-bottom:20px}
+/* The one-line banner app.js shows on every tab but Blog (compact: true). */
+.bm .bm-alert--compact{gap:12px;padding:8px 10px 8px 12px}
+.bm .bm-alert--compact .bm-alert__icon{width:28px;height:28px}
+.bm .bm-alert--compact .bm-alert__icon svg{width:16px;height:16px}
+.bm .bm-alert--compact .bm-alert__copy p{font-size:.875rem}
+/* Its box sits just before #editor-root: on tabs whose content is capped
+   (styles.css .pg / .editor-shell, 980px) it keeps the same right edge. */
+.bm:has(+#editor-root>:is(.pg,.editor-shell)){max-width:980px}
 @media(max-width:520px){
   .bm .bm-dialog__actions{flex-direction:column-reverse;align-items:stretch}
 }
@@ -279,6 +288,7 @@
   .bm .bm-alert{flex-wrap:wrap;align-items:flex-start}
   .bm .bm-alert__copy{flex-basis:calc(100% - 50px)}
   .bm .bm-alert__action{width:100%}
+  .bm .bm-alert--compact .bm-alert__copy{flex-basis:calc(100% - 40px)}
 }
 @media(prefers-reduced-motion:reduce){
   .bm *,.bm .bm-alert,.bm .bm-dialog[open]{animation:none!important;transition:none!important}

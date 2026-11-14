@@ -251,7 +251,7 @@
     if (value.length < min) add(path, `${where}: add at least ${plural(min, what.replace(/s$/, ''), what)}.`);
     if (value.length > max) add(path, `${where}: at most ${plural(max, what.replace(/s$/, ''), what)} (there are ${value.length}).`);
     value.forEach((item, i) => {
-      if (blank(item)) add(`${path}.${i}`, `${where}: ${what.replace(/s$/, '')} ${i + 1} is empty — fill it in or remove it.`);
+      if (blank(item)) add(`${path}.${i}`, `${where}: ${what.replace(/s$/, '')} ${i + 1} is empty. Fill it in or remove it.`);
     });
   };
 
@@ -380,7 +380,7 @@
         add(`${i}.photos`, `In therapy: ${who} needs at least 1 photo.`);
         return;
       }
-      if (photos.length > 3) add(`${i}.photos`, `In therapy: ${who} has ${photos.length} photos — at most 3.`);
+      if (photos.length > 3) add(`${i}.photos`, `In therapy: ${who} has ${photos.length} photos. The most it can have is 3.`);
       photos.forEach((photo, j) => {
         const path = `${i}.photos.${j}`;
         if (typeof photo !== 'string' || !TREATMENT_PHOTO.test(photo)) {
@@ -1040,6 +1040,28 @@
   const isIsoWithOffset = (value) =>
     typeof value === 'string' && ISO_WITH_OFFSET.test(value) && !Number.isNaN(Date.parse(value));
   const blogHrefAllowed = (href) => typeof href === 'string' && BLOG_HREFS.some((re) => re.test(href));
+
+  // THE "was this post updated?" rule, shared by the build (src/blog/seo.js
+  // re-exports it for the byline, article:modified_time, JSON-LD dateModified,
+  // sitemap lastmod, RSS lastBuildDate) and the admin preview (blog-seo.js
+  // enrichPost), so the preview never shows an "Updated" the site won't.
+  // updatedAt counts only when its calendar day in IST (the clinic's zone, like
+  // every date label) is LATER than the publish day. A same-day republish (the
+  // admin stamps updatedAt on every save) and an updatedAt left from before a
+  // republish or reschedule (earlier than publishAt) both count as no update.
+  // Returns the raw value (a typed +05:30 offset survives into JSON-LD), or ''.
+  // Reads updatedAt/publishAt, or the enriched post's updated/published Dates.
+  const blogDateOf = (value) => {
+    const date = value instanceof Date ? value : new Date(typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '');
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+  const istDay = (date) => new Date(date.getTime() + 330 * 60 * 1000).toISOString().slice(0, 10);
+  const updatedAtOf = (post) => {
+    const raw = post ? post.updatedAt || post.updated : '';
+    const updated = raw ? blogDateOf(raw) : null;
+    const published = post ? blogDateOf(post.publishAt || post.published) : null;
+    return updated && published && istDay(updated) > istDay(published) ? raw : '';
+  };
   const asList = (value) => (Array.isArray(value) ? value : []);
   const shortTitle = (title) => {
     const t = title.trim();
@@ -1103,6 +1125,11 @@
     return visible;
   };
 
+  // No words and no citation: an empty paragraph or list item (Enter at the end
+  // of the text). blog-blocks.js renders nothing for it, so it never blocks.
+  const blankInline = (value) => (typeof value === 'string' ? value.trim() === ''
+    : Array.isArray(value) && value.every((run) => isObject(run) && run.cite === undefined && typeof run.t === 'string' && run.t.trim() === ''));
+
   const requireInline = (value, path, where, add, refIds, what) => {
     if (value === undefined || value === null) {
       add(path, `${where} needs ${what}.`);
@@ -1113,12 +1140,15 @@
     }
   };
 
-  const checkInlineList = (items, path, where, add, refIds, { min = 1, what = 'item' } = {}) => {
+  const checkInlineList = (items, path, where, add, refIds, { min = 1, what = 'item', skipBlank = false } = {}) => {
     if (!Array.isArray(items) || items.length < min) {
       add(path, `${where} needs at least ${min} ${what}${min === 1 ? '' : 's'}.`);
       return;
     }
-    items.forEach((item, k) => requireInline(item, `${path}.${k}`, `${where}, ${what} ${k + 1}`, add, refIds, 'some text'));
+    items.forEach((item, k) => {
+      if (skipBlank && blankInline(item)) return;
+      requireInline(item, `${path}.${k}`, `${where}, ${what} ${k + 1}`, add, refIds, 'some text');
+    });
   };
 
   const checkBlogImage = (img, path, where, add, refIds) => {
@@ -1126,19 +1156,32 @@
       add(path, `${where}: choose an image.`);
       return;
     }
-    if (blank(img.src)) add(`${path}.src`, `${where}: choose an image.`);
-    else if (!BLOG_IMAGE.test(img.src)) {
+    if (blank(img.src)) {
+      add(`${path}.src`, `${where}: choose an image.`);
+      return; // one problem for an empty photo slot, not one per field
+    }
+    if (!BLOG_IMAGE.test(img.src)) {
       add(`${path}.src`, `${where}: the image “${img.src}” must be a .webp, .jpg, .png or .avif file inside assets/.`);
     }
     if (blank(img.alt)) {
-      add(`${path}.alt`, `${where}: describe the image in its alt text (it is read aloud to blind readers and helps Google understand the picture).`);
+      add(`${path}.alt`, `${where}: fill in “Describe the photo” (it is read aloud to people who cannot see the photo, and Google reads it too).`);
     } else {
       const tag = tagIn(img.alt);
-      if (tag) add(`${path}.alt`, `${where}: the alt text contains HTML code (“${tag}”).`);
+      if (tag) add(`${path}.alt`, `${where}: the photo description contains HTML code (“${tag}”).`);
     }
     if (img.caption !== undefined && img.caption !== null) checkInline(img.caption, `${path}.caption`, `${where} caption`, add, refIds);
     optionalText(img, 'credit', `${path}.credit`, `${where}: the photo credit`, add);
     if (img.patient !== undefined && typeof img.patient !== 'boolean') add(`${path}.patient`, `${where}: the “patient photo” setting is not valid.`);
+    // A patient photo is marked the moment it is ticked (patient: true keeps it out
+    // of share cards and search images at once); consent is its own tick, and
+    // only consent: false blocks publishing. A patient photo saved before the
+    // consent field existed was only ever marked after consent, so it passes.
+    if (img.consent !== undefined && typeof img.consent !== 'boolean') add(`${path}.consent`, `${where}: the “consent on file” setting is not valid.`);
+    else if (img.patient === true && img.consent === false) {
+      const post = /^(Blog post (?:“[^”]*”|\d+(?: \([^)]*\))?))(?:,\s*|:\s*)(.*)$/.exec(where);
+      const name = blank(img.alt) ? (post ? post[2] : where) : img.alt.trim().slice(0, 60);
+      add(`${path}.consent`, `${post ? `${post[1]}: ` : ''}Tick the consent box for the patient photo “${name}” before publishing.`);
+    }
   };
 
   const checkEnum = (value, allowed, path, label, add, { required = true } = {}) => {
@@ -1153,6 +1196,45 @@
     return true;
   };
 
+  // How a message names a block: the editor shows no block numbers, so name it the way the admin sees it,
+  // by its kind and opening words: “paragraph 2 (“Compression stockings help…”)”. The number counts blocks
+  // of that kind and only appears when the post has more than one.
+  const WORDLESS_KEYS = new Set(['type', 'level', 'size', 'style', 'width', 'align', 'tone', 'kind', 'side',
+    'source', 'src', 'youtube', 'anchor', 'focal', 'patient', 'credit', 'href', 'cite']);
+  const firstWords = (value) => {
+    if (typeof value === 'string') return value.replace(/\s+/g, ' ').trim();
+    if (Array.isArray(value)) {
+      if (value.some((r) => isObject(r) && typeof r.t === 'string')) {
+        return value.map((r) => (isObject(r) && typeof r.t === 'string' ? r.t : '')).join('').replace(/\s+/g, ' ').trim();
+      }
+      for (const item of value) { const words = firstWords(item); if (words) return words; }
+      return '';
+    }
+    if (isObject(value)) {
+      for (const [key, item] of Object.entries(value)) {
+        if (WORDLESS_KEYS.has(key)) continue;
+        const words = firstWords(item);
+        if (words) return words;
+      }
+    }
+    return '';
+  };
+  const blockKind = (block) => (block.type === 'heading' && block.level === 3 ? 'Subheading' : BLOCK_LABELS[block.type]);
+  const blockName = (blocks, j) => {
+    const block = blocks[j];
+    if (!isObject(block) || !BLOCK_TYPES.includes(block.type)) return `section ${j + 1}`;
+    const kind = blockKind(block);
+    const same = blocks.filter((b) => isObject(b) && BLOCK_TYPES.includes(b.type) && blockKind(b) === kind);
+    const n = same.length > 1 ? ` ${same.indexOf(block) + 1}` : '';
+    let words = firstWords(block);
+    if (words.length > 32) {
+      const cut = words.slice(0, 32);
+      const space = cut.lastIndexOf(' ');
+      words = `${(space > 12 ? cut.slice(0, space) : cut).replace(/[\s,.;:!?-]+$/, '')}…`;
+    }
+    return `${kind.charAt(0).toLowerCase()}${kind.slice(1)}${n}${words ? ` (“${words}”)` : ''}`;
+  };
+
   const checkBlock = (block, path, where, add, env) => {
     const { refIds, filmSrcs, headings } = env;
     if (!isObject(block)) {
@@ -1163,18 +1245,19 @@
       add(`${path}.type`, `${where} has an unknown block type “${String(block.type)}”.`);
       return;
     }
-    const label = `${where} (${BLOCK_LABELS[block.type]})`;
+    const label = where;
     const E = BLOG_ENUMS;
     switch (block.type) {
       case 'paragraph':
       case 'lead':
+        if (blankInline(block.text)) break; // empty: renders nothing
         requireInline(block.text, `${path}.text`, label, add, refIds, 'some text');
         break;
       case 'heading': {
         if (block.level !== 2 && block.level !== 3) {
-          add(`${path}.level`, `${label}: choose a main heading (H2) or a sub-heading (H3).`);
+          add(`${path}.level`, `${label}: choose Heading or Subheading.`);
         } else if (block.level === 3 && !headings.seenH2) {
-          add(`${path}.level`, `${label}: a sub-heading (H3) cannot come before the first main heading (H2). Make it an H2, or add an H2 above it.`);
+          add(`${path}.level`, `${label} cannot come before the first Heading. Make it a Heading, or add a Heading above it.`);
         }
         if (block.level === 2) headings.seenH2 = true;
         if (blank(block.text)) add(`${path}.text`, `${label} needs text.`);
@@ -1190,8 +1273,9 @@
         break;
       }
       case 'list':
+        if (Array.isArray(block.items) && block.items.every(blankInline)) break; // empty: renders nothing
         checkEnum(block.style, E.listStyle, `${path}.style`, `${label}: list style`, add);
-        checkInlineList(block.items, `${path}.items`, label, add, refIds, { what: 'item' });
+        checkInlineList(block.items, `${path}.items`, label, add, refIds, { what: 'item', skipBlank: true });
         break;
       case 'quote':
         requireInline(block.text, `${path}.text`, label, add, refIds, 'the quoted words');
@@ -1328,7 +1412,7 @@
       const slugs = new Map();
       list.forEach((item, i) => {
         const at = `${key}.${i}`;
-        const who = isObject(item) && !blank(item.name) ? `${noun} “${item.name.trim()}”` : `${noun} ${i + 1}`;
+        const who = isObject(item) && !blank(item.name) ? `${noun} “${item.name.trim()}”` : `the unnamed ${noun} (number ${i + 1} in the list)`;
         if (!isObject(item)) {
           add(at, `${where}: ${who} is not valid.`);
           return;
@@ -1337,8 +1421,9 @@
         else if (ids.has(item.id)) add(`${at}.id`, `${where}: ${who} has the same id as ${ids.get(item.id)}.`);
         else ids.set(item.id, who);
         if (blank(item.name)) add(`${at}.name`, `${where}: ${who} needs a name.`);
-        if (typeof item.slug !== 'string' || !BLOG_SLUG.test(item.slug)) {
-          add(`${at}.slug`, `${where}: ${who}'s web address “${String(item.slug)}” may only use lowercase letters, digits and single hyphens.`);
+        if (blank(item.slug)) add(`${at}.slug`, `${where}: ${who} needs a web address.`);
+        else if (typeof item.slug !== 'string' || !BLOG_SLUG.test(item.slug)) {
+          add(`${at}.slug`, `${where}: the web address “${String(item.slug)}” for ${who} may only use lowercase letters, digits and single hyphens.`);
         } else if (slugs.has(item.slug)) {
           add(`${at}.slug`, `${where}: ${who} has the same web address as ${slugs.get(item.slug)}.`);
         } else slugs.set(item.slug, who);
@@ -1446,7 +1531,7 @@
           return;
         }
         if (RESERVED_BLOG_SLUGS.includes(slug)) {
-          add(path, `${who}: “${slug}” is reserved for the blog's own pages — choose another web address.`);
+          add(path, `${who}: “${slug}” is reserved for the blog’s own pages. Choose another web address.`);
           return;
         }
         if (addresses.has(slug)) {
@@ -1482,9 +1567,9 @@
       checkEnum(post.leadIn, E.leadIn, p('leadIn'), `${who}: opening style`, add);
 
       if (blank(post.category)) add(p('category'), `${who} needs a category.`);
-      else if (!categoryIds.has(post.category)) add(p('category'), `${who}: its category “${post.category}” no longer exists — choose another.`);
+      else if (!categoryIds.has(post.category)) add(p('category'), `${who}: its category “${post.category}” no longer exists. Choose another.`);
       if (blank(post.author)) add(p('author'), `${who} needs an author.`);
-      else if (!authorIds.has(post.author)) add(p('author'), `${who}: its author “${post.author}” no longer exists — choose another.`);
+      else if (!authorIds.has(post.author)) add(p('author'), `${who}: its author “${post.author}” no longer exists. Choose another.`);
       if (post.reviewer !== undefined && post.reviewer !== null && post.reviewer !== '') {
         if (typeof post.reviewer !== 'string' || !authorIds.has(post.reviewer)) {
           add(p('reviewer'), `${who}: its medical reviewer “${String(post.reviewer)}” is not one of the blog's authors.`);
@@ -1528,7 +1613,7 @@
         });
       }
 
-      if (!isObject(post.cover)) add(p('cover'), `${who} needs a cover image.`);
+      if (!isObject(post.cover) || blank(post.cover.src)) add(p(isObject(post.cover) ? 'cover.src' : 'cover'), `${who}: add a cover photo.`);
       else {
         checkBlogImage(post.cover, p('cover'), `${who}: cover image`, add, refIds);
         const focal = post.cover.focal;
@@ -1560,11 +1645,11 @@
       } else {
         const headings = { seenH2: false, anchors: new Set(), h2: 0 };
         post.blocks.forEach((block, j) => {
-          checkBlock(block, p(`blocks.${j}`), `${who}, block ${j + 1}`, add, { refIds, filmSrcs, headings });
+          checkBlock(block, p(`blocks.${j}`), `${who}, ${blockName(post.blocks, j)}`, add, { refIds, filmSrcs, headings });
           if (isObject(block) && block.type === 'heading' && block.level === 2) headings.h2 += 1;
         });
         if (post.layout === 'guide' && headings.h2 < 2) {
-          add(p('layout'), `${who}: the Guide layout builds a table of contents from main headings (H2) — add at least 2, or choose another layout.`);
+          add(p('layout'), `${who}: the Guide layout builds its table of contents from Headings. Add at least 2, or choose another layout.`);
         }
       }
     });
@@ -1577,20 +1662,14 @@
         add(`${i}.related`, `${who}: the related posts are not a list.`);
         return;
       }
+      // A related id with no live post (deleted, unpublished, not due) is skipped
+      // by the build, so another post's action never blocks this one.
       post.related.forEach((id, k) => {
         if (id === post.id) add(`${i}.related.${k}`, `${who} lists itself as a related post.`);
-        else if (!ids.has(id)) add(`${i}.related.${k}`, `${who}: related post “${String(id)}” does not exist.`);
       });
     });
-    // Featured ids must name a post in the list. Sample ids live only in
-    // data/blog/samples.config.json (merged when samples load), so the shipped
-    // config never features a post the production build cannot see. A featured
-    // post that is scheduled or unpublished is fine: the build skips it.
-    asList(cfg.featured).forEach((id, k) => {
-      if (typeof id === 'string' && !ids.has(id)) {
-        add(`config.featured.${k}`, `Blog settings: featured post “${id}” does not exist — remove it from the featured list.`);
-      }
-    });
+    // Featured ids: like related ids, one with no live post is skipped by the
+    // build (deleting or unpublishing a featured post never fails the build).
     return errors;
   };
 
@@ -1621,6 +1700,7 @@
     validateBlogConfigDetailed,
     validateBlogPostsDetailed,
     blogHrefAllowed,
+    updatedAtOf,
     TINTS: Object.freeze(TINTS.slice()),
     LAYOUTS: Object.freeze(LAYOUTS.slice()),
     BLOCK_TYPES: Object.freeze(BLOCK_TYPES.slice()),

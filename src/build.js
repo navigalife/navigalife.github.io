@@ -716,7 +716,7 @@ const build = async () => {
 
   await Promise.all([
     fs.writeFile(path.join(DIST, 'index.html'), html),
-    fs.writeFile(path.join(DIST, '404.html'), notFoundPage(html)),
+    fs.writeFile(path.join(DIST, '404.html'), notFoundPage(html, { blog: Boolean(blogNav) })),
     fs.writeFile(
       path.join(DIST, 'robots.txt'),
       `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /strategy/\nDisallow: /changes/\nSitemap: ${SITE_URL}sitemap.xml\n`,

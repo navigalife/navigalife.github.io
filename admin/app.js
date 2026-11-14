@@ -329,14 +329,21 @@ const loadRepository = async () => {
 const isAuthProblem = (error) => error instanceof AuthError || error?.status === 401 ||
   (error?.status === 403 && !/rate limit/i.test(error.message));
 
-const describeApiError = (error) => {
-  if (error instanceof DataFileError) return 'The file ' + error.path + ' on GitHub has a mistake in it, so the admin can’t open it. Ask your developer to fix that file, then try again.';
-  if (!(error instanceof ApiError)) return error?.message || 'Something unexpected went wrong.';
-  if (error.status === 0) return 'Couldn’t reach GitHub. Check the internet connection, then try again.';
-  if ((error.status === 403 || error.status === 429) && /rate limit/i.test(error.message)) return 'GitHub is limiting how often the admin can ask right now. Wait a few minutes, then try again.';
-  if (error.status >= 500) return 'GitHub is having trouble right now (error ' + error.status + '). Wait a minute, then try again.';
-  if (error.status === 404) return 'GitHub couldn’t find the site’s files on the “' + state.branch + '” branch.';
-  return 'GitHub said: ' + error.message;
+// One sentence each, in this order: what went wrong, `reassure` (what is still
+// safe), what to do, and the error number last (it helps support, but it is
+// not what the owner needs first). `again` names the retry ("press Save &
+// Publish again"), so a toast says "try again" once.
+const describeApiError = (error, { reassure = '', again = 'try again' } = {}) => {
+  const say = (what, todo, code) => [what, reassure, todo, code ? '(Error ' + code + ')' : ''].filter(Boolean).join(' ');
+  const then = (first) => first + ', then ' + again + '.';
+  if (error instanceof DataFileError) return say('The file ' + error.path + ' on GitHub has a mistake in it, so the admin can’t open it.', then('Ask your developer to fix that file'));
+  if (!(error instanceof ApiError)) return say(error?.message || 'Something unexpected went wrong.', then('Wait a moment'));
+  if (error.status === 0) return say('Couldn’t reach GitHub.', then('Check the internet connection'));
+  if ((error.status === 403 || error.status === 429) && /rate limit/i.test(error.message)) return say('GitHub is limiting how often the admin can ask right now.', then('Wait a few minutes'));
+  if (error.status >= 500) return say('GitHub is having trouble right now.', then('Wait a minute'), error.status);
+  if (error.status === 404) return say('GitHub couldn’t find the site’s files on the “' + state.branch + '” branch.', then('Ask your developer to check it'), 404);
+  // GitHub's own messages often end without a full stop.
+  return say('GitHub said: ' + String(error.message).trim().replace(/([^.!?])$/, '$1.'), then('Wait a moment'), error.status);
 };
 
 const showLoadError = (error, retry) => {
@@ -598,13 +605,24 @@ const focusTargets = (button) => {
 };
 
 const renderUnsaved = () => {
-  const changed = unsavedTabs().map(tabName);
+  const tabs = unsavedTabs();
+  const changed = tabs.map(tabName);
   if (state.assetChanges.size) changed.push(state.assetChanges.size + ' file' + (state.assetChanges.size === 1 ? '' : 's') + ' to upload or delete');
   const isDirty = changed.length > 0;
   unsavedBar.hidden = !isDirty;
   dirtySummary.textContent = isDirty ? changed.join(' · ') : '';
   publishButton.disabled = !isDirty || state.publishing;
   barPublishButton.disabled = !isDirty || state.publishing;
+  // An open blog post has its own Publish buttons. The header one steps aside
+  // (hidden when there is nothing else to publish, or while publishing) and
+  // otherwise says it is for the rest, never this post.
+  const postOpen = state.activeTab === 'blog' && Boolean(editorRoot.querySelector('[data-blog-root] .bt-post'));
+  publishButton.hidden = postOpen && (!isDirty || state.publishing);
+  if (!state.publishing) {
+    const label = !postOpen ? 'Save & Publish' : tabs.includes('blog') ? 'Publish other changes' : 'Publish other tabs’ changes';
+    publishButton.textContent = label;
+    barPublishButton.textContent = label;
+  }
 };
 
 // Icon buttons name the row they act on ("Move “Venous ulcers” up"), so a
@@ -948,7 +966,7 @@ const renderCompany = () => {
     '<label>Legal name<input name="legalName" value="' + h(company.legalName) + '" required></label>' +
     '<label class="field--full">Tagline<input name="tagline" value="' + h(company.tagline) + '" required></label>' +
     '<label class="field--full">About copy<textarea name="about" rows="12" required>' + h(company.about) + '</textarea></label>' +
-    '<label>Phone<input name="phone" value="' + h(company.phone) + '"></label>' +
+    '<label>Phone<input name="phone" type="tel" inputmode="tel" value="' + h(company.phone) + '"><span class="field-help">Leave this empty to keep phone calls off the website, so visitors reach you on WhatsApp only. Adding a number brings back the “Call us” button, the Phone line under Contact and the “Or call the clinic” link on blog posts.</span></label>' +
     '<label>WhatsApp<input name="whatsapp" value="' + h(company.whatsapp) + '"></label>' +
     '<label>Email<input name="email" type="email" value="' + h(company.email) + '"></label>' +
     companyHoursField(company, h) +
@@ -990,8 +1008,28 @@ const renderAppearance = () => {
     '</div><div class="form-actions"><button class="button button--quiet" type="button" data-action="discard-form" data-form-tab="appearance" hidden>Discard changes</button><button class="button button--primary" type="button" data-action="save-appearance">Save appearance draft</button></div></form></section>';
 };
 
+// A paused blog scheduler, once known, shows as a compact banner on every tab but
+// Blog, whose own alert is the full one (blog-manage.js mountScheduleAlert).
+const scheduleBanner = { el: null, handle: null, api: null };
+const syncScheduleBanner = () => {
+  if (!scheduleBanner.el) {
+    scheduleBanner.el = document.createElement('div');
+    editorRoot.before(scheduleBanner.el);
+  }
+  scheduleBanner.el.hidden = state.activeTab === 'blog';
+  if (!state.api || scheduleBanner.api === state.api) return;
+  const api = state.api;
+  scheduleBanner.api = api;
+  scheduleBanner.handle?.destroy();
+  scheduleBanner.handle = null;
+  import('./blog-manage.js').then((mod) => {
+    if (scheduleBanner.api === api) scheduleBanner.handle = mod.mountScheduleAlert(scheduleBanner.el, { gh: api, posts: () => state.draft.blogPosts, compact: true });
+  }).catch((error) => console.warn('[blog] The schedule banner did not load', error));
+};
+
 const render = () => {
   if (!state.loaded) return;
+  syncScheduleBanner();
   for (const button of tabNav.querySelectorAll('[data-tab]')) {
     button.setAttribute('aria-current', button.dataset.tab === state.activeTab ? 'page' : 'false');
   }
@@ -1401,8 +1439,13 @@ const blogTab = createBlogTab({
   clearDirty: (key) => { state.dirty.delete(key); dirtyTabs.delete(key); renderUnsaved(); },
   // Only a still-staged file is dropped; a committed photo is left in the repo.
   unstageAsset: (path) => { const staged = state.assetChanges.get(path); if (staged && !staged.delete) unstageOrDeleteAsset(path); },
+  // Deleting an unpublished post for good: its committed photo is deleted in the next publish.
+  deleteAsset: (path) => unstageOrDeleteAsset(path),
   otherUnsavedTabs: () => unsavedTabs().filter((tab) => tab !== 'blog').map(tabName),
   publish: (options) => publish(options),
+  // After publish's onConflict: load the latest site with the owner's changes on
+  // top, quietly (the Blog tab says what happens next). -> { ok, conflicts, left }
+  reloadLatest: async () => (await reloadAndReapply({ quiet: true })) || { ok: false, conflicts: [], left: 0 },
 });
 
 const uploadSolutionImages = async (files) => {
@@ -1634,6 +1677,12 @@ const saveCompany = (form) => {
   }
   state.draft.company = company;
   markDirty('company');
+  // The clinic's own blog author (a_team) carries the clinic's name (blog-manage.js).
+  const blogConfig = state.draft.blogConfig;
+  if (blogConfig && Array.isArray(blogConfig.authors) && blogConfig.authors.some((a) => a && a.id === 'a_team' && a.name !== company.name)) {
+    state.draft.blogConfig = { ...blogConfig, authors: blogConfig.authors.map((a) => (a && a.id === 'a_team' ? { ...a, name: company.name } : a)) };
+    markDirty('blogConfig');
+  }
   showStatus('Company draft saved', 'Press Save & Publish to put the changes on the site.');
 };
 
@@ -1702,7 +1751,19 @@ const COMPLETE_DEADLINE = 20 * 60 * 1000; // total budget through completion
 // changed and stops, so it can't paint over the newer publish's progress.
 let pollGeneration = 0;
 
-const pollActions = async (commitSha, note = '') => {
+// How the publish toast ends once the site has rebuilt. `message` is HTML. Pages
+// caches each page for up to 10 minutes, so every ending says so.
+const LIVE_DONE = { title: 'Live on the site', message: 'It’s live. If you don’t see it, pull down to refresh; changes can take up to 10 minutes to show.' };
+// A caller with its own message (a blog delete) that changes what the site
+// shows without putting anything up: no "It’s live".
+const SITE_DONE = { title: 'Site updated', message: 'The site is up to date. If you still see the old version, pull down to refresh; changes can take up to 10 minutes to show.' };
+
+// quietUntilRun: the caller has shown its own success message (a blog delete);
+// the build's progress messages take over once GitHub has started the run.
+// done: the final message ({ title, message }). saved: the title while the
+// commit is in but the run hasn't started ("Saved" when the caller's own words
+// end the toast, so an Unpublish or Schedule never reads "Published").
+const pollActions = async (commitSha, note = '', { quietUntilRun = false, done = LIVE_DONE, saved = 'Published' } = {}) => {
   const generation = pollGeneration;
   const current = () => generation === pollGeneration;
   const say = (title, message) => { if (current()) showStatus(title, message + note); };
@@ -1719,10 +1780,10 @@ const pollActions = async (commitSha, note = '') => {
       if (!current()) return;
       if (runs.length) { [run] = runs; break; }
       if (Date.now() - started > DISCOVER_DEADLINE) {
-        say('Published — rebuild not started yet', 'Your changes are saved on GitHub, but GitHub hasn’t started rebuilding the site yet (it can be slow when busy). The site will update once it does. ' + actionsLink + '.');
+        say('Rebuild not started yet', 'Your changes are saved on GitHub, but GitHub hasn’t started rebuilding the site yet (it can be slow when busy). The site will update once it does. ' + actionsLink + '.');
         return;
       }
-      say('Published', 'Your changes are saved. The site is rebuilding — usually a minute or two, longer when GitHub is busy. ' + actionsLink + '.');
+      if (!quietUntilRun) say(saved, 'Your changes are saved. The site is rebuilding; it can take up to 10 minutes to show. ' + actionsLink + '.');
       await wait(POLL_INTERVAL);
       if (!current()) return;
     }
@@ -1735,7 +1796,7 @@ const pollActions = async (commitSha, note = '') => {
       const runLink = '<a href="' + h(run.html_url) + '" target="_blank" rel="noreferrer">View on GitHub</a>.';
       if (run.status === 'completed') {
         if (run.conclusion === 'success') {
-          say('Live on the site', 'Your changes are live. ' + runLink);
+          say(done.title, done.message);
           return;
         }
         if (run.conclusion === 'cancelled') {
@@ -1747,7 +1808,7 @@ const pollActions = async (commitSha, note = '') => {
             .sort((x, y) => x.id - y.id)[0];
           if (newer) {
             run = newer;
-            say('Published — rebuilding with a newer update', 'Another change was published right after yours, so GitHub is rebuilding the site once with both. <a href="' + h(newer.html_url) + '" target="_blank" rel="noreferrer">View on GitHub</a>.');
+            say('Rebuilding with a newer change', 'Another change was published right after yours, so GitHub is rebuilding the site once with both. <a href="' + h(newer.html_url) + '" target="_blank" rel="noreferrer">View on GitHub</a>.');
             await wait(POLL_INTERVAL);
             if (!current()) return;
             continue;
@@ -1759,27 +1820,40 @@ const pollActions = async (commitSha, note = '') => {
         return;
       }
       if (Date.now() - started > COMPLETE_DEADLINE) {
-        say('The rebuild is taking a while', 'The site has been rebuilding for unusually long — GitHub may be busy. It should still finish on its own. ' + runLink);
+        say('The rebuild is taking a while', 'The site has been rebuilding for unusually long; GitHub may be busy. It should still finish on its own. ' + runLink);
         return;
       }
-      if (run.status === 'in_progress') say('Updating the site', 'GitHub is rebuilding the site with your changes now — usually about a minute. ' + runLink);
-      else say('Published — waiting to rebuild', 'Your changes are saved. GitHub has queued the site rebuild; it can take a few minutes when GitHub is busy. ' + runLink);
+      if (run.status === 'in_progress') say('Updating the site', 'GitHub is rebuilding the site with your changes now. It can take up to 10 minutes to show. ' + runLink);
+      else say('Waiting to rebuild', 'Your changes are saved. GitHub has queued the site rebuild; it can take up to 10 minutes when GitHub is busy. ' + runLink);
       await wait(POLL_INTERVAL);
       if (!current()) return;
     }
   } catch {
-    say('Published', 'Your changes are saved on GitHub, but the admin couldn’t check on the site rebuild. The site normally updates within a few minutes. ' + actionsLink + '.');
+    say(saved, 'Your changes are saved on GitHub, but the admin couldn’t check on the site rebuild. The site normally updates within 10 minutes. ' + actionsLink + '.');
   }
 };
+
+// The gate toast puts each group's errors under a heading ("Blog, Settings"),
+// so the "Blog settings: " that starts each of those shared rule messages
+// (content-rules.js, which the build prints as is) only repeats it here.
+const gateLines = (html) => html.replace(/(<\/strong>|<br>)Blog settings: (.)/g, (all, lead, first) => lead + first.toUpperCase());
 
 const CONFLICT_ACTION = { action: 'reload-reapply', actionLabel: 'Load their changes, keep mine' };
 
 // Resolves true once the commit landed, false when nothing was published
-// (blog-tab.js rolls its staged post back on false).
+// (blog-tab.js rolls its staged post back on false). options: { message, ownStatus, done, failed, onConflict }
+// (ownStatus: the caller shows its own success message instead of "Published";
+// done: with ownStatus, { title, message } the toast ends on once the site has
+// rebuilt, e.g. "Scheduled", and the progress before it says "Saved";
+// failed: { title, reassure, again } for a failed commit, e.g. "Not scheduled",
+// instead of "Not published" and the Save & Publish retry hint; see describeApiError).
+// onConflict: called instead of the "Someone else published" message when main
+// moved meanwhile; the caller loads the latest itself (blog-tab.js).
 const publish = async (options) => {
   if (state.publishing) return false;
   if (state.editor) {
-    showStatus('Open editor not saved', 'Save or cancel the open editor first.');
+    // The editor is always on the open tab (switching tabs closes it).
+    showStatus('Open editor not saved', 'Save or cancel the ' + (EDITOR_NOUNS[state.editor.kind] || 'item') + ' you’re editing on the ' + tabName(state.activeTab) + ' tab first.');
     return false;
   }
   const message = typeof options?.message === 'string' && options.message.trim() ? options.message.trim() : 'Update site content from admin';
@@ -1796,7 +1870,7 @@ const publish = async (options) => {
   const blocked = unsavedFormsBlock() || pageEditor.publishBlock();
   if (blocked) {
     const canOpen = tabNav.querySelector('[data-tab="' + blocked.tab + '"]');
-    showStatus(blocked.title, blocked.message, canOpen ? { action: 'open-tab:' + blocked.tab, actionLabel: 'Open the ' + blocked.tabName + ' tab' } : {});
+    showStatus(blocked.title, gateLines(blocked.message), canOpen ? { action: 'open-tab:' + blocked.tab + (blocked.view ? ':' + blocked.view : ''), actionLabel: blocked.actionLabel || 'Open the ' + blocked.tabName + ' tab' } : {});
     return false;
   }
   const sent = collectChanges();
@@ -1809,23 +1883,31 @@ const publish = async (options) => {
   renderUnsaved();
   publishButton.textContent = 'Publishing…';
   barPublishButton.textContent = 'Publishing…';
-  showStatus('Publishing…', 'Sending your changes to GitHub. Keep this tab open until it says Published.');
+  showStatus('Publishing…', 'Sending your changes to GitHub. Keep this tab open until they’re saved.');
   try {
     const commit = await state.api.publish(sent.changes, state.baseSha, message);
     state.baseSha = commit.sha;
     settleCommitted(sent);
     renderUnsaved();
     const later = state.dirty.size || state.assetChanges.size
-      ? ' Changes you saved while it was publishing aren’t included yet — press Save & Publish again for those.'
+      ? ' Changes you saved while it was publishing aren’t included yet; press Save & Publish again for those.'
       : '';
-    showStatus('Published', 'Your changes are saved. The site is rebuilding — usually a minute or two.' + later);
-    pollActions(commit.sha, later);
+    const own = Boolean(options?.ownStatus);
+    const done = own && options.done?.title ? options.done : null;
+    if (!own) showStatus('Published', 'Your changes are saved. The site is rebuilding; it can take up to 10 minutes to show.' + later);
+    else if (done) showStatus('Saved', 'Your changes are saved. The site is rebuilding; it can take up to 10 minutes to show.' + later);
+    pollActions(commit.sha, later, { quietUntilRun: own && !done, done: done || (own ? SITE_DONE : LIVE_DONE), saved: own ? 'Saved' : 'Published' });
     return true;
   } catch (error) {
-    if (error instanceof BranchConflictError) {
+    if (error instanceof BranchConflictError && typeof options?.onConflict === 'function') {
+      options.onConflict();
+    } else if (error instanceof BranchConflictError) {
       showStatus('Someone else published since you opened the admin', 'Nothing of yours was published yet, and your changes are safe here. Load their changes first; yours will be kept on top.', CONFLICT_ACTION);
     } else {
-      handleApiError(error, 'Not published', ' Your changes are still here — press Save & Publish to try again.');
+      const failed = options?.failed;
+      handleApiError(error, failed?.title || 'Not published', failed?.title
+        ? { reassure: failed.reassure, again: failed.again }
+        : { reassure: 'Your changes are still here.', again: 'press Save & Publish again' });
     }
   } finally {
     state.publishing = false;
@@ -1839,8 +1921,10 @@ const publish = async (options) => {
 // Main moved under the admin. Load it, then carry over only what the owner
 // changed since their copy was loaded (admin/draft-merge.js) — putting their
 // whole stale file back would silently revert the other writer's edits in it.
-const reloadAndReapply = async () => {
-  if (state.editor) return showStatus('Save or cancel the open editor first', 'Then load their changes — yours will be kept on top.', CONFLICT_ACTION);
+// Resolves { ok: true, conflicts, left } once loaded (undefined when it couldn't
+// load; it says why). quiet: skip the success messages (the caller has its own).
+const reloadAndReapply = async ({ quiet = false } = {}) => {
+  if (state.editor) return showStatus('Save or cancel the open editor first', 'Then load their changes; yours will be kept on top.', CONFLICT_ACTION);
   const ownDraft = state.draft;
   const ownDirty = new Set(state.dirty);
   const assets = new Map(state.assetChanges);
@@ -1851,7 +1935,7 @@ const reloadAndReapply = async () => {
     await loadRepository();
   } catch (error) {
     if (error instanceof AuthError || error.status === 401) return handleApiError(error);
-    return showStatus('Couldn’t load their changes', h(describeApiError(error)) + ' Your changes are still here.', { action: 'reload-reapply', actionLabel: 'Try again' });
+    return showStatus('Couldn’t load their changes', h(describeApiError(error, { reassure: 'Your changes are still here.' })), { action: 'reload-reapply', actionLabel: 'Try again' });
   }
   const fresh = state.draft;
   const refsOf = (draft, keys = Object.keys(FILES), into = new Set()) => {
@@ -1917,25 +2001,29 @@ const reloadAndReapply = async () => {
   const left = dirty.size || assets.size;
   if (conflicts.length) {
     showStatus('Some of your changes need redoing',
-      'Their changes are loaded' + (left ? ' and the rest of yours are kept on top' : '') + '. Someone else also changed these, so their version was kept — please redo your change to:' +
+      'Their changes are loaded' + (left ? ' and the rest of yours are kept on top' : '') + '. Someone else also changed these, so their version was kept. Please redo your change to:' +
       conflicts.map((item) => '<br>• ' + h(item)).join('') + (left ? '<br>Then press Save & Publish.' : ''),
       { action: 'dismiss-status', actionLabel: 'Got it' });
+  } else if (quiet) {
+    // The caller says what happens next.
   } else if (left) {
     showStatus('Your changes are back on top', 'Their changes are loaded, with yours kept on top. Check them, then press Save & Publish.');
   } else {
     showStatus('Their changes are loaded', 'Your changes were already part of what they published, so there is nothing left to publish.');
   }
+  return { ok: true, conflicts, left };
 };
 
-const handleApiError = (error, title = 'Something went wrong', note = '') => {
+// words: describeApiError's { reassure, again }.
+const handleApiError = (error, title = 'Something went wrong', words = {}) => {
   if (error instanceof AuthError || error.status === 401) {
     sessionStorage.removeItem(TOKEN_SESSION_KEY);
     showAuth(vaultExists()
-      ? 'GitHub stopped accepting the saved sign-in. Unlock with your passcode to carry on — your unpublished changes stay here while this tab is open. If the token was replaced, choose “Forget this device” and set it up with the new one.'
-      : 'GitHub stopped accepting the token. Set up again with a working token to carry on — your unpublished changes stay here while this tab is open.');
+      ? 'GitHub stopped accepting the saved sign-in. Unlock with your passcode to carry on; your unpublished changes stay here while this tab is open. If the token was replaced, choose “Forget this device” and set it up with the new one.'
+      : 'GitHub stopped accepting the token. Set up again with a working token to carry on; your unpublished changes stay here while this tab is open.');
     return;
   }
-  showStatus(title, h(describeApiError(error)) + note);
+  showStatus(title, h(describeApiError(error, words)));
 };
 
 setupForm.addEventListener('submit', async (event) => {
@@ -1994,6 +2082,7 @@ tabNav.addEventListener('click', (event) => {
   state.activeTab = button.dataset.tab;
   clearStatus();
   render();
+  renderUnsaved();
 });
 
 editorRoot.addEventListener('click', async (event) => {
@@ -2083,7 +2172,7 @@ rebuildButton.addEventListener('click', async () => {
     await state.api.dispatchWorkflow();
     showStatus('Rebuild requested', 'GitHub is rebuilding the site as it is now, with no content changes. It can take a few minutes to start. <a href="' + h(ACTIONS_URL) + '" target="_blank" rel="noreferrer">Watch on GitHub</a>.');
   } catch (error) {
-    handleApiError(error);
+    handleApiError(error, 'The rebuild didn’t start', { again: 'press Rebuild site again' });
   } finally {
     rebuildButton.disabled = false;
   }
@@ -2093,13 +2182,15 @@ publishStatus.addEventListener('click', async (event) => {
   const button = event.target.closest('[data-global-action]');
   if (!button) return;
   if (button.dataset.globalAction === 'dismiss-status') return clearStatus();
-  const openTab = /^open-tab:([a-z]+)$/.exec(button.dataset.globalAction);
+  const openTab = /^open-tab:([a-z]+)(?::([a-z]+))?$/.exec(button.dataset.globalAction);
   if (openTab) {
     if (!leaveEditor()) return;
     state.activeTab = openTab[1];
     clearStatus();
     render();
+    renderUnsaved();
     if (openTab[1] === 'page') pageEditor.revealErrors();
+    if (openTab[1] === 'blog' && openTab[2] === 'settings') blogTab.showSettings();
     const saveButton = FORM_TABS[openTab[1]] && formHasEdits(openTab[1]) && editorRoot.querySelector('#' + FORM_TABS[openTab[1]] + ' [data-action^="save-"]');
     if (saveButton) {
       saveButton.scrollIntoView({ block: 'center' });
@@ -2152,7 +2243,7 @@ if (savedToken) {
     busyButton: unlockButton,
     inApp: true,
     onAuthFailure: (error) => showAuth(error.status === 401
-      ? 'GitHub no longer accepts the saved token — it may have expired or been replaced. Unlock to try again, or choose “Forget this device” and set it up with a new token.'
+      ? 'GitHub no longer accepts the saved token. It may have expired or been replaced. Unlock to try again, or choose “Forget this device” and set it up with a new token.'
       : error.message),
   });
 } else {

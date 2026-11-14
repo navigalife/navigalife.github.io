@@ -33,6 +33,19 @@ const dayOf = (value) => {
   return iso ? iso.slice(0, 10) : '';
 };
 
+// THE "was this post updated?" rule. One helper for every surface that shows or
+// publishes a modification: the byline (build-blog.js updatedLabel, which
+// render-post.js renders as given), article:modified_time, JSON-LD dateModified,
+// sitemap lastmod and the RSS lastBuildDate. An updatedAt counts only when its
+// calendar day in IST (the clinic's zone, like every date label) is LATER than the
+// publish day. A same-day republish (the admin stamps updatedAt on every save) and
+// an updatedAt left from before a republish or reschedule (earlier than publishAt)
+// both count as no update, so the page and its metadata can never disagree.
+// Returns the raw value (a typed +05:30 offset survives into JSON-LD), or ''.
+// The rule itself lives in admin/content-rules.js (shared with the admin
+// preview, blog-seo.js enrichPost); this module re-exports it.
+const { updatedAtOf } = require('../../admin/content-rules.js');
+
 const siteOf = (ctx) => text(ctx && ctx.siteUrl) || 'https://medivasc.in/';
 const ids = (ctx) => {
   const site = siteOf(ctx);
@@ -95,7 +108,11 @@ const taxonUrl = (ctx, item, kind) => text(item && item.absUrl) || `${siteOf(ctx
 
 // The company as its own byline IS the site's organisation node (siteNodes), not a
 // second entity; a team/desk byline is an Organization; a named clinician is a Person.
-const isCompanyAuthor = (ctx, author) => text(author.name).toLowerCase() === siteName(ctx).toLowerCase();
+// The company author is the one named like the clinic, or the clinic's own record
+// (id a_team) whatever its name, so renaming the clinic never makes it a Person.
+// A record under that id named as a team/desk keeps its own Organization.
+const isCompanyAuthor = (ctx, author) => text(author.name).toLowerCase() === siteName(ctx).toLowerCase()
+  || (author.id === 'a_team' && !isOrgAuthor(author));
 const isOrgAuthor = (author) => /^organi[sz]ation$/i.test(text(author.type || author.kind))
   || /\b(team|staff|desk|editors?|editorial)\b/i.test(text(author.name));
 const authorRef = (ctx, author) => {
@@ -159,7 +176,7 @@ const postJsonLd = (ctx, post, { ogImage: shareCard } = {}) => {
   const author = authorRef(ctx, post.authorObj || authorById(ctx, post.author));
   const reviewer = post.reviewer ? authorRef(ctx, post.reviewerObj || authorById(ctx, post.reviewer)) : null;
   const published = w3c(post.publishAt) || w3c(post.published);
-  const modified = w3c(post.updatedAt) || w3c(post.updated) || published;
+  const modified = w3c(updatedAtOf(post)) || published;
   const coverObj = shareableCover(post);
   const cover = coverObj ? absImg(ctx, coverObj.src) : '';
   const card = text(shareCard) ? absImg(ctx, shareCard) : '';
@@ -376,7 +393,7 @@ const rssFeed = (ctx) => {
     .slice(0, 30);
   // Deterministic: the feed's dates come from the posts, never from the clock.
   const newest = posts
-    .map((post) => dateOf(post.updatedAt || post.updated || post.publishAt || post.published))
+    .map((post) => dateOf(updatedAtOf(post) || post.publishAt || post.published))
     .filter(Boolean)
     .sort((a, b) => b - a)[0];
   const items = posts.map((post) => {
@@ -420,8 +437,9 @@ const rssFeed = (ctx) => {
 // ---------------------------------------------------------------------------
 // Sitemap entries (W1 adds xmlns:image to the root <urlset>)
 // ---------------------------------------------------------------------------
+const lastmodOf = (post) => w3c(updatedAtOf(post)) || w3c(post.publishAt || post.published);
 const latest = (posts) => posts
-  .map((post) => ({ iso: w3c(post.updatedAt || post.updated) || w3c(post.publishAt || post.published), at: dateOf(post.updatedAt || post.updated || post.publishAt || post.published) }))
+  .map((post) => ({ iso: lastmodOf(post), at: dateOf(updatedAtOf(post) || post.publishAt || post.published) }))
   .filter((entry) => entry.iso && entry.at)
   .sort((a, b) => b.at - a.at)[0];
 
@@ -434,7 +452,7 @@ const sitemapEntries = (ctx) => {
   const entries = [urlEntry(id.blogUrl, (latest(posts) || {}).iso)];
   for (const post of posts) {
     const images = unique(postImages(post, { includePatient: false }).map((src) => absImg(ctx, src)).filter((u) => /^https:\/\//.test(u)));
-    entries.push(urlEntry(postUrl(ctx, post), w3c(post.updatedAt || post.updated) || w3c(post.publishAt || post.published), images));
+    entries.push(urlEntry(postUrl(ctx, post), lastmodOf(post), images));
   }
   const categories = list(ctx.categories).length ? list(ctx.categories) : list(ctx.blog && ctx.blog.categories);
   for (const category of categories) {
@@ -499,7 +517,7 @@ const redirectStub = ({ fromDepth, to, siteUrl }) => {
   <meta name="robots" content="noindex,follow">
   <link rel="canonical" href="${attr(canonical)}">
   <meta http-equiv="refresh" content="0; url=${attr(relative)}">
-  <script>location.replace(${JSON.stringify(relative).replace(/</g, '\\u003c')} + location.hash);</script>
+  <script>location.replace(${JSON.stringify(relative).replace(/</g, '\\u003c')} + location.search + location.hash);</script>
 </head>
 <body>
   <p>This page has moved. <a href="${attr(relative)}">Continue to the new page</a>.</p>
@@ -508,4 +526,4 @@ const redirectStub = ({ fromDepth, to, siteUrl }) => {
 `;
 };
 
-module.exports = { postJsonLd, landingJsonLd, categoryJsonLd, authorJsonLd, rssFeed, sitemapEntries, llmsSection, redirectStub, metaFor };
+module.exports = { postJsonLd, landingJsonLd, categoryJsonLd, authorJsonLd, rssFeed, sitemapEntries, llmsSection, redirectStub, metaFor, updatedAtOf };

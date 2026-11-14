@@ -5,12 +5,14 @@
 // file touches admin state, publishes, or calls GitHub except the alert's
 // two workflow calls through `gh`.
 //
-//   mountBlogSettings(root, { getConfig, onChange, onMovePosts, posts, stageAsset, unstageAsset, h, icon })
-//     → { refresh(), destroy() }      onChange(config) gets the WHOLE new config.
+//   mountBlogSettings(root, { getConfig, onChange, onMovePosts, posts, stageAsset, unstageAsset, getCompany, h, icon })
+//     → { refresh(), revealErrors(), destroy() }      onChange(config) gets the WHOLE new config.
+//     getCompany() → the company draft (optional); the clinic's own author mirrors its name.
 //     stageAsset(file, { purpose: 'author' }) → Promise<{ src }>; unstageAsset(src) is optional.
 //   mountCalendar(root, { posts, onOpen }) → { refresh(posts), destroy() }
 //   `posts` (both mounts) is an array or a zero-arg getter returning one.
-//   mountScheduleAlert(root, { gh })     → { destroy() }
+//   mountScheduleAlert(root, { gh, posts, compact }) → { destroy() }
+//     compact: the one-line banner the admin shows on every other tab.
 //
 // All styling lives in blog-manage.css under the `.bm` root class, which each
 // mount adds to its root and removes on destroy.
@@ -76,6 +78,9 @@ const listOf = (value) => {
 const isLive = (post, now = Date.now()) => (post.status === 'published' || post.status === 'scheduled')
   && Number.isFinite(Date.parse(post.publishAt)) && Date.parse(post.publishAt) <= now;
 const canFeature = (post) => post.status === 'published' || post.status === 'scheduled';
+// The clinic itself as a blog author (AGENTS.md "Author"): never deleted, and its
+// name always mirrors data/company.json `name` (src/blog/seo.js matches it by id).
+const COMPANY_AUTHOR = 'a_team';
 const statusLabel = (post) => {
   if (post.status === 'published' || post.status === 'scheduled') return isLive(post) ? 'Published' : 'Scheduled';
   return post.status === 'unpublished' ? 'Unpublished' : 'Draft';
@@ -176,7 +181,7 @@ const enableDrag = (list, { onDrop }) => {
 };
 
 // ======================================================== mountBlogSettings
-export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, posts, stageAsset, unstageAsset, h, icon } = {}) {
+export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, posts, stageAsset, unstageAsset, getCompany, h, icon } = {}) {
   const esc = typeof h === 'function' ? h : escapeHtml;
   const ico = iconFor(typeof icon === 'function' ? icon : null);
   const pid = `bm${(mountCount += 1)}`;
@@ -187,6 +192,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
   const baseKey = (list, id) => `${list}:${id}`;
   const followName = new Set(); // ids whose slug still follows the name (new this session, slug untouched)
   const quiet = new Set(); // new rows: no "needs a name" nag until the owner leaves them
+  const typing = new Set(); // profile-link fields being typed in: their errors wait for blur
   const open = new Set();
   // Author photos. A photo is either in the base tree (a src from the loaded
   // config — never unstaged here) or staged by this mount (src returned by
@@ -223,6 +229,20 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
         if (item && item.id && !baseSlugs.has(baseKey(list, item.id))) baseSlugs.set(baseKey(list, item.id), item.slug);
       }
     }
+  };
+  // The clinic's name from the Company tab, or '' when the host gives none.
+  const companyName = () => {
+    const company = typeof getCompany === 'function' ? getCompany() : null;
+    return company && typeof company.name === 'string' ? company.name.trim() : '';
+  };
+  // The clinic's own author carries the clinic's name. True when that changed
+  // the config (data saved before the name was mirrored).
+  const mirrorCompany = () => {
+    const name = companyName();
+    const author = config.authors.find((a) => a && a.id === COMPANY_AUTHOR);
+    if (!name || !author || author.name === name) return false;
+    author.name = name;
+    return true;
   };
 
   const wrap = document.createElement('div');
@@ -261,9 +281,18 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       </div></div>
     </section>`;
 
-  const slugHelp = (list, id) => (baseSlugs.get(baseKey(list, id)) && postsOf(list, id).some((post) => isLive(post))
-    ? 'Changing it sends the old address to the new one.'
-    : 'Filled in from the name. Lowercase letters, digits and hyphens.');
+  // A slug follows the name while nothing is on the site at its address yet
+  // (new this session, or no live posts and still the name's own slug).
+  const hasLive = (list, id) => postsOf(list, id).some((post) => isLive(post));
+  const followsName = (list, item, name = item.name) => followName.has(item.id)
+    || (!hasLive(list, item.id) && item.id !== COMPANY_AUTHOR && String(item.slug || '') === slugify(name));
+  const slugHelp = (list, item) => {
+    if (baseSlugs.get(baseKey(list, item.id)) && hasLive(list, item.id)) return 'Changing it sends the old address to the new one.';
+    if (item.id === COMPANY_AUTHOR) return 'Lowercase letters, digits and hyphens.';
+    return followsName(list, item)
+      ? 'Filled in from the name. Lowercase letters, digits and hyphens.'
+      : 'Stays the same when you rename it. Change it here if you want.';
+  };
 
   const tintField = (cat, i) => {
     const name = cat.name || 'Category';
@@ -311,7 +340,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       <div class="bm-row__body" id="${pid}-cat-${esc(cat.id)}"${open.has(cat.id) ? '' : ' hidden'}>
         <div class="bm-grid">
           ${field({ label: 'Name', path: `categories.${i}.name`, value: cat.name, attrs: 'data-role="name"' })}
-          ${field({ label: 'Web address', path: `categories.${i}.slug`, value: cat.slug, affix: 'blog/category/', attrs: 'data-role="slug" spellcheck="false" autocapitalize="off"', help: slugHelp('categories', cat.id) })}
+          ${field({ label: 'Web address', path: `categories.${i}.slug`, value: cat.slug, affix: 'blog/category/', attrs: 'data-role="slug" spellcheck="false" autocapitalize="off"', help: slugHelp('categories', cat) })}
           ${field({ label: 'Introduction', path: `categories.${i}.intro`, value: cat.intro, area: true, rows: 3, full: true, help: 'Opens the category’s page on the blog.' })}
           ${field({ label: 'Search description', path: `categories.${i}.metaDescription`, value: cat.metaDescription, area: true, rows: 2, full: true, max: 160, placeholder: cat.intro || '', help: 'What Google shows under the category page. Leave empty to use the introduction.' })}
           ${tintField(cat, i)}
@@ -333,6 +362,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
 
   const authorRow = (author, i) => {
     const count = authoredBy(author.id).length;
+    const clinic = author.id === COMPANY_AUTHOR;
     const sub = [author.role, author.credentials].filter((v) => String(v || '').trim()).join(' · ');
     const summary = `<span class="bm-row__main bm-row__main--author">
         ${avatar(author)}
@@ -346,10 +376,12 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       <div class="bm-row__body" id="${pid}-author-${esc(author.id)}"${open.has(author.id) ? '' : ' hidden'}>
         <p class="bm-note">Role, credentials and photo appear on the site only once you fill them in.</p>
         <div class="bm-grid">
-          ${field({ label: 'Name', path: `authors.${i}.name`, value: author.name, attrs: 'data-role="name"' })}
-          ${field({ label: 'Web address', path: `authors.${i}.slug`, value: author.slug, affix: 'blog/author/', attrs: 'data-role="slug" spellcheck="false" autocapitalize="off"', help: slugHelp('authors', author.id) })}
-          ${field({ label: 'Role', path: `authors.${i}.role`, value: author.role, placeholder: 'e.g. Consultant vascular surgeon' })}
-          ${field({ label: 'Credentials', path: `authors.${i}.credentials`, value: author.credentials, placeholder: 'e.g. MBBS, MS (General Surgery)' })}
+          ${clinic
+    ? field({ label: 'Name', path: `authors.${i}.name`, value: author.name, attrs: 'readonly aria-readonly="true"', help: 'This is the clinic itself. Change the clinic name in the Company tab.' })
+    : field({ label: 'Name', path: `authors.${i}.name`, value: author.name, attrs: 'data-role="name"' })}
+          ${field({ label: 'Web address', path: `authors.${i}.slug`, value: author.slug, affix: 'blog/author/', attrs: 'data-role="slug" spellcheck="false" autocapitalize="off"', help: slugHelp('authors', author) })}
+          ${field({ label: 'Role', path: `authors.${i}.role`, value: author.role, placeholder: clinic ? '' : 'e.g. Consultant vascular surgeon' })}
+          ${field({ label: 'Credentials', path: `authors.${i}.credentials`, value: author.credentials, placeholder: clinic ? '' : 'e.g. MBBS, MS (General Surgery)' })}
           ${field({ label: 'Bio', path: `authors.${i}.bio`, value: author.bio, area: true, rows: 3, full: true, help: 'Two or three sentences for the author’s page and the end of their posts.' })}
           <div class="bm-field bm-field--full bm-photo">
             <span class="bm-field__label"><span>Photo</span></span>
@@ -360,7 +392,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
                   ${typeof stageAsset === 'function' ? `<label class="button button--quiet bm-upload">${ico('photo')}<span>${author.photo ? 'Replace photo' : 'Choose photo'}</span><input type="file" accept="image/*" class="bm-vh" data-act="photo"></label>` : ''}
                   ${author.photo ? '<button type="button" class="button button--text" data-act="photo-remove">Remove</button>' : ''}
                 </div>
-                <p class="field-help" data-photo-status role="status">A clear head-and-shoulders photo. Any size; it is resized here before upload.</p>
+                <p class="field-help" data-photo-status role="status">${clinic ? 'The clinic’s logo works best.' : 'A clear head-and-shoulders photo.'} Any size; it is resized here before upload.</p>
               </div>
             </div>
           </div>
@@ -368,7 +400,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
         </div>
         <div class="bm-row__foot">
           <p class="bm-row__note" data-note role="status"></p>
-          <button type="button" class="button button--text bm-delete" data-act="delete">${ico('trash')}Delete author</button>
+          ${clinic ? '' : `<button type="button" class="button button--text bm-delete" data-act="delete">${ico('trash')}Delete author</button>`}
         </div>
       </div>
     </li>`;
@@ -415,15 +447,15 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
     return `<section class="bm-section" id="${pid}-featured" aria-labelledby="${pid}-featured-h">
       <header class="bm-section__head"><div>
         <h2 id="${pid}-featured-h">Featured posts</h2>
-        <p>Shown in this order in the front-page carousel and the rail beside each post. Only published and scheduled posts can be featured.</p>
+        <p>Shown first on the blog’s front page, in this order, and beside each article as more to read. Only published and scheduled posts can be featured.</p>
       </div></header>
       ${ids.length ? `<ol class="bm-list" data-list="featured">${ids.map((id, i) => featuredRow(id, i, ids.length, byId, cats)).join('')}</ol>`
         : '<div class="bm-empty"><p>No featured posts yet. Add one below to lead the blog’s front page.</p></div>'}
       <div class="bm-add">
         <label class="bm-field bm-add__field"><span class="bm-field__label"><span>Feature a post</span></span>
           <select data-act="feature-pick"${eligible.length ? '' : ' disabled'}>
-            <option value="">${eligible.length ? 'Choose a post…' : 'Every published post is already featured'}</option>
-            ${eligible.map((post) => `<option value="${esc(post.id)}">${esc(post.title || 'Untitled post')}${Number.isFinite(Date.parse(post.publishAt)) ? ` — ${shortDate(Date.parse(post.publishAt))}` : ''}${post.status === 'scheduled' ? ' (scheduled)' : ''}</option>`).join('')}
+            <option value="">${eligible.length ? 'Choose a post…' : allPosts().some(canFeature) ? 'Every published post is already featured' : 'Publish a post first, then feature it here.'}</option>
+            ${eligible.map((post) => `<option value="${esc(post.id)}">${esc(post.title || 'Untitled post')}${Number.isFinite(Date.parse(post.publishAt)) ? `, ${shortDate(Date.parse(post.publishAt))}` : ''}${statusLabel(post) === 'Scheduled' ? ' (scheduled)' : ''}</option>`).join('')}
           </select>
         </label>
         <button type="button" class="button" data-act="feature-add" disabled>${ico('plus')}Add</button>
@@ -489,6 +521,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
   const render = () => {
     const key = focusKey(document.activeElement);
     for (const off of dragOffs) off();
+    typing.clear();
     wrap.innerHTML = view();
     dragOffs = [...wrap.querySelectorAll('[data-list="categories"], [data-list="featured"]')]
       .map((list) => enableDrag(list, { onDrop: (from, to) => moveItem(list.dataset.list, from, to) }));
@@ -528,6 +561,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
     errors.forEach((error, k) => {
       const owner = itemIdOf(error.path);
       if (owner && quiet.has(owner)) return;
+      if ([...typing].some((path) => error.path === path || error.path.startsWith(`${path}.`))) return;
       const el = fieldFor(error.path);
       if (!el) {
         general.push(error);
@@ -565,6 +599,14 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
   };
 
   const emit = () => {
+    // The Company tab may have renamed the clinic since this mount loaded.
+    if (mirrorCompany()) {
+      const i = config.authors.findIndex((a) => a && a.id === COMPANY_AUTHOR);
+      const row = wrap.querySelector(`[data-row="authors"][data-id="${COMPANY_AUTHOR}"]`);
+      const input = row?.querySelector(`[data-path="authors.${i}.name"]`);
+      if (input) input.value = config.authors[i].name;
+      syncRowLabels(row, 'authors', config.authors[i]);
+    }
     showErrors();
     if (typeof onChange === 'function') onChange(structuredClone(config));
   };
@@ -636,14 +678,18 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
     if (!path || el.matches('[data-act]')) return;
     if (el.type === 'radio') {
       if (event.type !== 'change' || !el.checked) return;
-    } else if (event.type === 'change' && el.dataset.role !== 'slug') return;
+    } else if (event.type === 'change' && el.dataset.role !== 'slug' && el.dataset.role !== 'links') return;
     const m = /^(categories|authors)\.(\d+)\.(\w+)$/.exec(path);
     const list = m?.[1];
     const item = m ? config[list][Number(m[2])] : null;
     const row = el.closest('[data-row]');
     let value = el.value;
+    const prevName = item ? item.name : '';
 
     if (el.dataset.role === 'links') {
+      // A half-typed address is not an error yet: check it when the field is left.
+      if (event.type === 'input') typing.add(path);
+      else typing.delete(path);
       setAt(path, lines(value));
     } else if (el.dataset.role === 'slug') {
       const prev = item.slug;
@@ -663,7 +709,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       retarget(list, item, prev);
     } else {
       setAt(path, value);
-      if (el.dataset.role === 'name' && item && followName.has(item.id)) {
+      if (el.dataset.role === 'name' && item && followsName(list, item, prevName)) {
         const prev = item.slug;
         item.slug = slugify(value);
         const slugInput = row?.querySelector('[data-role="slug"]');
@@ -746,21 +792,22 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
     if (!cat) return;
     const others = config.categories.filter((c) => c.id !== id);
     if (!others.length) {
-      rowNote(row, 'This is the blog’s only category. Add another one first — every post needs a category.');
+      rowNote(row, 'This is the blog’s only category. Add another one first. Every post needs a category.');
       return;
     }
     const count = postsIn(id).length;
     const name = cat.name || 'this category';
+    const named = cat.name ? `“${esc(cat.name)}”` : 'this category';
     const answer = await confirmDialog(count ? {
-      title: `Delete “${name}”`,
-      body: `<p>It has ${plural(count, 'post')}. They move to the category you choose, then “${esc(name)}” is deleted.</p>
+      title: cat.name ? `Delete “${cat.name}”` : 'Delete this category',
+      body: `<p>It has ${plural(count, 'post')}. ${count === 1 ? 'It moves' : 'They move'} to the category you choose, then ${named} is deleted.</p>
         <label class="bm-field"><span class="bm-field__label"><span>Move its ${plural(count, 'post')} to…</span></span>
           <select>${others.map((c) => `<option value="${esc(c.id)}">${esc(c.name || c.slug || c.id)}</option>`).join('')}</select>
         </label>`,
       ok: `Move ${count === 1 ? 'post' : 'posts'} and delete`,
       cancel: 'Keep category',
     } : {
-      title: `Delete “${name}”?`,
+      title: cat.name ? `Delete “${cat.name}”?` : 'Delete this category?',
       body: '<p>It has no posts, so nothing else changes.</p>',
       ok: 'Delete category',
       cancel: 'Keep category',
@@ -793,7 +840,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
   const deleteAuthor = async (row) => {
     const id = row.dataset.id;
     const author = config.authors.find((a) => a.id === id);
-    if (!author) return;
+    if (!author || id === COMPANY_AUTHOR) return;
     const name = author.name || 'this author';
     const named = authoredBy(id);
     if (named.length) {
@@ -801,7 +848,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       const shown = named.slice(0, 8);
       const more = named.length - shown.length;
       await confirmDialog({
-        title: `“${name}” can’t be deleted yet`,
+        title: author.name ? `“${author.name}” can’t be deleted yet` : 'This author can’t be deleted yet',
         body: `<p>${named.length === 1 ? 'This post names them' : `These ${named.length} posts name them`}. Give ${named.length === 1 ? 'it' : 'each one'} another author or reviewer first, then delete.</p>
           <ul class="bm-dialog__posts">${shown.map((post) => `<li><span class="bm-dialog__post">${esc(post.title || 'Untitled post')}</span><span class="bm-dialog__role">${[
             post.author === id ? 'Author' : '',
@@ -817,7 +864,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       rowNote(row, 'The blog needs at least one author.');
       return;
     }
-    const answer = await confirmDialog({ title: `Delete “${name}”?`, body: '<p>No posts name this author, so nothing else changes.</p>', ok: 'Delete author', cancel: 'Keep author' });
+    const answer = await confirmDialog({ title: author.name ? `Delete “${author.name}”?` : 'Delete this author?', body: '<p>No posts name this author, so nothing else changes.</p>', ok: 'Delete author', cancel: 'Keep author' });
     if (!answer) return;
     const index = config.authors.findIndex((a) => a.id === id);
     if (index < 0) return;
@@ -870,9 +917,12 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
       const author = config.authors.find((a) => a.id === id);
       if (!author) return;
       if (typeof stageAsset !== 'function') throw new Error('Photos can’t be added here.');
-      const slug = slugify(author.slug) || slugify(author.name) || author.id.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      // Named <slug>-<id>: the id keeps two authors (one taking the other's old
+      // address) from landing on the same staged or committed file.
+      const idPart = author.id.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const slug = slugify(author.slug) || slugify(author.name);
       const ext = result.type === 'image/jpeg' ? 'jpg' : 'webp';
-      const resized = new File([result.blob], `${slug}.${ext}`, { type: result.type || result.blob.type });
+      const resized = new File([result.blob], `${slug ? `${slug}-` : ''}${idPart}.${ext}`, { type: result.type || result.blob.type });
       say('Uploading…');
       const out = await stageAsset(resized, { purpose: 'author' });
       const src = typeof out === 'string' ? out : out?.src;
@@ -982,16 +1032,38 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
   wrap.addEventListener('keydown', onKeyDown);
   wrap.addEventListener('focusout', onFocusOut);
 
-  load();
+  // Loads the config; the clinic author's name is put right (and reported) if it
+  // fell behind the Company tab.
+  const loadMirrored = () => {
+    load();
+    if (mirrorCompany() && typeof onChange === 'function') onChange(structuredClone(config));
+  };
+  loadMirrored();
   render();
 
   return {
     refresh() {
-      load();
+      loadMirrored();
       for (const id of [...open]) {
         if (!config.categories.some((c) => c.id === id) && !config.authors.some((a) => a.id === id)) open.delete(id);
       }
       render();
+    },
+    // The publish gate's "Open Blog settings": show every problem and go to the first.
+    revealErrors() {
+      quiet.clear();
+      typing.clear();
+      showErrors();
+      for (const row of wrap.querySelectorAll('[data-row].has-error')) toggleRow(row, true);
+      const summary = wrap.querySelector('[data-summary]:not([hidden])');
+      const note = wrap.querySelector('[data-bm-error]');
+      const control = note && (note.closest('.bm-field')?.querySelector('input, textarea, select')
+        || note.closest('[data-row]')?.querySelector('[data-act="toggle"], [data-act="unfeature"]'));
+      const target = summary || control;
+      if (!target) return;
+      if (target === summary) summary.setAttribute('tabindex', '-1');
+      target.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
+      target.focus({ preventScroll: true });
     },
     destroy() {
       wrap.removeEventListener('input', onInput);
@@ -1078,9 +1150,10 @@ export function mountCalendar(root, { posts, onOpen } = {}) {
     const monthCount = monthEntries.reduce((sum, [, list]) => sum + list.length, 0);
     const scheduledCount = monthEntries.reduce((sum, [, list]) => sum + list.filter((e) => e.state === 'scheduled').length, 0);
     const isThisMonth = y === now.y && m === now.m;
+    // An empty month says so once, in .bm-cal__empty below the grid.
     const summary = monthCount
       ? `${plural(monthCount, 'post')}${scheduledCount ? `, ${scheduledCount} still to go live` : ''}`
-      : `Nothing scheduled or published in ${MONTHS[m]}.`;
+      : '';
 
     const focused = document.activeElement;
     const refocus = focused && wrap.contains(focused) ? (focused.dataset.cal || null) : null;
@@ -1088,7 +1161,7 @@ export function mountCalendar(root, { posts, onOpen } = {}) {
       <header class="bm-cal__head">
         <div class="bm-cal__heading">
           <h2 class="bm-cal__month" aria-live="polite">${MONTHS[m]} <span>${y}</span></h2>
-          <p class="bm-cal__summary">${summary}</p>
+          ${summary ? `<p class="bm-cal__summary">${summary}</p>` : ''}
         </div>
         <div class="bm-cal__nav">
           <button type="button" class="icon-button" data-cal="prev" aria-label="Previous month">${iconFor(null)('left')}</button>
@@ -1144,8 +1217,11 @@ export function mountCalendar(root, { posts, onOpen } = {}) {
 
 // ======================================================= mountScheduleAlert
 const SCHEDULE_WORKFLOW = 'blog-schedule.yml';
+// Every alert on the page (the Blog tab's, and app.js's compact banner on the
+// other tabs) shows the same known state: each successful read is broadcast.
+const SCHEDULE_EVENT = 'bm:schedule-state';
 
-export function mountScheduleAlert(root, { gh } = {}) {
+export function mountScheduleAlert(root, { gh, posts, compact = false } = {}) {
   root.classList.add('bm');
   const wrap = document.createElement('div');
   wrap.className = 'bm-alert-wrap';
@@ -1156,20 +1232,41 @@ export function mountScheduleAlert(root, { gh } = {}) {
 
   const clear = () => { wrap.innerHTML = ''; };
 
+  // Posts still to go live, which wait on the scheduler (a scheduled post whose
+  // time has passed counts as published, as everywhere else).
+  const waiting = () => listOf(posts).filter((post) => post.status === 'scheduled' && !isLive(post)).length;
+
   const paused = (state) => {
+    const n = waiting();
+    const count = n ? ` ${n === 1 ? '1 scheduled post is' : `${n} scheduled posts are`} waiting.` : '';
     const reason = state === 'disabled_manually'
-      ? 'the publishing schedule was switched off in GitHub.'
-      : 'GitHub switched the publishing schedule off (it does this after 60 days without changes).';
-    wrap.innerHTML = `<div class="bm-alert" role="status" data-state="${escapeHtml(state)}">
+      ? 'Someone switched automatic publishing off.'
+      : 'Automatic publishing switches itself off after 60 days with no changes to the website.';
+    const copy = compact
+      ? `<strong>Scheduled posts are on hold.</strong> Automatic publishing is switched off.${count}`
+      : `<strong>Scheduled posts are on hold.</strong> ${reason}${count} Turn it back on so ${n ? (n === 1 ? 'it goes' : 'they go') : 'scheduled posts go'} live on time.`;
+    wrap.innerHTML = `<div class="bm-alert${compact ? ' bm-alert--compact' : ''}" role="status" data-state="${escapeHtml(state)}">
       <span class="bm-alert__icon">${pauseIcon}</span>
       <div class="bm-alert__copy">
-        <p><strong>Scheduled posts are paused</strong> — ${reason}</p>
+        <p>${copy}</p>
         <p class="bm-alert__error" data-alert-error hidden></p>
       </div>
       <button type="button" class="button bm-alert__action" data-alert-enable>Turn it back on</button>
     </div>`;
   };
 
+  const show = (state) => {
+    if (!state || state === 'active' || state === 'missing') clear();
+    else paused(state);
+  };
+  const onState = (event) => {
+    if (destroyed || event.detail?.from === wrap) return;
+    clearTimeout(timer);
+    show(event.detail?.state);
+  };
+  document.addEventListener(SCHEDULE_EVENT, onState);
+
+  // A read error stays quiet here (nothing known to show) and is not broadcast.
   const check = async () => {
     let state;
     try {
@@ -1181,16 +1278,19 @@ export function mountScheduleAlert(root, { gh } = {}) {
     }
     if (destroyed) return state;
     if (state === 'missing') console.info(`[blog] ${SCHEDULE_WORKFLOW} is not on the branch; no schedule alert.`);
-    if (!state || state === 'active' || state === 'missing') clear();
-    else paused(state);
+    show(state);
+    document.dispatchEvent(new CustomEvent(SCHEDULE_EVENT, { detail: { state, from: wrap } }));
     return state;
   };
 
-  const showError = (message) => {
+  // retry false: pressing the button again can't help (the sign-in or its
+  // access is the problem), so it goes and the message says what will.
+  const showError = (message, { retry = true } = {}) => {
     const box = wrap.querySelector('[data-alert-error]');
     const button = wrap.querySelector('[data-alert-enable]');
     if (box) { box.textContent = message; box.hidden = false; }
-    if (button) { button.disabled = false; button.textContent = 'Try again'; }
+    if (button && retry) { button.disabled = false; button.textContent = 'Try again'; }
+    else if (button) button.remove();
   };
 
   const enable = async (button) => {
@@ -1203,11 +1303,15 @@ export function mountScheduleAlert(root, { gh } = {}) {
     } catch (error) {
       if (destroyed) return;
       console.warn('[blog] Could not turn the publishing schedule back on:', error);
-      showError(error?.name === 'AuthError'
-        ? 'Your GitHub key has expired. Sign in again, then try once more.'
-        : error?.status === 403 || error?.status === 404
-          ? 'This GitHub key isn’t allowed to switch workflows on. In GitHub, open Actions, choose the blog schedule and press “Enable workflow” — or use a key with Actions access.'
-          : 'That didn’t go through. Check the connection and try again.');
+      // The admin's sign-in is the passcode on the Lock screen (app.js): after
+      // Lock, Unlock checks the saved sign-in with GitHub again.
+      if (error?.name === 'AuthError' || error?.status === 401) {
+        showError('GitHub stopped accepting your sign-in. Press Lock at the top, then unlock with your passcode. If that doesn’t work, choose “Forget this device” and set it up again.', { retry: false });
+      } else if ((error?.status === 403 && !/rate limit/i.test(String(error.message))) || error?.status === 404) {
+        showError('Your login can’t switch automatic publishing back on. Ask the person who set up the website to do it.', { retry: false });
+      } else {
+        showError('That didn’t go through. Check the connection and try again.');
+      }
       return;
     }
     if (destroyed) return;
@@ -1222,7 +1326,7 @@ export function mountScheduleAlert(root, { gh } = {}) {
       </div>`;
       timer = setTimeout(() => { if (!destroyed) clear(); }, 8000);
     } else if (state && state !== 'missing') {
-      showError('GitHub hasn’t confirmed the change yet. Give it a minute, then try again.');
+      showError('The change hasn’t come through yet. Give it a minute, then try again.');
     }
   };
 
@@ -1238,6 +1342,7 @@ export function mountScheduleAlert(root, { gh } = {}) {
     destroy() {
       destroyed = true;
       clearTimeout(timer);
+      document.removeEventListener(SCHEDULE_EVENT, onState);
       wrap.removeEventListener('click', onClick);
       wrap.remove();
       if (!root.querySelector('.bm-settings, .bm-cal, .bm-alert-wrap')) root.classList.remove('bm');

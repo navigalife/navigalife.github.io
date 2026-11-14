@@ -262,17 +262,38 @@ const renderAuthorPage = (ctx, author) => {
 </div>`;
 };
 
-// --- Coming soon (0 live posts) ------------------------------------------------
+// --- Contact CTA (post pages + coming soon) -----------------------------------
 
-// WhatsApp + call glyphs, matching render-post.js's svg() output so the
-// placeholder's CTA reads identically to the one on every post page.
-const soonSvg = (body, fill = false) => fill
-  ? `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="currentColor">${body}</svg>`
-  : `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
-const SOON_ICONS = {
-  whatsapp: soonSvg('<path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/>', true),
-  call: soonSvg('<path d="M7.4 3.5 10 8 7.8 9.7c1.2 2.6 3.3 4.7 5.9 5.9l1.7-2.2 4.6 2.5-.8 4a2 2 0 0 1-2 1.6C9.1 20.7 3.3 14.9 2.5 6.8a2 2 0 0 1 1.6-2l3.3-.7Z"/>'),
+// The ONE copy of the line-icon helper and the WhatsApp/call glyphs that close a
+// post and the coming-soon page; render-post.js takes all three through its
+// existing require of this file (no new require: the admin preview bundles both).
+const svg = (body, { fill = false, cls = 'icon' } = {}) => fill
+  ? `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="currentColor">${body}</svg>`
+  : `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+const CONTACT_ICONS = {
+  whatsapp: svg('<path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/>', { fill: true }),
+  call: svg('<path d="M7.4 3.5 10 8 7.8 9.7c1.2 2.6 3.3 4.7 5.9 5.9l1.7-2.2 4.6 2.5-.8 4a2 2 0 0 1-2 1.6C9.1 20.7 3.3 14.9 2.5 6.8a2 2 0 0 1 1.6-2l3.3-.7Z"/>'),
 };
+
+// The care-team CTA aside. `title` is trusted markup (a code constant, may hold
+// <em>); `text` is escaped. The call link renders only while company.phone is set
+// (contactHref.call is '' otherwise), so re-entering a phone in the admin brings
+// it back with no code change. No WhatsApp and no phone → no CTA at all.
+const contactCta = (ctx, { id, title, text: body }) => {
+  const wa = ctx.contactHref && ctx.contactHref.whatsapp;
+  const call = ctx.contactHref && ctx.contactHref.call;
+  if (!wa && !call) return '';
+  return `<aside class="post-cta" aria-labelledby="${esc(id)}"><div class="post-cta__copy">`
+    + '<p class="post-cta__kicker">MediVasc care team</p>'
+    + `<h2 class="post-cta__title" id="${esc(id)}">${title}</h2>`
+    + `<p class="post-cta__text">${esc(body)}</p></div>`
+    + '<div class="post-cta__actions">'
+    + (wa ? `<a class="button post-cta__wa" href="${esc(wa)}" rel="noopener" target="_blank">${CONTACT_ICONS.whatsapp}<span>Chat on WhatsApp</span></a>` : '')
+    + (call ? `<a class="text-link post-cta__call" href="${esc(call)}">${CONTACT_ICONS.call}<span>Or call the clinic</span></a>` : '')
+    + '</div></aside>';
+};
+
+// --- Coming soon (0 live posts) ------------------------------------------------
 
 // The /blog/ page shown while the Journal has no live post yet: the Journal
 // identity, a calm line on what it will cover, and the same WhatsApp/call
@@ -280,33 +301,21 @@ const SOON_ICONS = {
 // sitemap, feed and llms.txt (build-blog.js); the normal landing replaces it the
 // moment a post goes live, with no other change.
 const renderComingSoon = (ctx) => {
-  const wa = ctx.contactHref && ctx.contactHref.whatsapp;
-  const call = ctx.contactHref && ctx.contactHref.call;
   const kicker = text(ctx.blog && ctx.blog.name) || 'The MediVasc Journal';
-  const cta = (wa || call)
-    ? `
-  <div class="blog-soon__cta">
-    <aside class="post-cta" aria-labelledby="blog_soon_cta">
-      <div class="post-cta__copy">
-        <p class="post-cta__kicker">MediVasc care team</p>
-        <h2 class="post-cta__title" id="blog_soon_cta">Need help in the meantime?</h2>
-        <p class="post-cta__text">No need to wait for an article. Message us on WhatsApp. Tell us what you are seeing, add a photo if you can, and our team will tell you what to do next.</p>
-      </div>
-      <div class="post-cta__actions">
-        ${wa ? `<a class="button post-cta__wa" href="${esc(wa)}" rel="noopener" target="_blank">${SOON_ICONS.whatsapp}<span>Chat on WhatsApp</span></a>` : ''}
-        ${call ? `<a class="text-link post-cta__call" href="${esc(call)}">${SOON_ICONS.call}<span>Or call the clinic</span></a>` : ''}
-      </div>
-    </aside>
-  </div>`
-    : '';
+  const cta = contactCta(ctx, {
+    id: 'blog_soon_cta',
+    title: 'Need help in the meantime?',
+    text: 'No need to wait for an article. Message us on WhatsApp. Tell us what you are seeing, add a photo if you can, and our team will tell you what to do next.',
+  });
   return `
 <div class="blog-landing blog-soon">
   <header class="blog-masthead container">
     <p class="blog-kicker">${esc(kicker)}</p>
     <h1 class="blog-masthead__title">The first articles are on their way.</h1>
     <p class="blog-masthead__intro">Our care team will write here about vascular and lymphatic care, wound and foot care, and living well with these conditions, in plain words that help you act early.</p>
-  </header>${cta}
+  </header>${cta ? `
+  <div class="blog-soon__cta">${cta}</div>` : ''}
 </div>`;
 };
 
-module.exports = { renderLanding, renderCategoryPage, renderAuthorPage, renderPostCard, renderComingSoon };
+module.exports = { renderLanding, renderCategoryPage, renderAuthorPage, renderPostCard, renderComingSoon, svg, CONTACT_ICONS, contactCta };

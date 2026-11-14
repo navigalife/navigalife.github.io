@@ -178,6 +178,9 @@ label.row-action{position:relative}
 .status-group + .status-group{margin-top:8px}
 .publish-status .status-group strong{margin-bottom:0}
 .publish-status a{color:var(--primary)}
+/* "View on site" (blog-tab.js, always last in the message): its own line, a 44px tap target at every size; the
+   negative bottom margin lets the target use the toast's bottom padding instead of making the toast taller. */
+.publish-status .bt-view-site--status{display:flex;width:fit-content;min-height:44px;align-items:center;margin-bottom:-13px}
 .publish-status .button{margin-top:10px}
 /* Full 44px touch target, but no border or fill — in a box this size a bordered
    icon button reads as the toast's primary action, which the × is not. */

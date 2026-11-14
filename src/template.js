@@ -1092,10 +1092,53 @@ const renderPage = ({
 // This page is the one place a root path is allowed; it never ships at /changes/.
 const MOUNT_BASE = '<base href="/">\n  <script>if(location.pathname.indexOf(\'/changes/\')===0)'
   + 'document.getElementsByTagName(\'base\')[0].href=\'/changes/\'</script>';
-const notFoundPage = (html) => {
+//
+// The page is the homepage with a plain "not found" notice on top, so a dead link
+// (an unpublished or deleted article, a typo) says what happened before it offers
+// the homepage below. The notice works without JS; on a /blog/… address (also under
+// /changes/) a tiny script swaps its line and link for the Journal ones. Its few
+// rules ride inline here, so styles.css (and every other page) stays untouched.
+// Links are relative to the <base>, so they land on the site root or the mount.
+// One h1 per page: the notice is the page's subject, so the homepage hero's h1 is
+// demoted to an h2 in this copy only. h2 shares every h1 rule in styles.css (the
+// h1,h2 font rules, `h1 em,h2 em`) except size/width/spacing, which `.hero h1`
+// sets; `.hero h2` below repeats those four values. Keep it in step with
+// styles.css `.hero h1`. No other h2 rule in styles.css reaches inside .hero.
+const NOT_FOUND_CSS = '<style>'
+  + '.notfound{padding-block:clamp(2rem,4vw,3rem);border-bottom:1px solid color-mix(in srgb,var(--line) 85%,transparent)}'
+  + '.notfound .kicker{margin-bottom:16px}'
+  + '.notfound h1{font-size:clamp(2rem,3.6vw,2.75rem);max-width:20ch;margin-bottom:12px}'
+  + '.notfound__text{margin-bottom:8px;color:var(--ink-muted)}'
+  + '.hero h2{font-size:clamp(2.2rem,5vw,3.1rem);max-width:24ch;margin-bottom:24px;text-wrap:balance}'
+  + '</style>';
+const HERO_H1 = /<h1>((?:(?!<\/?h1[\s>])[^])*)<\/h1>/g;
+const notFoundNotice = ({ blog }) => `<section class="notfound" aria-labelledby="notfound_title">
+    <div class="container">
+      <p class="kicker">Error 404</p>
+      <h1 id="notfound_title">This page isn’t here</h1>
+      <p class="notfound__text" data-notfound-text>It may have moved or been taken down.</p>
+      <a class="text-link" href="./" data-notfound-link><span>Go to the homepage</span>${icon('arrow')}</a>
+    </div>
+  </section>${blog ? `
+  <script>(function(){if(!/^\\/(?:changes\\/)?blog\\//.test(location.pathname))return;`
+    + 'var t=document.querySelector(\'[data-notfound-text]\'),a=document.querySelector(\'[data-notfound-link]\');if(!t||!a)return;'
+    + 't.textContent=\'This article is no longer available.\';a.setAttribute(\'href\',\'blog/\');a.firstChild.textContent=\'Browse the Journal\'})()</script>' : ''}`;
+// opts.blog: a Journal exists (build.js blogNav), so /blog/ is a page to send people to.
+const notFoundPage = (html, { blog = false } = {}) => {
   const charset = '<meta charset="utf-8">\n';
+  const main = '<main id="main">';
   if (!html.includes(charset)) throw new Error('notFoundPage: <meta charset="utf-8"> not found; the 404 base script goes right after it.');
-  return html.replace(charset, `${charset}  ${MOUNT_BASE}\n`);
+  if (!html.includes(main) || !html.includes('</head>')) throw new Error('notFoundPage: <main id="main"> or </head> not found; the not-found notice goes at the top of main.');
+  const heroH1 = html.match(HERO_H1) || [];
+  if (heroH1.length !== 1 || (html.match(/<h1[\s>]/g) || []).length !== 1) throw new Error('notFoundPage: expected exactly one bare <h1> (the homepage hero); the 404 demotes it so the notice is the only h1.');
+  // The homepage's robots meta (and its comment) becomes noindex: a 404 is never a result.
+  const robots = /(?:<!--(?:(?!-->)[^])*-->\s*)?<meta name="robots" content="[^"]*">/;
+  return html
+    .replace(HERO_H1, (_, inner) => `<h2>${inner}</h2>`)
+    .replace(charset, () => `${charset}  ${MOUNT_BASE}\n`)
+    .replace(robots, () => '<meta name="robots" content="noindex">')
+    .replace('</head>', () => `  ${NOT_FOUND_CSS}\n</head>`)
+    .replace(main, () => `${main}\n  ${notFoundNotice({ blog })}\n`);
 };
 
 module.exports = { renderPage, renderShell, notFoundPage, contactHrefs, phoneHref, escapeHtml };

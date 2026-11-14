@@ -9,6 +9,8 @@
  *
  *   list()                      -> [{ id, slug, title, updated_at, updated_by, size, assets, asset_bytes }], newest first
  *   get(id)                     -> { id, slug, title, updated_at, updated_by, post, assets: [{ name, type, size, updated_at }] }
+ *   version(id)                 -> { updated_at, updated_by }, or null when there is no draft with that id
+ *       (checked before publishing or deleting, so an older copy never replaces or removes a newer one)
  *   save(id, post, ifMatch)     -> { id, updated_at }
  *       ifMatch = the updated_at you last loaded/saved: saves only over that version.
  *       ifMatch = null/undefined: creates a new draft (fails if the id exists).
@@ -97,6 +99,20 @@ export const createDraftsApi = ({ endpoint, getToken }) => {
 
     async get(id) {
       return asJson(await request('GET', path(id)));
+    },
+
+    // The worker has no lighter route: GET /drafts/:id answers the whole draft, or
+    // 404 once it is gone (deleted, or published and removed).
+    async version(id) {
+      let got;
+      try {
+        got = await asJson(await request('GET', path(id)));
+      } catch (error) {
+        if (error.code === 'not-found') return null;
+        throw error;
+      }
+      if (!got || !Number.isFinite(got.updated_at)) throw new DraftsError('The drafts service answered with something unexpected. Try again in a minute.', { code: 'server' });
+      return { updated_at: got.updated_at, updated_by: typeof got.updated_by === 'string' ? got.updated_by : '' };
     },
 
     async save(id, post, ifMatch) {

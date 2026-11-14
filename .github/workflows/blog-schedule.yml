@@ -7,7 +7,9 @@
 #
 # Timing: tell the owner "within ~30 minutes". GitHub starts cron runs late
 # (often 5-20 minutes, more at busy hours, and a tick can be skipped), and the
-# deploy itself takes a few minutes on top.
+# deploy itself takes a few minutes on top. The ticks sit at :07, :22, :37 and
+# :52, off the top of the hour, which GitHub documents as its busiest (most
+# delayed, most often dropped) minute; still one tick every 15 minutes.
 #
 # GitHub DISABLES scheduled workflows after 60 days without repository activity.
 # The admin's schedule-off alert (lane W5d, mountScheduleAlert) watches this
@@ -25,7 +27,7 @@ name: Blog scheduler
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
 
 permissions:

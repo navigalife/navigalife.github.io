@@ -16,8 +16,9 @@
 // block types render nothing.
 //
 // API
-//   renderBlocks(blocks, opts) → html     opts = { img, depth, films, references, contactHref }
+//   renderBlocks(blocks, opts) → html     opts = { img, depth, films, references, contactHref, postLinks }
 //   renderInline(inline, opts) → html
+//   postLinks(livePosts, redirects) → Map   (address slug → current slug; see below)
 //   headingsOf(blocks) → [{ level, text, anchor, kind }]   (the ids renderBlocks
 //                        emits; kind = heading | faq | takeaways, document order)
 //   plainText(post) → string             (title + dek + every block's text)
@@ -31,6 +32,13 @@
 // whose quote characters are already typographic, so an attribute can never be
 // broken out of even if the helper forgets to escape. Without opts.img a plain
 // depth-prefixed <img> is emitted.
+//
+// opts.postLinks (from postLinks()) lists the posts that are on the site. With it,
+// a link to blog/<slug>/ goes to that post's current address (an old slug or a
+// settings redirect resolves), and a link to a post that is not live (unknown,
+// draft, unpublished, scheduled for later, deleted) renders as its plain words,
+// so a stale link never breaks the page or the build. Without it, every
+// allowlisted blog/<slug>/ link renders as written.
 (function (root) {
   'use strict';
 
@@ -138,19 +146,47 @@
   const TEL_RE = /^tel:\+?[0-9][0-9().-]{2,24}$/i;
   const OWN_HOST_RE = /^(?:www\.)?medivasc\.in$/i;
 
+  const POST_LINK_RE = new RegExp(`^blog\\/(${SLUG})\\/(${FRAG})$`);
+  const SLUG_RE = new RegExp(`^${SLUG}$`);
+
   // → { href, external } or null. Anything not on the allowlist is null, and the
-  // run renders as plain text.
-  const resolveHref = (raw, depth) => {
+  // run renders as plain text. links = opts.postLinks (a Map) or null.
+  const resolveHref = (raw, depth, links) => {
     if (typeof raw !== 'string') return null;
     const href = raw.trim();
     if (!href || href.length > 2048 || /[\u0000- \u007f-\u009f]/.test(href)) return null;
     if (ANCHOR_RE.test(href)) return { href, external: false };
-    if (INTERNAL_RE.test(href)) return { href: depth + href, external: false };
+    if (INTERNAL_RE.test(href)) {
+      const post = links ? POST_LINK_RE.exec(href) : null;
+      if (!post) return { href: depth + href, external: false };
+      const slug = links.get(post[1]);
+      return typeof slug === 'string' && SLUG_RE.test(slug) ? { href: `${depth}blog/${slug}/${post[2]}`, external: false } : null;
+    }
     if (TEL_RE.test(href)) return { href: href.replace(/^tel:/i, 'tel:'), external: false };
     if (MAILTO_RE.test(href)) return { href: href.replace(/^mailto:/i, 'mailto:'), external: false };
     const m = HTTPS_RE.exec(href);
     if (m) return { href: href.replace(/^https:/i, 'https:'), external: !OWN_HOST_RE.test(m[1]) };
     return null;
+  };
+
+  // The posts on the site → opts.postLinks: every address that opens one (its
+  // slug, then its old slugs, then a settings redirect blog/a/ → blog/b/ whose
+  // target is one of them) → that post's current slug. The build passes its live
+  // posts; the admin preview passes the posts live now.
+  const POST_ADDRESS_RE = new RegExp(`^blog\\/(${SLUG})\\/$`);
+  const postLinks = (livePosts, redirects) => {
+    const map = new Map();
+    const posts = list(livePosts).filter((p) => isObj(p) && SLUG_RE.test(str(field(p, 'slug'))));
+    posts.forEach((p) => { if (!map.has(p.slug)) map.set(p.slug, p.slug); });
+    posts.forEach((p) => list(field(p, 'previousSlugs')).forEach((old) => {
+      if (typeof old === 'string' && SLUG_RE.test(old) && !map.has(old)) map.set(old, p.slug);
+    }));
+    list(redirects).forEach((r) => {
+      const from = POST_ADDRESS_RE.exec(str(field(r, 'from')));
+      const to = POST_ADDRESS_RE.exec(str(field(r, 'to')));
+      if (from && to && !map.has(from[1]) && map.has(to[1])) map.set(from[1], map.get(to[1]));
+    });
+    return map;
   };
 
   // Hrefs supplied by the build (ctx.contactHref) rather than the author: allow
@@ -184,13 +220,19 @@
       .join('');
   };
 
+  // No words and no citation: an empty paragraph or list item (Enter at the end
+  // of the text). It renders nothing, and the content rules let it through.
+  const blankInline = (inline) => plainInline(inline).trim() === ''
+    && !(Array.isArray(inline) && inline.some((run) => isObj(run) && hasOwn(run, 'cite')));
+
   const newState = (opts) => {
     const refs = new Map();
     list(field(opts, 'references')).forEach((r, i) => {
       const id = str(field(r, 'id'));
       if (id && /^[A-Za-z0-9_-]{1,64}$/.test(id) && !refs.has(id)) refs.set(id, i + 1);
     });
-    return { depth: depthOf(opts), refs, cites: new Map() };
+    const links = field(opts, 'postLinks');
+    return { depth: depthOf(opts), refs, cites: new Map(), links: links && typeof links.get === 'function' ? links : null };
   };
 
   const citeHtml = (id, state) => {
@@ -240,7 +282,7 @@
       const html = runHtml(run);
       if (!html) return;
       lastCite = false;
-      const link = isObj(run) ? resolveHref(field(run, 'href'), state.depth) : null;
+      const link = isObj(run) ? resolveHref(field(run, 'href'), state.depth, state.links) : null;
       if (!link || !open || open.href !== link.href) close();
       if (link && !open) {
         out.push(linkOpen(link));
@@ -312,6 +354,7 @@
   const R = Object.create(null);
 
   R.paragraph = (b, s) => {
+    if (blankInline(field(b, 'text'))) return '';
     const html = inlineHtml(field(b, 'text'), s);
     if (!html) return '';
     const first = s.firstDone ? '' : ' data-first';
@@ -320,6 +363,7 @@
   };
 
   R.lead = (b, s) => {
+    if (blankInline(field(b, 'text'))) return '';
     const html = inlineHtml(field(b, 'text'), s);
     if (!html) return '';
     const first = s.firstDone ? '' : ' data-first';
@@ -336,7 +380,7 @@
   };
 
   R.list = (b, s) => {
-    const items = list(field(b, 'items')).map((it) => inlineHtml(it, s)).filter(Boolean);
+    const items = list(field(b, 'items')).filter((it) => !blankInline(it)).map((it) => inlineHtml(it, s)).filter(Boolean);
     if (!items.length) return '';
     const tag = field(b, 'style') === 'number' ? 'ol' : 'ul';
     const cls = tag === 'ol' ? 'b-list b-list--number' : 'b-list b-list--bullet';
@@ -548,7 +592,7 @@
     return Math.max(1, Math.round(words / 220));
   };
 
-  const api = Object.freeze({ renderBlocks, renderInline, headingsOf, plainText, readingMinutes, slugify, BLOCK_TYPES });
+  const api = Object.freeze({ renderBlocks, renderInline, headingsOf, plainText, readingMinutes, slugify, postLinks, BLOCK_TYPES });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MediVascBlogBlocks = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

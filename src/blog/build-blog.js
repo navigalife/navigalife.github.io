@@ -109,12 +109,12 @@ const loadBlog = async ({ root, rules, films = [], now = new Date(), env = proce
       list(rules.validateBlogPosts(posts, config, films)),
     ]);
   }
-  // Files on disk, links between posts, the featured list, the site's videos.
+  // Files on disk and the site's videos (links between posts degrade, never fail).
   const checkBlogRefs = loadRefChecker();
   if (checkBlogRefs) {
-    groups.push(['Blog links and files', list(checkBlogRefs(posts, config, { root, films, now })).map((problem) => problem.message)]);
+    groups.push(['Blog photos and videos', list(checkBlogRefs(posts, config, { root, films, now })).map((problem) => problem.message)]);
   } else {
-    console.warn('Blog: src/blog/check-refs.js is missing; image, link and video references were not checked.');
+    console.warn('Blog: src/blog/check-refs.js is missing; image and video references were not checked.');
   }
 
   const live = posts.filter((post) => {
@@ -332,8 +332,9 @@ const buildBlog = async (blog, {
     const authorObj = new Map(authors.map((a) => [a.id, a]));
     const posts = ordered.map((post) => {
       const at = published(post);
-      const updated = post.updatedAt ? new Date(post.updatedAt) : null;
-      const updatedValid = updated && !Number.isNaN(updated.getTime()) && dateLabel(updated) !== dateLabel(at);
+      // seo.updatedAtOf is the one "updated?" rule (byline, meta, JSON-LD, sitemap).
+      const updatedRaw = seo.updatedAtOf(post);
+      const updated = updatedRaw ? new Date(updatedRaw) : null;
       return {
         ...post,
         url: `blog/${post.slug}/`,
@@ -345,11 +346,12 @@ const buildBlog = async (blog, {
         readingMinutes: blocks.readingMinutes(post),
         published: at,
         publishedLabel: dateLabel(at),
-        updated: updatedValid ? updated : null,
-        updatedLabel: updatedValid ? dateLabel(updated) : '',
+        updated,
+        updatedLabel: updated ? dateLabel(updated) : '',
       };
     });
     const postById = new Map(posts.map((post) => [post.id, post]));
+    const postLinks = blocks.postLinks(posts, config.redirects);
     const keywordsOf = (post) => new Set(
       [text(post.seo && post.seo.focusKeyphrase), ...list(post.seo && post.seo.keywords).map(text)]
         .filter(Boolean)
@@ -386,6 +388,8 @@ const buildBlog = async (blog, {
       themeId,
       posts,
       featured: list(config.featured).map((id) => postById.get(id)).filter(Boolean),
+      // Links between posts: only live posts link; a stale link renders as plain words.
+      postLinks,
       categories,
       authors,
       related,
@@ -494,8 +498,28 @@ const buildBlog = async (blog, {
     }));
   }
 
-  // Category + author archives (only those with ≥1 live post).
+  // Category + author archives (only those with ≥1 live post). Each gets its own
+  // share card from og.js unchanged: the post card's frame, a label kicker
+  // ("Articles on" / "Articles by") and the name as the title, never a cover. A
+  // card that cannot be drawn falls back to the site's share image, like a post's.
   const archiveCtx = ctxFor('../../../');
+  const taxonCard = async (kind, item, kicker) => {
+    let png = null;
+    try {
+      png = await og.renderOgPng({ title: text(item.name), slug: `${kind}-${item.slug}` }, {
+        blogName: config.name,
+        category: kicker,
+        lockupPath: path.join(root, 'assets', 'brand', 'logo-ink.png'),
+        theme,
+        root,
+      });
+    } catch (error) {
+      console.warn(`Blog: the share image for ${kind} "${text(item.name)}" could not be drawn (${error.message}); using the site's share image.`);
+    }
+    return Buffer.isBuffer(png)
+      ? { ogImage: `${siteUrl}${await writeHashed(`assets/blog/og/${kind}`, item.slug, 'png', png)}`, ogImageAlt: `${kicker} ${text(item.name)}` }
+      : {};
+  };
   for (const category of archiveCtx.categories) {
     await writePage(path.posix.join('blog', 'category', category.slug), shell(archiveCtx, {
       kind: 'category',
@@ -505,6 +529,7 @@ const buildBlog = async (blog, {
         description: text(category.metaDescription) || text(category.intro) || text(config.intro),
       }),
       jsonLd: seo.categoryJsonLd(archiveCtx, category),
+      ...(await taxonCard('category', category, 'Articles on')),
       main: renderCategoryPage(archiveCtx, category),
     }));
   }
@@ -517,6 +542,8 @@ const buildBlog = async (blog, {
         description: text(author.bio) || text(config.intro),
       }),
       jsonLd: seo.authorJsonLd(archiveCtx, author),
+      // Mirrors the page's own label: an author with no written article is a reviewer.
+      ...(await taxonCard('author', author, archiveCtx.posts.some((p) => p.author === author.id) ? 'Articles by' : 'Medically reviewed by')),
       main: renderAuthorPage(archiveCtx, author),
     }));
   }

@@ -2,18 +2,21 @@
 // Cross-file contracts: AGENTS.md "The blog"; styles in
 // blog-seo.css, every selector under the one root class `.bseo`.
 //
-//   mountSeoPanel(root, { getPost, onChange, allPosts, config, h, icon, resolveSrc? })
+//   mountSeoPanel(root, { getPost, onChange, allPosts, config, h, icon, resolveSrc?, everLive? })
 //     → { refresh(), destroy() }
 //   mountPostPreview(root, { getPost, config, films, resolveSrc, allPosts?, controls? })
 //     → { refresh(), setMode({ device: 'phone'|'desktop', theme: 'light'|'dark' }), destroy() }
-//   mountRevisions(root, { postId, gh, onRestore }) → { destroy() }
+//   mountRevisions(root, { postId, gh, onRestore, isLive? }) → { destroy() }
 //
 // The host (W5a) owns the one post object. These components read it through
 // getPost() and write a shallow patch of the top-level fields they changed
 // ({ slug }, { seo }, { about }, { related }) through onChange(patch). Optional
 // extras beyond the pinned signatures: `resolveSrc` on the panel (share-card
 // cover), `allPosts` on the preview (rail cards) and `controls: false` (host
-// draws its own device/theme chips and calls setMode).
+// draws its own device/theme chips and calls setMode), `everLive` on the panel
+// (boolean or () => boolean: has this post ever been on the site; the host knows
+// from the committed record) and `isLive` on the history (boolean or
+// () => boolean: is it on the site now, so the newest version is "Live now").
 
 import './content-rules.js';
 import './blog-blocks.js';
@@ -55,8 +58,11 @@ const svg = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="fa
 const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
 const STAMP = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
 const toDate = (v) => { const d = v instanceof Date ? v : new Date(v); return Number.isNaN(d.getTime()) ? null : d; };
-const dayLabel = (v) => { const d = toDate(v); return d ? DAY.format(d) : ''; };
-const stampLabel = (v) => { const d = toDate(v); return d ? `${STAMP.format(d).replace(/\b(am|pm)\b/i, (m) => m.toLowerCase())} IST` : ''; };
+// 3-letter months like the post list (blog-tab.js shortDate): Chrome's own
+// short month for September is "Sept".
+const sep = (text) => text.replace(/\bSept\b/, 'Sep');
+const dayLabel = (v) => { const d = toDate(v); return d ? sep(DAY.format(d)) : ''; };
+const stampLabel = (v) => { const d = toDate(v); return d ? `${sep(STAMP.format(d)).replace(/\b(am|pm)\b/i, (m) => m.toLowerCase())} IST` : ''; };
 
 const wordCount = (post) => {
   if (!isObj(post)) return 0;
@@ -112,7 +118,11 @@ const truncatePx = (text, max, font) => {
 };
 
 // A post that has been live keeps its address unless the owner changes it.
-const hasBeenLive = (post) => post.status === 'published' || post.status === 'unpublished' || list(post.previousSlugs).length > 0;
+// `everLive` (the host's answer, from the committed record) wins over the post's
+// own status, which can't tell a reopened draft from a post taken down; an old
+// address in previousSlugs always means it has been live.
+const flag = (value, fallback) => (typeof value === 'function' ? Boolean(value()) : typeof value === 'boolean' ? value : fallback);
+const hasBeenLive = (post, everLive) => flag(everLive, post.status === 'published' || post.status === 'unpublished') || list(post.previousSlugs).length > 0;
 
 // Site-root URL (admin/ sits one level below it) — absolute, so it works inside
 // an iframe srcdoc and when the bundle is versioned with ?v=.
@@ -142,6 +152,8 @@ const keywordsOf = (post) => new Set(
     .filter(Boolean),
 );
 const isLivePost = (p) => isObj(p) && p.status === 'published';
+// On the site right now, as the build decides it (a scheduled post that came due counts).
+const isOnSiteNow = (p) => isObj(p) && (p.status === 'published' || p.status === 'scheduled') && Date.parse(p.publishAt) <= Date.now();
 const byNewest = (a, b) => (toDate(b.publishAt) || 0) - (toDate(a.publishAt) || 0);
 // Mirrors build-blog.js related(): manual picks, then same category, then shared keywords.
 const relatedOf = (post, posts) => {
@@ -169,7 +181,7 @@ const COMMON_CONDITIONS = [
 
 // ================================================================ SEO panel
 
-export function mountSeoPanel(root, { getPost, onChange, allPosts = [], config = {}, h = escape, icon, resolveSrc } = {}) {
+export function mountSeoPanel(root, { getPost, onChange, allPosts = [], config = {}, h = escape, icon, resolveSrc, everLive } = {}) {
   const esc = typeof h === 'function' ? h : escape;
   const id = `bseo${(seq += 1)}`;
   const state = { postId: undefined, auto: false, snippet: 'desktop', keys: {}, destroyed: false, slugQueued: false };
@@ -260,7 +272,7 @@ export function mountSeoPanel(root, { getPost, onChange, allPosts = [], config =
         <section class="bseo-sec" aria-labelledby="${id}-share">
           <h3 class="bseo-sec__title" id="${id}-share">When it is shared</h3>
           <div class="bseo-share" data-share></div>
-          <p class="bseo-note">Approximate — the real share image is generated when the site builds.</p>
+          <p class="bseo-note">Approximate: the real share image is generated when the site builds.</p>
         </section>
       </div>
     </div>`;
@@ -279,7 +291,7 @@ export function mountSeoPanel(root, { getPost, onChange, allPosts = [], config =
   const setValue = (el, value) => { if (el && document.activeElement !== el && el.value !== value) el.value = value; };
 
   // ---- slug: follows the title until the owner edits it -------------------
-  const deriveAuto = (post) => !str(post.slug) || (!hasBeenLive(post) && post.slug === slugify(post.title));
+  const deriveAuto = (post) => !str(post.slug) || (!hasBeenLive(post, everLive) && post.slug === slugify(post.title));
   const typingSlug = (v) => v.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9-]+/g, '-').replace(/-{2,}/g, '-').replace(/^-+/, '').slice(0, 80);
   const followTitle = () => {
     if (!state.auto || state.slugQueued) return;
@@ -305,17 +317,28 @@ export function mountSeoPanel(root, { getPost, onChange, allPosts = [], config =
     state.auto = false;
     change({ slug: value });
   });
+  // An emptied address goes back to following the title (and fills in from it).
+  const followAgain = () => {
+    state.auto = true;
+    const fromTitle = slugify(read().title);
+    els.slug.value = fromTitle;
+    change({ slug: fromTitle });
+  };
   els.slug.addEventListener('change', () => {
     const final = slugify(els.slug.value);
-    if (!final) {
-      state.auto = true;
-      const fromTitle = slugify(read().title);
-      els.slug.value = fromTitle;
-      change({ slug: fromTitle });
-      return;
-    }
+    if (!final) return followAgain();
     if (final !== els.slug.value) els.slug.value = final;
     if (final !== read().slug) change({ slug: final });
+  });
+  // "change" fires while the box still has focus, so an emptied address only
+  // gets its "Add an address" note (and help text) once focus has left. It
+  // doesn't fire at all when the box ends as it started (empty, then typed in
+  // and cleared), so an empty box is handled here too, or the help would say
+  // "Set by you" while nothing follows the title.
+  els.slug.addEventListener('blur', () => {
+    if (state.destroyed) return;
+    if (!slugify(els.slug.value) && !state.auto) followAgain();
+    renderSlug(read());
   });
   // The address box reads as one field: a click on the fixed part puts the
   // caret at the end of the editable part.
@@ -453,7 +476,7 @@ export function mountSeoPanel(root, { getPost, onChange, allPosts = [], config =
         const note = p ? statusNote(p) : 'Missing';
         return `<li class="bseo-related__row">
           <span class="bseo-related__n" aria-hidden="true">${i + 1}</span>
-          <span class="bseo-related__text"><span class="bseo-related__title">${esc(p ? titleOf(p) : rid)}</span><span class="bseo-related__meta">${esc([p && categoryName(p), note].filter(Boolean).join(' · ') || (p ? `blog/${p.slug}/` : 'This post no longer exists — remove it'))}</span></span>
+          <span class="bseo-related__text"><span class="bseo-related__title">${esc(p ? titleOf(p) : rid)}</span><span class="bseo-related__meta">${esc([p && categoryName(p), note].filter(Boolean).join(' · ') || (p ? `blog/${p.slug}/` : 'This post no longer exists; remove it'))}</span></span>
           <span class="bseo-related__acts">
             <button type="button" class="bseo-icon" data-act="up" data-i="${i}" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>${iconOr('up')}</button>
             <button type="button" class="bseo-icon" data-act="down" data-i="${i}" aria-label="Move down" ${i === ids.length - 1 ? 'disabled' : ''}>${iconOr('down')}</button>
@@ -464,7 +487,7 @@ export function mountSeoPanel(root, { getPost, onChange, allPosts = [], config =
     }
     const full = ids.length >= 4;
     els.relq.disabled = full;
-    els.relq.placeholder = full ? 'Four picked — remove one to add another' : 'Search posts by title';
+    els.relq.placeholder = full ? 'Four picked; remove one to add another' : 'Search posts by title';
     const auto = relatedOf(post, allList()).filter((p) => !ids.includes(p.id));
     els.relAuto.textContent = full ? ''
       : ids.length
@@ -506,7 +529,7 @@ export function mountSeoPanel(root, { getPost, onChange, allPosts = [], config =
     meter('title', {
       ratio: Math.max(n / TITLE_MAX, px / SERP.titleMax),
       good: titleGood,
-      text: !n ? 'Add a title — Google needs one to show.'
+      text: !n ? 'Add a title; Google needs one to show.'
         : `${n} characters (aim for ${TITLE_MAX} or fewer) · about ${px} of ${SERP.titleMax} px wide on Google${px > SERP.titleMax ? ', so it will be cut' : ''}`,
     });
     els.titleSrc.textContent = own ? '' : 'Using the post title';
@@ -516,8 +539,8 @@ export function mountSeoPanel(root, { getPost, onChange, allPosts = [], config =
     meter('description', {
       ratio: d / 155,
       good: d >= 120 && d <= 160,
-      text: !d ? 'Add a description — or Google picks a sentence for you.'
-        : `${d} characters · aim for 120–155${d > 160 ? ' — Google cuts the rest' : d < 120 ? ' — room for a little more' : ''}`,
+      text: !d ? 'Add a description, or Google picks a sentence for you.'
+        : `${d} characters · aim for 120–155${d > 160 ? ' · Google cuts the rest' : d < 120 ? ' · room for a little more' : ''}`,
     });
     els.descSrc.textContent = ownDesc ? '' : (str(post.dek).trim() ? 'Using the summary under the title' : '');
   };
@@ -527,7 +550,8 @@ export function mountSeoPanel(root, { getPost, onChange, allPosts = [], config =
   const renderChecks = (post) => {
     const api = checksApi();
     if (!api) { els.checks.innerHTML = '<li class="bseo-check">Checks are still loading.</li>'; return; }
-    const seo = api.seoChecklist(post, allList());
+    // Links that will show as plain words come first: they change the page.
+    const seo = [...(typeof api.linkCheck === 'function' ? api.linkCheck(post, allList(), config) : []), ...api.seoChecklist(post, allList())];
     const claims = api.claimsCheck(post);
     const note = str(api.CLAIMS_NOTE);
     const sig = JSON.stringify([seo, claims]);
@@ -587,7 +611,7 @@ export function mountSeoPanel(root, { getPost, onChange, allPosts = [], config =
     els.serp.innerHTML = `<div class="bseo-serp" data-device="${mobile ? 'mobile' : 'desktop'}">
       <div class="bseo-serp__site"><span class="bseo-serp__icon"><img src="${esc(favicon)}" alt=""></span><span class="bseo-serp__src"><span class="bseo-serp__name">MediVasc</span><span class="bseo-serp__url">https://${esc(SITE_HOST)} › blog › ${esc(slug)}</span></span></div>
       <p class="bseo-serp__title">${esc(title)}</p>
-      <p class="bseo-serp__desc">${shownDesc ? `<span class="bseo-serp__date">${esc(date)} — </span>${esc(shownDesc)}` : '<span class="bseo-serp__empty">No description yet — Google will pick a sentence from the post.</span>'}</p>
+      <p class="bseo-serp__desc">${shownDesc ? `<span class="bseo-serp__date">${esc(date)} — </span>${esc(shownDesc)}` : '<span class="bseo-serp__empty">No description yet; Google will pick a sentence from the post.</span>'}</p>
     </div>`;
     const image = coverUrl || (cover && cover.patient ? shareFallback : '');
     const media = image ? `<img src="${esc(image)}" alt="" loading="lazy" decoding="async">` : '<span class="bseo-share__noimg">No cover image yet</span>';
@@ -606,7 +630,7 @@ export function mountSeoPanel(root, { getPost, onChange, allPosts = [], config =
         <div class="bseo-x__card"><div class="bseo-x__media">${media}<span class="bseo-x__label">${esc(full)}</span></div></div>
         <p class="bseo-x__from">From ${esc(SITE_HOST)}</p>
       </figure>
-      ${cover && cover.patient ? '<p class="bseo-note bseo-share__patient">The cover is a patient photo, so it never goes on a share card — the site’s standard share image is used instead.</p>' : ''}`;
+      ${cover && cover.patient ? '<p class="bseo-note bseo-share__patient">The cover is a patient photo, so it never goes on a share card; the site’s standard share image is used instead.</p>' : ''}`;
   };
 
   // ---- slug status --------------------------------------------------------
@@ -616,14 +640,14 @@ export function mountSeoPanel(root, { getPost, onChange, allPosts = [], config =
     els.reset.hidden = state.auto || !fromTitle || fromTitle === post.slug;
     els.slugHelp.textContent = state.auto
       ? 'Follows the title until you edit it.'
-      : hasBeenLive(post)
+      : hasBeenLive(post, everLive)
         ? 'This post has been live. If you change the address, the old one keeps sending readers here.'
-        : 'Set by you — it no longer follows the title.';
+        : 'Set by you; it no longer follows the title.';
     const slug = str(post.slug);
     const owner = slug && others().find((p) => p.slug === slug || list(p.previousSlugs).includes(slug));
     const empty = !slug && document.activeElement !== els.slug;
     els.slugErr.hidden = !owner && !empty;
-    els.slugErr.textContent = owner ? `Another post already uses this address: “${titleOf(owner)}”. Pick a different one.` : empty ? 'Add an address — or a title, and it fills in.' : '';
+    els.slugErr.textContent = owner ? `Another post already uses this address: “${titleOf(owner)}”. Pick a different one.` : empty ? 'Add an address, or a title and it fills in.' : '';
     els.slug.setAttribute('aria-invalid', String(Boolean(owner || empty)));
   };
 
@@ -702,8 +726,11 @@ const enrichPost = (post, config, depth) => {
   const tax = (item, kind) => (isObj(item) ? { ...item, url: `blog/${kind}/${item.slug}/`, href: `${depth}blog/${kind}/${item.slug}/`, absUrl: `${SITE}blog/${kind}/${item.slug}/` } : null);
   const find = (items, fid) => list(items).find((x) => isObj(x) && x.id === fid);
   const at = toDate(post.publishAt) || new Date();
-  const updated = post.updatedAt ? toDate(post.updatedAt) : null;
-  const updatedValid = Boolean(updated) && dayLabel(updated) !== dayLabel(at);
+  // The site's one "updated?" rule (content-rules.js updatedAtOf, also behind
+  // build-blog.js): only an updatedAt on a LATER IST day than the publish day.
+  const updatedRaw = globalThis.MediVascContentRules.updatedAtOf({ updatedAt: post.updatedAt, publishAt: at });
+  const updated = updatedRaw ? toDate(updatedRaw) : null;
+  const updatedValid = Boolean(updated);
   return {
     ...post,
     url: `blog/${str(post.slug)}/`,
@@ -769,6 +796,15 @@ export function mountPostPreview(root, { getPost, config = {}, films = [], resol
       contactHref: { whatsapp: 'https://wa.me/', call: '', contact: `${depth}#contact`, ...(isObj(hrefs()) ? hrefs() : {}) },
       related: (post) => (live.length ? relatedOf(post, live).map((p) => enriched.get(p.id)).filter(Boolean) : []),
       featured: list(config && config.featured).map((fid) => enriched.get(fid)).filter(Boolean),
+      // As on the site: a link to a post that is not live shows as plain words.
+      // This post as edited stands in for its saved copy (links to itself work).
+      postLinks: blocksApi() && typeof blocksApi().postLinks === 'function'
+        ? (() => {
+          const cur = typeof getPost === 'function' ? getPost() : null;
+          const others = list(pool).filter((p) => isOnSiteNow(p) && !(isObj(cur) && cur.id && p.id === cur.id));
+          return blocksApi().postLinks(isObj(cur) ? [cur, ...others] : others, config && config.redirects);
+        })()
+        : undefined,
     };
   };
   const docHtml = (main) => `<!doctype html><html lang="en" class="js" data-theme="${state.theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base href="${esc(baseUrl)}"><link rel="stylesheet" href="${esc(cssUrl)}"></head><body class="page-blog page-blog--post"><main id="main">${main}</main></body></html>`;
@@ -863,7 +899,7 @@ export function mountPostPreview(root, { getPost, config = {}, films = [], resol
       html = api.renderPost(ctx(), enrichPost(post, config, depth));
     } catch (error) {
       console.error('[blog preview]', error);
-      showMsg('Preview paused — part of the post can’t be drawn yet. It updates as soon as it can.');
+      showMsg('Preview paused: part of the post can’t be drawn yet. It updates as soon as it can.');
       return;
     }
     showMsg('');
@@ -941,19 +977,19 @@ const POSTS_PATH = 'data/blog/posts.json';
 const fileCache = new Map(); // sha → parsed posts.json (a commit's content never changes)
 const isRateLimit = (e) => Boolean(e) && (e.status === 429 || (e.status === 403 && /rate limit|secondary/i.test(String(e.message))));
 const friendlyError = (e) => {
-  if (isRateLimit(e)) return 'GitHub’s hourly allowance for looking up history is used up. It refills on its own — try again in a little while.';
+  if (isRateLimit(e)) return 'GitHub’s hourly allowance for looking up history is used up. It refills on its own; try again in a little while.';
   if (e && (e.name === 'AuthError' || e.status === 401)) return 'Your GitHub sign-in has expired. Sign in again to see the history.';
   if (e && e.status === 0) return 'GitHub can’t be reached right now. Check the connection, then try again.';
   return `The history couldn’t be loaded${e && e.message ? ` (${e.message.replace(/\.$/, '')})` : ''}.`;
 };
 
-export function mountRevisions(root, { postId, gh, onRestore } = {}) {
+export function mountRevisions(root, { postId, gh, onRestore, isLive } = {}) {
   const state = { commits: null, versions: new Map(), error: null, loading: false, destroyed: false, confirm: null, wanted: 6, notice: '' };
   root.classList.add('bseo', 'bseo--revisions');
   root.innerHTML = `
     <div class="bseo-rev__head">
       <h3 class="bseo-sec__title">Version history</h3>
-      <p class="bseo-sec__lede">Every published change to this post. Restoring puts an older version back in the editor — nothing on the site changes until you publish.</p>
+      <p class="bseo-sec__lede">Every published change to this post. Restoring puts an older version back in the editor; nothing on the site changes until you publish.</p>
     </div>
     <div data-rev-body></div>
     <p class="bseo-rev__status" data-rev-status role="status"></p>`;
@@ -1084,7 +1120,7 @@ export function mountRevisions(root, { postId, gh, onRestore } = {}) {
       const confirming = state.confirm === row.commit.sha;
       return `<li class="bseo-rev__row${confirming ? ' is-confirming' : ''}" data-sha="${escape(row.commit.sha)}">
         <div class="bseo-rev__main">
-          <p class="bseo-rev__when"><time datetime="${escape(str(row.commit.date))}">${when}</time>${row.i === latestShown && row.i === 0 ? '<span class="badge badge--active">Live now</span>' : ''}</p>
+          <p class="bseo-rev__when"><time datetime="${escape(str(row.commit.date))}">${when}</time>${row.i === latestShown && row.i === 0 && flag(isLive, true) ? '<span class="badge badge--active">Live now</span>' : ''}</p>
           <p class="bseo-rev__title">${escape(str(row.post.title) || 'Untitled post')}</p>
           <p class="bseo-rev__meta"><span>${message}</span><span class="bseo-rev__delta" data-delta>${escape(deltaText(row))}</span></p>
         </div>
@@ -1097,7 +1133,7 @@ export function mountRevisions(root, { postId, gh, onRestore } = {}) {
     }).join('');
     const ghost = pending ? '<li class="bseo-rev__row bseo-rev__row--ghost"><span></span><span></span></li>' : '';
     const empty = !out.length && !pending && !state.error
-      ? `<p class="bseo-rev__empty">${state.commits.length ? 'No earlier versions of this post yet.' : 'No published versions yet — the history starts the first time this post is published.'}</p>` : '';
+      ? `<p class="bseo-rev__empty">${state.commits.length ? 'No earlier versions of this post yet.' : 'No published versions yet; the history starts the first time this post is published.'}</p>` : '';
     const banner = state.error ? `<div class="bseo-rev__error"><p>${escape(friendlyError(state.error))}</p><button type="button" class="button button--quiet" data-retry-more>Try again</button></div>` : '';
     body.innerHTML = `${items || ghost ? `<ol class="bseo-rev__list">${items}${ghost}</ol>` : ''}${empty}${banner}${more && !pending ? '<button type="button" class="button button--quiet bseo-rev__more" data-more>Show older versions</button>' : ''}`;
   };

@@ -279,11 +279,32 @@ const cleanFailureText = (error) => (error && error.message ? error.message : 'B
 // it. The canvas always shows exactly what "Use crop" saves; "Use crop" waits
 // while a cleaned preview is on its way and stays blocked after a failure until
 // the owner chooses (cleanFailureText).
-export const cropEvidenceImage = async (file, label, { cutout, cleanDefault } = {}) => {
+//
+// The blog editor reuses this dialog for its photos with options.frame
+// 'natural' (the frame takes the photo's own shape, long edge <= 2400; zoom and
+// the sliders choose how close in, and the save keeps the source pixels the
+// frame shows, never upscaled), options.watermark false, and its own
+// options.kicker / options.title. Without them it is the 4:5 watermarked
+// testimonial crop, unchanged; the 640x800 canvas and the kicker are put back
+// when the dialog closes.
+export const cropEvidenceImage = async (file, label, { cutout, cleanDefault, frame = '4:5', watermark = true, kicker, title } = {}) => {
   assertImage(file);
   const image = await createImageBitmap(file, { imageOrientation: 'from-image' });
   const dialog = document.querySelector('#crop-dialog');
   const canvas = document.querySelector('#crop-canvas');
+  const kickerEl = dialog.querySelector('.dialog-heading .auth-kicker');
+  const kickerWas = kickerEl ? kickerEl.textContent : '';
+  const natural = frame === 'natural';
+  if (natural) {
+    const fit = Math.min(1, 2400 / Math.max(image.width, image.height));
+    canvas.width = Math.max(1, Math.round(image.width * fit));
+    canvas.height = Math.max(1, Math.round(image.height * fit));
+    canvas.style.aspectRatio = `${canvas.width} / ${canvas.height}`;
+    // A wide photo may use more of the dialog than the 4:5 frame's 400px;
+    // fitToScreen still trims it to the height that is free.
+    if (canvas.width > canvas.height) canvas.style.width = 'min(100%, 600px)';
+  }
+  if (kickerEl && kicker) kickerEl.textContent = kicker;
   const zoom = document.querySelector('#crop-zoom');
   const positionX = document.querySelector('#crop-x');
   const positionY = document.querySelector('#crop-y');
@@ -292,7 +313,7 @@ export const cropEvidenceImage = async (file, label, { cutout, cleanDefault } = 
   const note = document.querySelector('#crop-note');
   const apply = document.querySelector('#crop-apply');
   const choice = document.querySelector('#crop-choice');
-  document.querySelector('#crop-title').textContent = `Crop ${label} image`;
+  document.querySelector('#crop-title').textContent = title || `Crop ${label} image`;
   zoom.value = '1';
   positionX.value = '0';
   positionY.value = '0';
@@ -307,26 +328,29 @@ export const cropEvidenceImage = async (file, label, { cutout, cleanDefault } = 
   let backdrop = null;
   let open = true;
 
-  const draw = () => {
-    const context = canvas.getContext('2d', { alpha: false });
-    const coverScale = Math.max(canvas.width / image.width, canvas.height / image.height);
+  // Paints the crop into any context whose canvas has the frame's shape: the
+  // dialog canvas, or (natural frame) the save canvas at source resolution.
+  const paint = (context) => {
+    const { width: frameW, height: frameH } = context.canvas;
+    const coverScale = Math.max(frameW / image.width, frameH / image.height);
     const scale = coverScale * Number(zoom.value);
     const width = image.width * scale;
     const height = image.height * scale;
-    const overflowX = Math.max(0, width - canvas.width);
-    const overflowY = Math.max(0, height - canvas.height);
+    const overflowX = Math.max(0, width - frameW);
+    const overflowY = Math.max(0, height - frameH);
     const x = -(overflowX / 2) + (Number(positionX.value) * overflowX / 2);
     const y = -(overflowY / 2) + (Number(positionY.value) * overflowY / 2);
     if (subject && clean.checked) {
-      if (!backdrop || backdrop.width !== canvas.width || backdrop.height !== canvas.height) backdrop = paintBackdrop(canvas.width, canvas.height);
+      if (!backdrop || backdrop.width !== frameW || backdrop.height !== frameH) backdrop = paintBackdrop(frameW, frameH);
       drawCleanSubject(context, subject, backdrop, x, y, width, height);
     } else {
       context.fillStyle = '#F5F8F9';
-      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillRect(0, 0, frameW, frameH);
       context.drawImage(image, x, y, width, height);
     }
-    drawEvidenceWatermark(context, canvas.width);
+    if (watermark) drawEvidenceWatermark(context, frameW);
   };
+  const draw = () => paint(canvas.getContext('2d', { alpha: false }));
   const fit = () => fitToScreen(dialog, canvas);
   const setNote = (text) => {
     note.textContent = text;
@@ -343,7 +367,7 @@ export const cropEvidenceImage = async (file, label, { cutout, cleanDefault } = 
     pending = true;
     choice.hidden = true;
     setNote('Cleaning background…');
-    cutoutSubject(image, cutout).then((result) => {
+    cutoutSubject(image, cutout, natural ? CROP_FRAME.zoom * canvas.width / image.width : undefined).then((result) => {
       if (!open) return;
       subject = result;
       setNote('');
@@ -398,9 +422,27 @@ export const cropEvidenceImage = async (file, label, { cutout, cleanDefault } = 
   clean.removeEventListener('change', onClean);
   choice.removeEventListener('click', onChoice);
   window.removeEventListener('resize', fit);
+  if (kickerEl) kickerEl.textContent = kickerWas;
+  let out = canvas;
+  if (natural) {
+    // The frame at zoom z shows 1/z of the photo: save those pixels at their own
+    // size, never stretched back up to the frame.
+    if (accepted) {
+      const z = Math.max(1, Number(zoom.value) || 1);
+      out = document.createElement('canvas');
+      out.width = Math.max(1, Math.round(canvas.width / z));
+      out.height = Math.max(1, Math.round(canvas.height / z));
+      paint(out.getContext('2d', { alpha: false }));
+    }
+    canvas.width = CROP_FRAME.w;
+    canvas.height = CROP_FRAME.h;
+    canvas.style.aspectRatio = '';
+    canvas.style.width = '';
+    canvas.style.maxWidth = '';
+  }
   image.close();
   if (!accepted) return null;
-  return canvasBlob(canvas, 0.88);
+  return canvasBlob(out, natural ? 0.9 : 0.88);
 };
 
 // Downscale a chat screenshot to a 2000px maximum edge and re-encode to WebP,
@@ -472,10 +514,30 @@ const redactionTile = (source, box) => {
 // over the background becomes backdrop. The canvas then shows that result, and
 // "Use cleaned image" saves exactly it; editing a box drops back to the original
 // and the next save cleans again.
-export const redactImage = async (blob, label = 'screenshot', { cutout, cleanDefault } = {}) => {
+//
+// The blog editor reuses this dialog for any photo: options.title, options.hint
+// (replaces the screenshot instructions before the keyboard line),
+// options.canvasLabel (the image's spoken name) and options.cancelText (the
+// cancel button and the close button's name). Each is put back when the dialog
+// closes, so the testimonial flow always opens with its own words.
+export const redactImage = async (blob, label = 'screenshot', { cutout, cleanDefault, title: titleText, hint, canvasLabel, cancelText } = {}) => {
   const image = await createImageBitmap(blob, { imageOrientation: 'from-image' });
   const dialog = document.querySelector('#redact-dialog');
   const canvas = document.querySelector('#redact-canvas');
+  const hintEl = dialog.querySelector('.redact-hint');
+  const hintText = hintEl && hintEl.firstChild && hintEl.firstChild.nodeType === 3 ? hintEl.firstChild : null;
+  const cancelButton = dialog.querySelector('.form-actions [value="cancel"]');
+  const closeButton = dialog.querySelector('.dialog-heading [value="cancel"]');
+  const words = {
+    hint: hintText ? hintText.nodeValue : '',
+    canvas: canvas.getAttribute('aria-label'),
+    cancel: cancelButton ? cancelButton.textContent : '',
+    close: closeButton ? closeButton.getAttribute('aria-label') : '',
+  };
+  if (hintText && hint) hintText.nodeValue = `${hint} `;
+  if (canvasLabel) canvas.setAttribute('aria-label', canvasLabel);
+  if (cancelButton && cancelText) cancelButton.textContent = cancelText;
+  if (closeButton && cancelText) closeButton.setAttribute('aria-label', cancelText);
   const stage = dialog.querySelector('.redact-stage');
   const removeButton = document.querySelector('#redact-remove');
   const clearButton = document.querySelector('#redact-clear');
@@ -488,7 +550,7 @@ export const redactImage = async (blob, label = 'screenshot', { cutout, cleanDef
   const note = document.querySelector('#redact-note');
   const choice = document.querySelector('#redact-choice');
   const apply = document.querySelector('#redact-apply');
-  title.textContent = `Blur identifying details — ${label}`;
+  title.textContent = titleText || `Blur identifying details: ${label}`;
   cleanRow.hidden = !cutout;
   clean.checked = Boolean(cutout && cleanDefault);
   note.textContent = '';
@@ -871,6 +933,10 @@ export const redactImage = async (blob, label = 'screenshot', { cutout, cleanDef
   removeButton.hidden = false;
   clearButton.hidden = false;
   editButton.hidden = true;
+  if (hintText) hintText.nodeValue = words.hint;
+  if (words.canvas !== null) canvas.setAttribute('aria-label', words.canvas);
+  if (cancelButton) cancelButton.textContent = words.cancel;
+  if (closeButton && words.close !== null) closeButton.setAttribute('aria-label', words.close);
 
   if (!accepted) {
     // Focus goes back to the opener (or its re-rendered twin) through the

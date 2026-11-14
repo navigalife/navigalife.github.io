@@ -26,7 +26,7 @@ const HUGE_PIXELS = 100e6; // above this a failed decode is "too large", not "da
 const HEAD_BYTES = 256 * 1024; // headers (EXIF, HEIF meta) live well inside this
 const HEIC_DECODER_URL = new URL('./vendor/heic/libheif-1.23.5.esm.js', import.meta.url).href;
 
-const HEIC_MESSAGE = "This iPhone photo format couldn't be opened here — on iPhone, set Camera → Formats → Most Compatible, or open the admin in Safari.";
+const HEIC_MESSAGE = "This iPhone photo format couldn't be opened here. On iPhone, set Camera → Formats → Most Compatible, or open the admin in Safari.";
 const FORMAT_NAMES = { jpeg: 'JPEG', png: 'PNG', gif: 'GIF', webp: 'WebP', bmp: 'BMP', tiff: 'TIFF', heic: 'iPhone (HEIC)', avif: 'AVIF' };
 
 const fail = (code, message, cause) => {
@@ -466,17 +466,17 @@ const decodeError = (file, format, info, causes) => {
   const name = quoted(file);
   if (format === 'heic' || (!format && looksHeicByName(file))) {
     if (causes.some((cause) => cause && cause.heifLoad)) {
-      return fail('heic', "The iPhone photo reader couldn't be downloaded. Check the internet connection and try again — or open the admin in Safari, which reads iPhone photos on its own.", causes);
+      return fail('heic', "The iPhone photo reader couldn't be downloaded. Check the internet connection and try again, or open the admin in Safari, which reads iPhone photos on its own.", causes);
     }
     return fail('heic', HEIC_MESSAGE, causes);
   }
   if (format === 'avif') return fail('unsupported', `${name} is an AVIF image, which this browser can't open. Use an up-to-date Chrome, Safari or Firefox, or save it as a JPEG first.`, causes);
   if (format === 'tiff') return fail('unsupported', `${name} is a TIFF image, which this browser can't open. Save it as a JPEG or PNG first, then upload that.`, causes);
-  if (!format) return fail('not-image', `${name} isn't a photo this page can open — what's inside the file isn't an image. Choose a JPEG, PNG, WebP, GIF or iPhone (HEIC) photo.`, causes);
+  if (!format) return fail('not-image', `${name} isn't a photo this page can open. What's inside the file isn't an image. Choose a JPEG, PNG, WebP, GIF or iPhone (HEIC) photo.`, causes);
   if (info && info.width * info.height > HUGE_PIXELS) {
     return fail('too-large', `${name} is too large for this browser to open (${info.width.toLocaleString('en-US')} × ${info.height.toLocaleString('en-US')} pixels). Save a smaller copy (under about 100 megapixels) and upload that.`, causes);
   }
-  return fail('corrupt', `${name} looks like a ${FORMAT_NAMES[format]} photo but couldn't be opened — the file may be damaged or only partly downloaded. Save or export it again, then pick the new copy.`, causes);
+  return fail('corrupt', `${name} looks like a ${FORMAT_NAMES[format]} photo but couldn't be opened. The file may be damaged or only partly downloaded. Save or export it again, then pick the new copy.`, causes);
 };
 
 // Decodes `file` and returns a canvas at exactly fit(uprightW, uprightH).
@@ -487,7 +487,7 @@ const render = async (file, { fit, report, test = {} }) => {
   const nativeResize = test.nativeResize !== false;
   if (!(file instanceof Blob)) throw fail('none', 'No photo was chosen. Pick a photo and try again.');
   if (!file.size) {
-    throw fail('empty', `${quoted(file)} is empty (0 bytes), so there's no photo in it. Pick it again — if it came from iCloud, WhatsApp or another app, let it finish downloading first.`);
+    throw fail('empty', `${quoted(file)} is empty (0 bytes), so there's no photo in it. Pick it again. If it came from iCloud, WhatsApp or another app, let it finish downloading first.`);
   }
   report('reading', 0);
   const reader = await openReader(file);
@@ -495,7 +495,7 @@ const render = async (file, { fit, report, test = {} }) => {
   if (!format && !/^image\//i.test(file.type || '') && !looksHeicByName(file)) throw decodeError(file, null, null);
   const info = format ? await readInfo(reader, format) : null;
   if (info && info.truncated) {
-    throw fail('corrupt', `${quoted(file)} is incomplete — only part of the photo is in the file, so it was probably cut off while downloading or copying. Save or export it again, then pick the new copy.`);
+    throw fail('corrupt', `${quoted(file)} is incomplete. Only part of the photo is in the file, so it was probably cut off while downloading or copying. Save or export it again, then pick the new copy.`);
   }
   const target = info ? fit(info.width, info.height) : null;
   report('reading', 1);

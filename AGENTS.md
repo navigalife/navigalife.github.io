@@ -190,8 +190,8 @@ Schemas are code, not prose: every field and enum is in `admin/content-rules.js`
 - **Build** — `src/build.js` calls `src/blog/build-blog.js` (`loadBlog()` validates
   before `dist` is wiped, `buildBlog()` writes pages). In `src/blog/`: pure renderers
   `render-landing.js` / `render-post.js`; `seo.js`; `og.js` share cards;
-  `check-refs.js` (files on disk, links to live posts, featured ids, film srcs —
-  build-fatal). One hashed `blog.css` (landing + post + blocks) and `blog.js`
+  `check-refs.js` (photos on disk and film srcs, build-fatal; links between posts
+  and featured/related ids are NOT checked, they degrade: see Invariants). One hashed `blog.css` (landing + post + blocks) and `blog.js`
   (`reader.js` + `landing.js`, each a guarded IIFE); reading works with JS off.
 - **Shared UMD** (Node `require`, `globalThis.*` in the admin) — `content-rules.js`,
   `blog-blocks.js` (the ONE body renderer, the XSS boundary), `blog-checks.js`.
@@ -208,7 +208,8 @@ Schemas are code, not prose: every field and enum is in `admin/content-rules.js`
   the admin's normal publish commit. `samples.json` + `samples.config.json` are
   tracked but **local preview only**, loaded only by `MV_BLOG_SAMPLES=1`, which is
   never in the deploy path. Sample featured ids live there, so **`config.featured`
-  ships as `[]`** (a featured id with no post fails the build).
+  ships as `[]`** (a featured id with no live post is skipped, never fatal, but
+  `blog-rules.test.js` still keeps sample ids out of the shipped config).
 - `MV_DIST=<dir>` builds anywhere (parallel builds); `MV_BLOG_DATA=<dir>` = fixtures.
 - **Drafts are private**: D1 `drafts` + `draft_assets` in the Worker, never git. A
   D1-only post reaches components as `status: 'draft'`, never written to posts.json.
@@ -224,10 +225,14 @@ Schemas are code, not prose: every field and enum is in `admin/content-rules.js`
   re-encodes WebP with metadata dropped; only that uploads.
 - Draft photos are `draft:<name>` in `draft_assets`; publish rewrites them to
   `assets/blog/<slug>/<name>` and stages the blobs in the SAME commit as posts.json.
-  Author photos (≤800px) stage as-is at `assets/blog/authors/<slug>.<ext>`, never
-  `draft:`. The build makes WebP variants at `BLOG_WIDTHS`, never past the source.
-- `patient: true` (editor demands the consent tick) keeps a photo on the page but out
-  of OG cards, JSON-LD/RSS images and the image sitemap.
+  Author photos (≤800px) stage as-is at `assets/blog/authors/<slug>-<id>.<ext>` (the id
+  keeps two authors from sharing a file), never `draft:`. The build makes WebP
+  variants at `BLOG_WIDTHS`, never past the source.
+- `patient: true` keeps a photo on the page but out of OG cards, JSON-LD/RSS images
+  and the image sitemap. Ticking Patient writes `patient: true, consent: false` at
+  once (fail-closed); `consent: false` blocks publish (content-rules checkBlogImage)
+  until the consent box is ticked; replacing a patient photo resets `consent: false`.
+  A legacy `patient: true` with no `consent` field passes.
 
 **SEO outputs** (`seo.js`, pure)
 - One JSON-LD `@graph` per page reusing the homepage's `<site>#website` and
@@ -237,9 +242,11 @@ Schemas are code, not prose: every field and enum is in `admin/content-rules.js`
   `config.redirects` become noindex redirect stubs. `og.js` draws each post's card
   from glyph outlines (Mac = CI); a null card falls back to the site image.
 - **Author (as of ship)**: the company, `a_team` / "MediVasc" / slug `medivasc`. Its
-  name equals `data/company.json` `name`, so `authorRef` renders it AS the
-  `<site>#organization` node, not a second entity (rename one, break the join). No
-  reviewer, so `reviewedBy` stays absent; credential fields render only when set.
+  name follows `data/company.json` `name` (the Company tab's save and the Blog settings
+  view both mirror it), and `seo.js` `isCompanyAuthor` matches it by that name OR by
+  the id `a_team` (unless it is named as a team/desk), so `authorRef` renders it AS
+  the `<site>#organization` node, not a second entity, even with the names out of
+  step. No reviewer, so `reviewedBy` stays absent; credential fields render only when set.
 
 **URLs** — flat `/blog/<slug>/` (no category in it), `/blog/category/<slug>/`,
 `/blog/author/<slug>/`. Every blog href/src is RELATIVE via `ctx.depth` (`/changes/`
@@ -256,6 +263,21 @@ and sitemaps. blog-blocks `depthOf` silently drops an absolute depth (`'/'`).
 - New posts carry `titleSize`/`bodySize`/`leadIn` from `blankPost` (required).
   Deleting a category moves its posts (`onMovePosts`), redirecting if any is live; an
   author named by a post cannot be deleted.
+- **Delete permanently** (`unpublished` posts only): ONE commit drops the record, its id
+  from `related`/`featured`, redirects into it and its unreferenced `assets/blog/`
+  photos (never `authors/`); links to it from other posts become plain words (the confirm
+  names those posts); its D1 draft goes after the commit.
+- **Failure copy** is composed ONCE by `app.js describeApiError`: what happened → the
+  reassurance → what to do → `(Error N)` last. Callers pass `{ reassure, again }` (also
+  `handleApiError`'s 3rd argument) and never append their own "try again".
+- `blog-tab.js` exports its pure helpers as `_internals` for
+  `tools/test/blog-tab.test.js`, which imports a copy of the module with its static
+  imports cut (asserted line by line, so a new import fails the test until the cut list
+  follows). Keep `planNext`/`planDelete` pure: no `ctx`, `posts()`, `config()` or tab state.
+- The `starting` re-entry guard in `commitPost`/`deletePost` (a second Publish/Delete
+  while the first is opening) has NO unit pin; it lives in the closure. If you touch it,
+  re-check by hand: Unpublish during an in-flight autosave makes one commit, not two.
+  The blog-seo emptied-address help line is DOM-only too (no pin).
 
 **Invariants**
 - Validator-enforced (the build fails, the admin blocks): posts are structured blocks
@@ -268,6 +290,12 @@ and sitemaps. blog-blocks `depthOf` silently drops an absolute depth (`'/'`).
   kept out of `sitemap.xml`, `feed.xml` and `llms.txt`; the post, category and
   author pages still exist only with ≥1 live post. A scheduled-but-not-yet-due
   post never reaches `live`, so it neither shows nor leaks.
+- **Stale post refs degrade** (2026-11-13): a link to a post that is not on the site
+  (unknown, unpublished, scheduled later, deleted) renders as its plain words and never
+  fails the build; an old slug or a redirect rewrites to the current address, #section
+  kept (`blog-blocks.js postLinks`); related/featured ids with no live post are skipped.
+  The admin only warns (`blog-checks.js linkCheck`). Missing photos, films and author
+  photos stay build-fatal.
 
 **Blog gotchas**
 - `data-theme` on ANY element matches styles.css's global `[data-theme="dark"]`

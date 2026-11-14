@@ -75,7 +75,7 @@
 
 /* ---- list view: rows */
 .bt-rows{margin:0;padding:0;list-style:none;border-top:1px solid var(--line)}
-.bt-rows li{border-bottom:1px solid var(--line)}
+.bt-rows li{position:relative;border-bottom:1px solid var(--line)}
 .bt-row{display:grid;grid-template-columns:96px minmax(0,1fr) auto;align-items:center;gap:24px;width:calc(100% + 28px);margin:0 -14px;padding:18px 14px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background-color 200ms var(--bt-ease)}
 .bt-row:hover{background:color-mix(in srgb,var(--surface-2) 48%,transparent)}
 .bt-thumb{display:block;overflow:hidden;width:96px;aspect-ratio:4/3;border-radius:6px;background:var(--surface-2)}
@@ -88,8 +88,20 @@
 .bt-row__slug{overflow:hidden;max-width:100%;color:var(--ink-muted);font-size:.8125rem;text-overflow:ellipsis;white-space:nowrap}
 .bt-row__side{display:grid;justify-items:end;align-content:center;gap:6px;min-width:120px;text-align:right}
 .bt-row__date{color:var(--ink-muted);font-size:.8125rem;font-variant-numeric:tabular-nums;white-space:nowrap}
-/* Live with no pending edits: one line, the dot then "Published 4 Nov" in the date's voice. */
+/* "View on site" on a live row. A link can't sit inside the row's button, so it
+   is the button's sibling, laid over the row's bottom-right corner: the side
+   column stretches and keeps its bottom 30px free, so the link never covers the
+   status. Text lines up with the side column's right edge; the 40px box (8px
+   past the text on each side) is the tap target. Tab order: row, then link. */
+.bt-rows__live .bt-row__side{align-self:stretch;padding-bottom:30px}
+.bt-row__view{position:absolute;right:-8px;bottom:8px;display:inline-flex;align-items:center;min-height:40px;padding:0 8px;border-radius:6px;color:var(--primary);font-size:.8125rem;font-weight:600;line-height:20px;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;white-space:nowrap}
+.bt-row__view:hover{text-decoration-thickness:2px}
+.bt-row__view:focus-visible{outline:3px solid var(--focus);outline-offset:-2px}
+/* Pointing at the link still shows which row it belongs to. */
+.bt-rows li:has(>.bt-row__view:hover)>.bt-row{background:color-mix(in srgb,var(--surface-2) 48%,transparent)}
+/* A live row: one line, the dot then "Published 30 Sep · updated 2 Nov" in the date's voice. */
 .bt-status--dated{gap:9px;color:var(--ink-muted);font-weight:400;font-variant-numeric:tabular-nums}
+.bt-status--dated .bt-status__when{font-weight:inherit}
 .bt-none,.bt-empty{display:grid;justify-items:center;gap:6px;padding:64px 20px;text-align:center}
 .bt-none p{margin:0 0 10px;color:var(--ink-muted)}
 /* Fixed padding: .bt-art's 12%/11% resolves against the containing block, which
@@ -132,8 +144,12 @@
 .bt-art .a-dot{width:80%;height:3px;background:var(--art-ink)}
 
 /* ---- post view: bar, notes, panes */
-.bt-post{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,360px);grid-template-areas:"bar bar" "notes notes" "main panes" "main side";grid-template-rows:auto auto auto 1fr;gap:0 40px;align-items:start}
-.bt-bar{position:sticky;top:var(--admin-inset-top,0px);z-index:5;grid-area:bar;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:24px;padding:12px 0;border-bottom:1px solid var(--line);background:var(--bg)}
+/* The editor's own bars (blog-editor.css --bed-sticky) stick just under the admin header and this
+   post bar; the bar wraps to two or three rows on a phone, so blog-tab.js measures it (--bt-bar-h).
+   Scroll padding clears the whole stack (+52px editor bar), so a typed caret never sits under it. */
+html:has(.bt-post .bed-bar){scroll-padding-top:calc(var(--admin-inset-top,0px) + var(--bt-bar-h,0px) + 52px + 12px)}
+.bt-post{--bed-sticky:calc(var(--admin-inset-top,0px) + var(--bt-bar-h,0px));display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,360px);grid-template-areas:"bar bar" "notes notes" "main panes" "main side";grid-template-rows:auto auto auto 1fr;gap:0 40px;align-items:start}
+.bt-bar{position:sticky;top:var(--admin-inset-top,0px);z-index:25;grid-area:bar;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:24px;padding:12px 0;border-bottom:1px solid var(--line);background:var(--bg)}
 .bt-back{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 10px 0 2px;border:0;border-radius:8px;background:transparent;color:var(--ink-muted);font:inherit;font-size:.875rem;font-weight:600;cursor:pointer;transition:color 200ms var(--bt-ease)}
 .bt-back:hover{color:var(--ink)}
 .bt-back svg,.bt-undo svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -155,6 +171,9 @@
 .bt-bar .button--quiet:hover{border-color:color-mix(in srgb,var(--ink) 24%,var(--line));background:var(--surface)}
 .bt-bar .button--text{padding-inline:10px;color:var(--ink-muted)}
 .bt-bar .button--text:hover{background:transparent;color:var(--alert)}
+/* Delete permanently (unpublished posts only): destructive, so it reads red at rest. */
+.bt-bar .bt-danger{color:var(--alert)}
+.bt-bar .bt-danger:hover:not(:disabled){text-decoration:underline;text-underline-offset:3px}
 .bt-undo{width:38px;height:38px;border-color:transparent;border-radius:8px;background:transparent;color:var(--ink-muted);transition:background-color 200ms var(--bt-ease),color 200ms var(--bt-ease)}
 .bt-undo:hover:not(:disabled){background:var(--surface-2);color:var(--ink)}
 .bt-undo:disabled{opacity:.35;cursor:default}
@@ -238,8 +257,14 @@
   .bt-thumb{grid-row:span 2;width:72px;border-radius:5px}
   .bt-row__title{font-size:1.0625rem}
   .bt-row__body{gap:8px}
-  /* Status, "Unpublished edits", date: wrap rather than run off a 390 screen. */
+  /* Status, "Changes not on the site yet", date: wrap rather than run off a 390 screen. */
   .bt-row__side{grid-column:2;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;min-width:0;text-align:left}
+  /* Live rows: "View on site" goes under the status line, at the text column
+     (72px photo + 16px gap, less the link's 8px padding), and the row keeps
+     room below for it. */
+  .bt-rows__live .bt-row{padding-bottom:44px}
+  .bt-rows__live .bt-row__side{align-self:auto;padding-bottom:0}
+  .bt-row__view{right:auto;bottom:8px;left:80px;min-height:36px}
   .bt-picker .editor-header{position:relative;display:block}
   .bt-picker .editor-header h1{font-size:1.75rem}
   .bt-picker .editor-header>.button{position:absolute;top:-8px;right:0;min-height:40px;padding-inline:14px;font-size:.875rem}

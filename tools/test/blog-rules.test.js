@@ -12,6 +12,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const rules = require(path.join(ROOT, 'admin/content-rules.js'));
 const checks = require(path.join(ROOT, 'admin/blog-checks.js'));
 const { checkBlogRefs } = require(path.join(ROOT, 'src/blog/check-refs.js'));
+const blocks = require(path.join(ROOT, 'admin/blog-blocks.js'));
 
 let passed = 0;
 const failures = [];
@@ -316,18 +317,17 @@ test('posts: slug shape and reserved addresses', () => {
   for (const bad of ['First-Post', 'first post', 'first_post', '', undefined]) expectPath(errs([basePost({ slug: bad })]), '0.slug');
   for (const reserved of ['category', 'author']) expectPath(errs([basePost({ slug: reserved })]), '0.slug');
 });
-test('posts: related ids must exist and not be the post itself', () => {
+test('posts: a post cannot be its own related post; a related id with no post is skipped, not a problem', () => {
   const e = errs([basePost({ related: ['p_one', 'p_ghost'] })]);
   expectPath(e, '0.related.0');
-  expectPath(e, '0.related.1');
+  assert.ok(!hasPath(e, '0.related.1'), `a deleted related post must not block: ${JSON.stringify(e)}`);
+  expectClean(errs([basePost({ related: ['p_ghost'] })]));
   expectClean(errs([basePost({ related: ['p_two'] }), basePost({ id: 'p_two', slug: 'second' })]));
 });
-test('posts: featured ids must name a post in the list', () => {
+test('posts: a featured id with no post is skipped, not a problem', () => {
   const config = baseConfig();
   config.featured = ['p_one', 'p_ghost'];
-  const e = errs([basePost()], config);
-  expectPath(e, 'config.featured.1');
-  assert.ok(!hasPath(e, 'config.featured.0'));
+  expectClean(errs([basePost()], config));
   config.featured = ['p_one'];
   expectClean(errs([basePost({ status: 'scheduled', publishAt: '2099-01-01T09:00:00+05:30' })], config));
 });
@@ -360,7 +360,7 @@ test('inline: runs, marks, HTML and citations', () => {
   expectPath(blockErrs({ type: 'paragraph', text: [{ t: 'x' }, { cite: 'r9' }] }), '0.blocks.1.text.1.cite');
   expectPath(blockErrs({ type: 'paragraph', text: [{ t: 'x' }, { cite: 'r1', b: true }] }), '0.blocks.1.text.1');
   expectPath(blockErrs({ type: 'paragraph', text: [{ cite: 'r1' }] }), '0.blocks.1.text');
-  expectPath(blockErrs({ type: 'paragraph', text: [{ t: '   ' }] }), '0.blocks.1.text');
+  expectClean(blockErrs({ type: 'paragraph', text: [{ t: '   ' }] })); // empty paragraph: renders nothing
   expectPath(blockErrs({ type: 'paragraph', text: 42 }), '0.blocks.1.text');
   expectClean(blockErrs({ type: 'paragraph', text: [{ t: 'Bold', b: true, i: true, hl: true }, { cite: 'r1' }] }));
 });
@@ -397,14 +397,14 @@ const missing = (type, field, mutate) => {
 };
 test('blocks: required fields per type', () => {
   missing('paragraph', 'text', (b) => { delete b.text; });
-  missing('lead', 'text', (b) => { b.text = ''; });
+  missing('lead', 'text', (b) => { delete b.text; });
   missing('heading', 'text', (b) => { b.text = ''; });
   missing('heading', 'level', (b) => { b.level = 4; });
   missing('heading', 'size', (b) => { b.size = 'XL'; });
   missing('heading', 'anchor', (b) => { b.anchor = 'has space'; });
   missing('list', 'style', (b) => { delete b.style; });
-  missing('list', 'items', (b) => { b.items = []; });
-  missing('list', 'items.0', (b) => { b.items = ['']; });
+  missing('list', 'items', (b) => { delete b.items; });
+  missing('list', 'items.0', (b) => { b.items = [7, 'Two']; });
   missing('quote', 'text', (b) => { delete b.text; });
   missing('quote', 'cite', (b) => { b.cite = 5; });
   missing('pullquote', 'text', (b) => { b.text = [{ t: 'runs are not allowed' }]; });
@@ -432,6 +432,50 @@ test('blocks: required fields per type', () => {
   missing('faq', 'items.0.q', (b) => { b.items[0].q = ''; });
   missing('faq', 'items.0.a', (b) => { delete b.items[0].a; });
   missing('cta', 'kind', (b) => { b.kind = 'email'; });
+});
+test('blocks: an empty paragraph, intro or list item (Enter at the end) passes and renders nothing', () => {
+  const empty = [
+    { type: 'paragraph', text: '' },
+    { type: 'paragraph', text: [{ t: '  ' }, { t: '', b: true }] },
+    { type: 'lead', text: [] },
+    { type: 'list', style: 'bullet', items: ['', [{ t: ' ' }]] },
+  ];
+  for (const block of empty) {
+    expectClean(blockErrs(block));
+    assert.strictEqual(blocks.renderBlocks([block], { depth: '../../' }), '', `renders nothing: ${JSON.stringify(block)}`);
+  }
+  // A list keeps its real items; a citation with no words still needs words.
+  const html = blocks.renderBlocks([{ type: 'list', style: 'bullet', items: ['One', '', 'Two'] }], { depth: '' });
+  assert.strictEqual((html.match(/<li/g) || []).length, 2, html);
+  expectClean(blockErrs({ type: 'list', style: 'bullet', items: ['One', '', 'Two'] }));
+  expectPath(blockErrs({ type: 'paragraph', text: [{ cite: 'r1' }] }), '0.blocks.1.text');
+});
+test('images: an empty photo slot is one problem, not one per field', () => {
+  const noSrc = basePost();
+  noSrc.cover.src = '';
+  noSrc.cover.alt = '';
+  assert.deepStrictEqual(paths(errs([noSrc])), ['0.cover.src']);
+  assert.ok(/: add a cover photo\.$/.test(errs([noSrc])[0].message), errs([noSrc])[0].message);
+  assert.deepStrictEqual(paths(errs([basePost({ cover: undefined })])), ['0.cover']);
+  assert.deepStrictEqual(paths(blockErrs({ type: 'image', src: '', alt: '', width: 'column', align: 'left', size: 'M' })), ['0.blocks.1.src']);
+});
+test('images: a patient photo without the consent tick blocks publishing; older patient photos pass', () => {
+  const ticked = basePost();
+  Object.assign(ticked.cover, { patient: true, consent: false });
+  const e = errs([ticked]);
+  assert.deepStrictEqual(e.map((x) => [x.path, x.message]), [[
+    '0.cover.consent',
+    'Blog post “Seven warning signs your feet need a doctor”: Tick the consent box for the patient photo “A foot being checked” before publishing.',
+  ]]);
+  const named = blockErrs({ type: 'gallery', images: [{ src: 'assets/a.webp', alt: 'A' }, { src: 'assets/b.webp', alt: 'Leg wound', patient: true, consent: false }] });
+  assert.deepStrictEqual(paths(named), ['0.blocks.1.images.1.consent']);
+  assert.ok(/patient photo “Leg wound” before publishing\.$/.test(named[0].message), named[0].message);
+  const legacy = basePost();
+  legacy.cover.patient = true; // saved before the consent field: only ever marked after consent
+  expectClean(errs([legacy]));
+  Object.assign(legacy.cover, { consent: true });
+  expectClean(errs([legacy]));
+  expectPath(blockErrs(Object.assign(clone(VALID_BLOCKS.image), { consent: 'yes' })), '0.blocks.1.consent');
 });
 test('blocks: a wide or full image cannot float', () => {
   missing('image', 'align', (b) => { b.width = 'wide'; b.align = 'right'; });
@@ -684,7 +728,7 @@ test('claims: scans title, dek, captions, alt text, FAQs, tables and buttons', (
     { type: 'gallery', images: [{ src: 'assets/a.webp', alt: 'A', caption: 'Fully healed' }, { src: 'assets/b.webp', alt: 'B' }] },
   ];
   const where = checks.claimsCheck(post).map((i) => i.where);
-  for (const w of ['the title', 'the summary under the title', 'the cover image alt text', 'block 1 (Questions)', 'block 2 (Table)', 'block 3 (Contact button)', 'block 4 (Gallery), image 1 caption']) {
+  for (const w of ['the title', 'the summary under the title', 'the cover photo description', 'block 1 (Questions)', 'block 2 (Table)', 'block 3 (Contact button)', 'block 4 (Gallery), image 1 caption']) {
     assert.ok(where.includes(w), `nothing found in ${w}: ${JSON.stringify(where)}`);
   }
 });
@@ -754,17 +798,24 @@ test('refs: missing images (cover, gallery, image, imageText, author photo, wron
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
-test('refs: dead internal links', () => {
+// The page side of "stale post refs degrade": the build's live posts → postLinks.
+const livePosts = (posts) => posts.filter((p) => ['published', 'scheduled'].includes(p.status) && Date.parse(p.publishAt) <= NOW.getTime());
+const renderWith = (post, posts, config) => blocks.renderBlocks(post.blocks, {
+  depth: '../../', references: post.references, postLinks: blocks.postLinks(livePosts(posts), (config || refConfig()).redirects),
+});
+test('refs: a link to an address no post has is not a build problem; it renders as plain words', () => {
   const dir = fixture();
   try {
     const posts = refPosts();
     posts[0].blocks[0].text[1].href = 'blog/three/';
     posts[1].blocks = [{ type: 'faq', items: [{ q: 'Q', a: [{ t: 'see', href: 'blog/nowhere/#x' }] }] }];
     posts[1].cover.caption = [{ t: 'cap', href: 'blog/ghost/' }];
-    const problems = refs(dir, posts);
-    assert.deepStrictEqual(fields(problems).sort(), ['p_one:blocks.0.text.1.href', 'p_two:blocks.0.items.0.a.0.href', 'p_two:cover.caption.0.href']);
-    const msg = problems.find((p) => p.field === 'blocks.0.text.1.href').message;
-    assert.ok(/the link “two” goes to blog\/three\/, but there is no post at that address/.test(msg), msg);
+    expectClean(refs(dir, posts));
+    const one = renderWith(posts[0], posts);
+    assert.ok(!one.includes('blog/three/') && one.includes('See two'), one);
+    assert.ok(one.includes('href="../../blog/two/#part"'), 'the live link next to it still links');
+    const two = renderWith(posts[1], posts);
+    assert.ok(!two.includes('blog/nowhere/') && /\bsee\b/.test(two), two);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -778,32 +829,89 @@ test('refs: old addresses and settings redirects still resolve', () => {
     const config = refConfig();
     config.redirects = [{ from: 'blog/moved/', to: 'blog/two/' }];
     expectClean(refs(dir, posts, config));
+    // The page links straight to the current address, keeping the #section.
+    posts[0].blocks[0].text[2].href = 'blog/moved/#part';
+    posts[0].blocks.push({ type: 'paragraph', text: [{ t: 'old', href: 'blog/two-old/#signs' }, { t: ' all posts', href: 'blog/' }, { t: ' foot', href: 'blog/category/diabetic-foot/' }] });
+    const html = renderWith(posts[0], posts, config);
+    assert.ok(html.includes('href="../../blog/two/"') && html.includes('href="../../blog/two/#part"') && html.includes('href="../../blog/two/#signs"'), html);
+    assert.ok(!/blog\/(?:moved|two-old)\//.test(html), html);
+    assert.ok(html.includes('href="../../blog/"') && html.includes('href="../../blog/category/diabetic-foot/"'), 'non-post blog addresses render as written');
+    assert.ok(html.includes('href="../../blog/one/"'), 'a post may link to itself');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
-test('refs: links to posts that are unpublished or not live yet', () => {
+test('refs: links to posts that are unpublished, scheduled for later or deleted are not build problems; they render as plain words', () => {
   const dir = fixture();
   try {
     const posts = refPosts();
+    const plain = (html) => !html.includes('blog/two/') && html.includes('See two and ');
     posts[1].status = 'unpublished';
-    let problems = refs(dir, posts);
-    assert.deepStrictEqual(fields(problems), ['p_one:blocks.0.text.1.href', 'p_one:blocks.0.text.2.href']);
-    assert.ok(/not published/.test(problems[0].message));
+    expectClean(refs(dir, posts));
+    assert.ok(plain(renderWith(posts[0], posts)), renderWith(posts[0], posts));
     posts[1].status = 'scheduled';
     posts[1].publishAt = '2026-12-01T09:00:00+05:30';
-    problems = refs(dir, posts);
-    assert.strictEqual(problems.length, 2);
-    assert.ok(/not live yet/.test(problems[0].message), problems[0].message);
-    // A post that itself goes live later only needs its target live by then.
-    posts[0].status = 'scheduled';
-    posts[0].publishAt = '2026-12-02T09:00:00+05:30';
     expectClean(refs(dir, posts));
+    assert.ok(plain(renderWith(posts[0], posts)));
+    posts[0].status = 'scheduled';
     posts[0].publishAt = '2026-11-30T09:00:00+05:30';
-    assert.ok(/by the time this post goes live/.test(refs(dir, posts)[0].message));
+    expectClean(refs(dir, posts));
+    const deleted = [posts[0]];
+    expectClean(refs(dir, deleted));
+    assert.ok(plain(renderWith(posts[0], deleted)));
+    // Once the target is live, the same post links again (a later build).
+    posts[1].status = 'published';
+    posts[1].publishAt = '2026-11-01T09:00:00+05:30';
+    assert.ok(renderWith(posts[0], posts).includes('href="../../blog/two/"'));
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+test('linkCheck: warns (never blocks) exactly when a post link will show as plain words', () => {
+  const at = (iso) => new Date(iso);
+  const posts = refPosts();
+  const one = posts[0];
+  const config = refConfig();
+  config.redirects = [{ from: 'blog/moved/', to: 'blog/two/' }];
+  const warn = (post, all, now) => checks.linkCheck(post, all, config, now || NOW);
+  assert.deepStrictEqual(warn(one, posts), [], 'live target, self-link, external: nothing to say');
+  // Old address, redirect and fragment all resolve.
+  one.blocks[0].text[1].href = 'blog/two-old/#part';
+  one.blocks[0].text[2].href = 'blog/moved/';
+  assert.deepStrictEqual(warn(one, posts), []);
+  // Not live: one warning per target post, however many links point at it.
+  posts[1].status = 'unpublished';
+  let items = warn(one, posts);
+  assert.strictEqual(items.length, 1, JSON.stringify(items));
+  assert.strictEqual(items[0].status, 'warn');
+  assert.ok(/links to “Seven warning signs.*”, which isn’t on the site yet\. Until it is, that link shows as plain words\.$/.test(items[0].message), items[0].message);
+  // Scheduled: fine if it goes live by the time this post does.
+  posts[1].status = 'scheduled';
+  posts[1].publishAt = '2026-12-01T09:00:00+05:30';
+  assert.strictEqual(warn(one, posts).length, 1, 'this post is live now, the target is later');
+  Object.assign(one, { status: 'scheduled', publishAt: '2026-12-02T09:00:00+05:30' });
+  assert.deepStrictEqual(warn(one, posts), [], 'target goes live first');
+  one.publishAt = '2026-11-30T09:00:00+05:30';
+  assert.strictEqual(warn(one, posts).length, 1, 'target goes live after this post');
+  assert.deepStrictEqual(warn(one, posts, at('2026-12-01T10:00:00+05:30')), [], 'both due by now');
+  // Unknown address (target deleted, or mistyped): one warning per link wording, unique ids.
+  one.blocks.push({ type: 'paragraph', text: [{ t: 'gone', href: 'blog/ghost/' }, { t: ' again ' }, { t: 'gone', href: 'blog/ghost/#x' }, { t: ' other', href: 'blog/ghost/' }] });
+  items = warn(one, [one]);
+  const unknown = items.filter((i) => i.id.startsWith('link-unknown-'));
+  assert.deepStrictEqual(unknown.map((i) => i.message), [
+    'The link “two” goes to a post address that doesn’t exist, so it shows as plain words.',
+    'The link “and” goes to a post address that doesn’t exist, so it shows as plain words.',
+    'The link “gone” goes to a post address that doesn’t exist, so it shows as plain words.',
+    'The link “other” goes to a post address that doesn’t exist, so it shows as plain words.',
+  ]);
+  assert.strictEqual(new Set(items.map((i) => i.id)).size, items.length, 'ids are unique');
+  // The edited copy of this post stands in for its saved copy: a link to its own new address is fine.
+  const saved = clone(one);
+  one.slug = 'one-renamed';
+  one.blocks = [{ type: 'paragraph', text: [{ t: 'top', href: 'blog/one-renamed/#signs' }] }];
+  assert.deepStrictEqual(warn(one, [saved, posts[1]]), []);
+  assert.deepStrictEqual(checks.linkCheck(null, null), []);
+  assert.deepStrictEqual(checks.linkCheck({ blocks: 'x' }, [null, 3]), []);
 });
 test('refs: unpublished posts are not checked', () => {
   const dir = fixture();
@@ -818,14 +926,12 @@ test('refs: unpublished posts are not checked', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
-test('refs: featured ids must be in the posts', () => {
+test('refs: a featured id with no post is not a build problem (the build skips it)', () => {
   const dir = fixture();
   try {
     const config = refConfig();
     config.featured = ['p_two', 'p_s01', 'p_one'];
-    const problems = refs(dir, refPosts(), config);
-    assert.deepStrictEqual(problems.map((p) => [p.postId, p.field]), [[null, 'featured.1']]);
-    assert.ok(/featured post “p_s01” does not exist/.test(problems[0].message));
+    expectClean(refs(dir, refPosts(), config));
     // A featured post that is scheduled for later is fine (the build skips it).
     const posts = refPosts();
     posts[1].status = 'scheduled';

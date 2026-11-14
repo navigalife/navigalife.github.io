@@ -66,8 +66,8 @@ const CONFIG = {
 const words = (key) => FIELDS[key] || key.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
 
 const OBJECTS = {
-  content: { depth: 2, label: (path) => 'Page: ' + (SECTIONS[path[0]] || path[0]) + (path[1] ? ' — ' + words(path[1]) : '') },
-  config: { depth: 2, label: (path) => (CONFIG[path[0]] || words(path[0])) + (path[1] ? ' — ' + words(path[1]) : '') },
+  content: { depth: 2, label: (path) => 'Page: ' + (SECTIONS[path[0]] || path[0]) + (path[1] ? ', ' + words(path[1]) : '') },
+  config: { depth: 2, label: (path) => (CONFIG[path[0]] || words(path[0])) + (path[1] ? ', ' + words(path[1]) : '') },
   company: {
     depth: 1,
     groups: [['address', 'addressParts', 'geo', 'mapsUrl']],

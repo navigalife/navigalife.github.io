@@ -12,6 +12,9 @@
  *
  * Extras (additive, optional): opts.historyButtons === false hides the built-in
  * undo/redo buttons; root fires a 'bed:history' CustomEvent { canUndo, canRedo }.
+ * opts.hasPhone() false hides the contact button's Call choice (a Call button with
+ * no phone on record shows as WhatsApp). opts.posts (a list, or a function that
+ * returns one) feeds the link popup's "Link to one of our posts" list.
  */
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -36,10 +39,12 @@ const HINTS = {
   quote: 'Quotation with its source', pullquote: 'One large highlighted line', image: 'Photo with caption',
   gallery: 'Two or three photos', imageText: 'Photo beside text', callout: 'Doctor, tip or note',
   takeaways: 'Summary points', table: 'Rows and columns', faq: 'Expandable answers',
-  video: 'Site film or YouTube', cta: 'WhatsApp, call or contact', divider: 'A quiet section break',
+  video: 'Site film or YouTube', cta: 'WhatsApp or contact button', divider: 'A quiet section break',
 };
 const CALLOUT_TITLES = { doctor: 'When to see a doctor', tip: 'Tip', note: 'Note' };
-const CTA_LABELS = { whatsapp: 'Chat on WhatsApp', call: 'Call us', contact: 'Contact us' };
+// The reader sees the renderer's default labels (blog-blocks.js CTA_LABELS), so the
+// placeholders match them.
+const CTA_LABELS = { whatsapp: 'Message us on WhatsApp', call: 'Call the clinic', contact: 'Contact us' };
 
 const ICONS = {
   paragraph: '<path d="M5 7h14M5 12h14M5 17h9"/>',
@@ -108,6 +113,8 @@ function el(tag, attrs, ...kids) {
 const clone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const blank = (v) => typeof v !== 'string' || v.trim() === '';
+const NOT_PHOTO = 'That file is not a photo. Choose a JPG, PNG, HEIC or WebP image.';
+const isPhotoFile = (file) => !!file && (/^image\//.test(file.type || '') || /\.(heic|heif|jpe?g|png|webp|avif)$/i.test(file.name || ''));
 
 // ------------------------------------------------------------------- hrefs
 const LOCAL_HREFS = [
@@ -122,12 +129,18 @@ const hrefAllowed = (href) => {
   const r = rules();
   return r?.blogHrefAllowed ? r.blogHrefAllowed(href) : LOCAL_HREFS.some((re) => re.test(href));
 };
-const HREF_HELP = 'Use a full https:// address, mailto:, tel:, another post (blog/post-address/) or a #section link.';
+const HREF_HELP = 'Use a full web address starting with https://, an email address, a phone number or a #section link.';
 // Owner input → an allowed href, or { error }. Bare domains/emails/phones get their scheme.
 function normalizeHref(raw) {
   const v = String(raw || '').trim();
   if (!v) return { error: 'Type or paste a link address.' };
   if (/^(javascript|data|vbscript|file|blob):/i.test(v)) return { error: 'That kind of link is not allowed.' };
+  // A pasted address of one of our own posts becomes the short form the site checks.
+  const own = /^(?:https?:\/\/)?(?:www\.)?medivasc\.in\/blog\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?(?:index\.html)?(#[A-Za-z0-9_-]+)?$/i.exec(v);
+  if (own) {
+    const href = `blog/${own[1].toLowerCase()}/${own[2] || ''}`;
+    return hrefAllowed(href) ? { href } : { error: HREF_HELP };
+  }
   if (/^http:\/\//i.test(v)) return { error: 'Use the secure https:// version of this address.' };
   let href = v;
   if (/^[^\s@:/]+@[^\s@/]+\.[^\s@/]+$/.test(v)) href = `mailto:${v}`;
@@ -237,20 +250,25 @@ const SKIP_TAGS = new Set(['script', 'style', 'head', 'title', 'meta', 'link', '
   'object', 'embed', 'img', 'picture', 'svg', 'math', 'video', 'audio', 'source', 'track', 'canvas', 'input', 'button',
   'select', 'option', 'textarea', 'xml', 'o:p', 'form', 'frame', 'frameset', 'map', 'area', 'base', 'dialog']);
 const isCiteEl = (n) => n.nodeType === 1 && n.localName === 'sup' && n.hasAttribute('data-cite');
-const BOLD_OFF = /font-weight\s*:\s*(normal|lighter|[1-4]00)\b/i;
-const BOLD_ON = /font-weight\s*:\s*(bold|bolder|[6-9]00)\b/i;
+// Anchored to a declaration start: Word writes <b style='mso-bidi-font-weight:normal'> (and the italic twin),
+// which is about right-to-left text and must not read as "not bold".
+const BOLD_OFF = /(?:^|;)\s*font-weight\s*:\s*(normal|lighter|[1-4]00)\b/i;
+const BOLD_ON = /(?:^|;)\s*font-weight\s*:\s*(bold|bolder|[6-9]00)\b/i;
+const ITALIC_OFF = /(?:^|;)\s*font-style\s*:\s*normal\b/i;
+const ITALIC_ON = /(?:^|;)\s*font-style\s*:\s*(italic|oblique)\b/i;
 function marksFor(node, marks) {
   const tag = node.localName;
   const style = node.getAttribute('style') || '';
   const next = { ...marks };
   if ((tag === 'b' || tag === 'strong') && !BOLD_OFF.test(style)) next.b = true;
-  if ((tag === 'i' || tag === 'em') && !/font-style\s*:\s*normal/i.test(style)) next.i = true;
+  if ((tag === 'i' || tag === 'em') && !ITALIC_OFF.test(style)) next.i = true;
   if (tag === 'mark') next.hl = true;
   if (BOLD_ON.test(style)) next.b = true;
   else if (BOLD_OFF.test(style) && tag !== 'b' && tag !== 'strong') delete next.b;
-  if (/font-style\s*:\s*italic/i.test(style)) next.i = true;
+  if (ITALIC_ON.test(style)) next.i = true;
   if (tag === 'a') {
-    const href = (node.getAttribute('href') || '').trim();
+    let href = (node.getAttribute('href') || '').trim();
+    if (/^http:\/\/[^\s<>"]/i.test(href)) href = `https://${href.slice(7)}`; // a pasted http:// link keeps working as https
     if (hrefAllowed(href)) next.href = href;
     else delete next.href;
   }
@@ -318,6 +336,7 @@ function sanitizeHtml(html) {
   const pieces = [];
   let cur = null;
   let seam = false; // a footnote marker was just dropped: "word ¹ next" must not keep both spaces
+  let cellGap = false; // a table row reads as one paragraph: the next cell's words follow " · "
   const flush = () => {
     if (cur) {
       const runs = trimRuns(cur.runs);
@@ -325,6 +344,7 @@ function sanitizeHtml(html) {
     }
     cur = null;
     seam = false;
+    cellGap = false;
   };
   const walk = (node, marks, ctx) => {
     for (const c of node.childNodes) {
@@ -336,6 +356,18 @@ function sanitizeHtml(html) {
           const last = cur && cur.runs[cur.runs.length - 1];
           if (t[0] === ' ' && last && typeof last.t === 'string' && last.t.endsWith(' ')) t = t.slice(1);
           if (!t) { seam = true; continue; } // only the seam's own space: the next text still meets it
+        }
+        if (cellGap) {
+          if (!t.trim()) continue;
+          for (let k = cur ? cur.runs.length - 1 : -1; k >= 0; k -= 1) {
+            const r = cur.runs[k];
+            if (typeof r.t !== 'string') break;
+            r.t = r.t.replace(/\s+$/, '');
+            if (r.t) break;
+          }
+          if (cur) cur.runs.push({ t: ' · ' });
+          t = t.replace(/^\s+/, '');
+          cellGap = false;
         }
         if (!cur) {
           if (!t.trim()) continue;
@@ -349,9 +381,20 @@ function sanitizeHtml(html) {
       if (SKIP_TAGS.has(tag)) continue;
       const style = c.getAttribute('style') || '';
       if (/mso-list\s*:\s*ignore/i.test(style)) continue;
-      if (tag === 'br') { flush(); continue; }
+      if (tag === 'br') { if (ctx.row) { if (cur) cur.runs.push({ t: ' ' }); } else flush(); continue; }
       if (tag === 'sup' && /^\s*\[?\d+\]?\s*$/.test(c.textContent)) { seam = true; continue; } // foreign footnote markers
       const m = marksFor(c, marks);
+      if (ctx.row) { // inside a table row nothing breaks the line; each new cell joins the row's text
+        if ((tag === 'td' || tag === 'th') && cur && cur.runs.some((r) => !isCiteRun(r) && r.t.trim())) cellGap = true;
+        walk(c, m, ctx);
+        continue;
+      }
+      if (tag === 'tr') {
+        flush();
+        walk(c, m, { kind: 'p', style: undefined, row: true });
+        flush();
+        continue;
+      }
       if (!PIECE_TAGS.has(tag)) { walk(c, m, ctx); continue; }
       let { kind, style: st } = ctx;
       if (tag === 'h1' || tag === 'h2') kind = 'h2';
@@ -575,6 +618,17 @@ export function mountBlockEditor(root, opts = {}) {
   const stageImage = typeof opts.stageImage === 'function' ? opts.stageImage : null;
   const resolveSrc = typeof opts.resolveSrc === 'function' ? opts.resolveSrc : (s) => s;
   const films = Array.isArray(opts.films) ? opts.films.filter((f) => f && f.src) : [];
+  // Without the host saying otherwise, a phone is assumed (the Call choice shows).
+  const hasPhone = () => {
+    try { return typeof opts.hasPhone === 'function' ? Boolean(opts.hasPhone()) : opts.hasPhone !== false; } catch { return true; }
+  };
+  const hintOf = (type) => (type === 'cta' && hasPhone() ? 'WhatsApp, call or contact button' : HINTS[type]);
+  const postList = () => {
+    try {
+      const list = typeof opts.posts === 'function' ? opts.posts() : opts.posts;
+      return Array.isArray(list) ? list.filter((p) => p && typeof p === 'object') : [];
+    } catch { return []; }
+  };
   const PT = (() => {
     const d = document.createElement('div');
     try { d.contentEditable = 'plaintext-only'; } catch { return 'true'; }
@@ -619,7 +673,7 @@ export function mountBlockEditor(root, opts = {}) {
   let pendingRefDelete = null;
   let lastCell = null;
   let destroyed = false;
-  const pendingPatient = new Set(); // `${key}|${path}` — ticked, consent not yet confirmed
+  const freshAlt = new Set(); // `${key}|${path}`: photo just replaced, its old description was cleared
   const uploads = new Map(); // `${key}|${path}` → { state: 'busy'|'error', message }
   const hist = { past: [], future: [], lastKey: null, lastAt: 0, burstAt: 0 };
   const dirty = new Set();
@@ -633,7 +687,7 @@ export function mountBlockEditor(root, opts = {}) {
   const page = el('div', { class: 'bed-page' });
   const tb = el('div', { class: 'bed-tb', role: 'toolbar', 'aria-label': 'Text formatting', hidden: true });
   const pop = el('div', { class: 'bed-pop', role: 'dialog', hidden: true });
-  const menu = el('div', { class: 'bed-menu', role: 'dialog', 'aria-label': 'Add a block', hidden: true });
+  const menu = el('div', { class: 'bed-menu', role: 'dialog', 'aria-label': 'Add a section', hidden: true });
   const live = el('div', { class: 'bed-sr', 'aria-live': 'polite', 'aria-atomic': 'true' });
   const toast = el('div', { class: 'bed-toast', role: 'status', hidden: true });
   const dropLine = el('div', { class: 'bed-dropline', hidden: true });
@@ -720,6 +774,7 @@ export function mountBlockEditor(root, opts = {}) {
     seed.clear();
     schedule();
     updateCount();
+    if (!hwarnQueued) { hwarnQueued = true; queueMicrotask(syncHeadingWarns); }
   }
 
   // ------------------------------------------------------------ focus
@@ -818,13 +873,15 @@ export function mountBlockEditor(root, opts = {}) {
     f.textContent = value || '';
     return f;
   }
-  function inputField(path, value, ph, { label, opt, req, kind = 'input', type = 'text', cls = '', warn, warnShown } = {}) {
+  function inputField(path, value, ph, { label, opt, req, kind = 'input', type = 'text', cls = '', warn, warnShown, help } = {}) {
     const id = uid('in');
+    const described = [help ? `${id}-h` : '', warn ? `${id}-w` : ''].filter(Boolean).join(' ');
     const input = el('input', { id, type, class: `bed-input ${cls}`.trim(), 'data-f': path, 'data-kind': kind, 'data-opt': opt ? '' : false,
       'data-req': req ? '' : false, placeholder: ph, autocomplete: 'off', spellcheck: kind === 'input' ? 'true' : 'false',
-      'aria-invalid': warnShown ? 'true' : false, 'aria-describedby': warn ? `${id}-w` : false });
+      'aria-invalid': warnShown ? 'true' : false, 'aria-describedby': described || false });
     input.value = value || '';
     const wrap = el('label', { class: 'bed-field', for: id }, el('span', { class: 'bed-field__l', text: label }), input);
+    if (help) wrap.append(el('span', { class: 'bed-help', id: `${id}-h`, text: help }));
     if (warn) wrap.append(el('span', { class: 'bed-warn', id: `${id}-w`, 'data-warn-of': path, hidden: !warnShown }, svg('warn'), warn));
     return wrap;
   }
@@ -853,11 +910,11 @@ export function mountBlockEditor(root, opts = {}) {
         el('button', { type: 'button', class: 'bed-btn bed-btn--overlay', 'data-act': 'pick', 'data-p': path }, svg('upload'), cover ? 'Replace' : 'Replace photo'));
       if (cover) acts.append(el('button', { type: 'button', class: 'bed-btn bed-btn--overlay', 'data-act': 'cover-remove' }, svg('trash'), 'Remove'));
       slot.append(frame, acts);
-      if (cover) slot.append(el('p', { class: 'bed-help', text: 'Click the photo to set its focus point — crops on the site keep it in frame.' }));
+      if (cover) slot.append(el('p', { class: 'bed-help', text: 'Click the photo to set its focus point. Crops on the site keep it in frame.' }));
     } else {
       slot.append(el('button', { type: 'button', class: 'bed-drop', 'data-act': 'pick', 'data-p': path },
         svg('upload'), el('span', { class: 'bed-drop__t', text: cover ? 'Add a cover photo' : 'Add a photo' }),
-        el('span', { class: 'bed-drop__h', text: 'Any size — it is resized for the web' })));
+        el('span', { class: 'bed-drop__h', text: 'Any size. It is resized for the web' })));
     }
     if (up) {
       slot.append(up.state === 'busy'
@@ -867,26 +924,31 @@ export function mountBlockEditor(root, opts = {}) {
     slot.append(file);
     return slot;
   }
+  // Fail closed: ticking "Patient photo" writes patient:true at once (out of share
+  // cards and search images right away) with consent:false, which blocks publishing
+  // until the consent box is ticked. A legacy patient photo with no consent field
+  // was only ever marked after consent, so it shows as consented.
   function patientRow(key, path, img) {
-    const id = `${key}|${path}`;
     const on = img.patient === true;
-    const pending = !on && pendingPatient.has(id);
+    const consented = on && img.consent !== false;
     const row = el('div', { class: 'bed-patient' });
     const cb = el('input', { type: 'checkbox', 'data-act': 'patient', 'data-p': path });
-    cb.checked = on || pending;
+    cb.checked = on;
     row.append(el('label', { class: 'bed-check' }, cb, el('span', { text: 'Patient photo' })));
-    if (on || pending) {
+    if (on) {
       const cc = el('input', { type: 'checkbox', 'data-act': 'consent', 'data-p': path });
-      cc.checked = on;
-      row.append(el('label', { class: `bed-check${on ? '' : ' is-needed'}` }, cc, el('span', { text: 'Patient consent is on file' })));
-      if (!on) row.append(el('p', { class: 'bed-warn', role: 'alert' }, svg('warn'), 'Confirm consent before this can be marked as a patient photo.'));
+      cc.checked = consented;
+      row.append(el('label', { class: `bed-check${consented ? '' : ' is-needed'}` }, cc, el('span', { text: 'Patient consent is on file' })));
+      if (!consented) row.append(el('p', { class: 'bed-warn', role: 'alert' }, svg('warn'), 'Tick the consent box before publishing.'));
     }
     return row;
   }
   function imageMeta(key, path, img, { richCaption = true, credit = false } = {}) {
     const wrap = el('div', { class: 'bed-meta' });
-    wrap.append(inputField(sub(path, 'alt'), img.alt, 'Describe the photo for someone who cannot see it',
-      { label: 'Alt text', req: true, warn: 'Required — read aloud to blind readers, and it helps Google.', warnShown: blank(img.alt) }));
+    const fresh = freshAlt.has(`${key}|${path}`);
+    wrap.append(inputField(sub(path, 'alt'), img.alt, 'What the photo shows, in a sentence',
+      { label: 'Describe the photo', req: true, help: 'For people who can’t see the photo. Google reads it too.',
+        warn: fresh ? 'Describe the new photo.' : 'Needed before publishing.', warnShown: blank(img.alt) }));
     if (richCaption) {
       const capId = uid('cap');
       wrap.append(el('div', { class: 'bed-field' }, el('span', { class: 'bed-field__l', id: capId, text: 'Caption' }),
@@ -897,7 +959,8 @@ export function mountBlockEditor(root, opts = {}) {
       wrap.append(el('div', { class: 'bed-field' }, el('span', { class: 'bed-field__l', id: capId, text: 'Caption' }),
         plainField('div', sub(path, 'caption'), typeof img.caption === 'string' ? img.caption : inlineText(img.caption), 'Optional', 'bed-input bed-input--rich', { opt: true, label: 'Caption' })));
     }
-    if (credit) wrap.append(inputField(sub(path, 'credit'), img.credit, 'Optional — e.g. MediVasc', { label: 'Credit', opt: true }));
+    if (credit) wrap.append(inputField(sub(path, 'credit'), img.credit, 'Optional, for example MediVasc', { label: 'Credit', opt: true }));
+    wrap.append(photoTools(key, path, img));
     wrap.append(patientRow(key, path, img));
     return wrap;
   }
@@ -928,7 +991,7 @@ export function mountBlockEditor(root, opts = {}) {
         svg('type'), el('span', { class: 'bed-typebtn__l', text: 'Typography' }), el('span', { class: 'bed-typebtn__sum', 'data-typosum': '', text: typoSummary() })));
     updateCount();
   }
-  const LEADINS = [['dropcap', 'Drop cap'], ['smallcaps', 'Small caps'], ['boldwords', 'Bold words'], ['none', 'None']];
+  const LEADINS = [['dropcap', 'Large first letter'], ['smallcaps', 'Small capitals'], ['boldwords', 'Bold first words'], ['none', 'None']];
   const typoSummary = () => `Title ${doc.titleSize} · Text ${doc.bodySize} · ${(LEADINS.find((l) => l[0] === doc.leadIn) || LEADINS[3])[1]}`;
   function renderTypo() {
     typePanel.textContent = '';
@@ -976,7 +1039,7 @@ export function mountBlockEditor(root, opts = {}) {
   function renderHead() {
     const head = el('header', { class: 'bed-head', 'data-key': 'doc' });
     const title = el('h1', { class: 'bed-title', contenteditable: PT, 'data-f': 'title', 'data-kind': 'plain', 'data-ph': 'Title',
-      role: 'textbox', 'aria-label': 'Title — select words and press Accent to set them in accent italic', spellcheck: 'true' });
+      role: 'textbox', 'aria-label': 'Title. Select words and press Accent to set them in accent italic', spellcheck: 'true' });
     paintTitle(title);
     head.append(title, el('p', { class: 'bed-note', 'data-note': 'accent', hidden: true }),
       plainField('p', 'dek', doc.dek, 'A one- or two-sentence summary under the title', 'bed-dek', { label: 'Summary' }));
@@ -992,11 +1055,11 @@ export function mountBlockEditor(root, opts = {}) {
     const f = el('div', { class: 'bed-flow' });
     const firstText = doc.blocks.findIndex((b) => b.type === 'paragraph' || b.type === 'lead');
     doc.blocks.forEach((b, i) => f.append(gap(i), blockEl(b, i, i === firstText)));
-    f.append(el('div', { class: 'bed-end' }, el('button', { type: 'button', class: 'bed-add', 'data-act': 'insert', 'data-at': String(doc.blocks.length) }, svg('plus'), 'Add block')));
+    f.append(el('div', { class: 'bed-end' }, el('button', { type: 'button', class: 'bed-add', 'data-act': 'insert', 'data-at': String(doc.blocks.length) }, svg('plus'), 'Add section')));
     return f;
   }
   const gap = (i) => el('div', { class: 'bed-gap' }, el('button', { type: 'button', class: 'bed-plus', tabindex: '-1', 'data-act': 'insert',
-    'data-at': String(i), 'aria-label': 'Add a block here', title: 'Add a block here' }, svg('plus')));
+    'data-at': String(i), 'aria-label': 'Add a section here', title: 'Add a section here' }, svg('plus')));
   function layoutClass(b) {
     if (b.type !== 'image') return '';
     const w = b.width || 'column';
@@ -1008,7 +1071,7 @@ export function mountBlockEditor(root, opts = {}) {
     const key = keys[i];
     const w = el('section', { class: `bed-block${layoutClass(b)}${key === selKey ? ' is-selected' : ''}`, 'data-key': key, 'data-type': b.type, 'aria-label': labelOf(b.type) });
     w.append(el('div', { class: 'bed-gutter' }, el('button', { type: 'button', class: 'bed-handle', tabindex: '-1', 'data-act': 'handle', 'aria-label': `Move ${labelOf(b.type)}`, title: 'Drag to move' }, svg('drag'))));
-    w.append(el('div', { class: 'bed-content' }, bodyOf(b, key, first)));
+    w.append(el('div', { class: 'bed-content' }, bodyOf(b, key, first), orphanSub(i) ? headingWarn() : null));
     if (key === selKey) {
       const was = wrapOf(key);
       const s = stripOf(b, i);
@@ -1016,6 +1079,33 @@ export function mountBlockEditor(root, opts = {}) {
       w.append(s);
     }
     return w;
+  }
+  // A Subheading with no Heading above it blocks publishing (content-rules checks the
+  // same thing): say so on the block, with a one-click fix. Moves, deletes and level
+  // changes elsewhere can flip it, so change() re-syncs every heading after each edit.
+  function orphanSub(i) {
+    const b = doc.blocks[i];
+    if (!b || b.type !== 'heading' || b.level !== 3) return false;
+    for (let j = 0; j < i; j++) if (doc.blocks[j] && doc.blocks[j].type === 'heading' && doc.blocks[j].level === 2) return false;
+    return true;
+  }
+  function headingWarn() {
+    return el('p', { class: 'bed-warn bed-hwarn', 'data-hwarn': '' }, svg('warn'), el('span', { text: 'A Subheading needs a Heading above it.' }),
+      el('button', { type: 'button', class: 'bed-btn bed-btn--quiet', 'data-act': 'set', 'data-prop': 'level', 'data-val': '2', text: 'Make it a Heading' }));
+  }
+  let hwarnQueued = false;
+  function syncHeadingWarns() {
+    hwarnQueued = false;
+    if (destroyed) return;
+    doc.blocks.forEach((b, i) => {
+      const w = wrapOf(keys[i]);
+      const c = w && w.querySelector(':scope > .bed-content');
+      if (!c) return;
+      const was = c.querySelector(':scope > [data-hwarn]');
+      const want = orphanSub(i);
+      if (want && !was) c.append(headingWarn());
+      else if (!want && was) was.remove();
+    });
   }
   function renderBlock(key) {
     const i = keys.indexOf(key);
@@ -1029,6 +1119,7 @@ export function mountBlockEditor(root, opts = {}) {
     flowEl.replaceWith(next);
     flowEl = next;
     rerenderRefs();
+    placeStrip(true); // a block inserted, moved or changed brings a new strip: re-measure its room now, not on the next scroll
   }
   function rerenderRefs() {
     const next = renderRefs();
@@ -1047,12 +1138,12 @@ export function mountBlockEditor(root, opts = {}) {
   function bodyOf(b, key, first) {
     switch (b.type) {
       case 'paragraph':
-        return richField('p', 'text', b.text, first ? 'Start writing — or press / to add a block' : 'Write, or press / for blocks', 'bed-p', { label: 'Paragraph', first });
+        return richField('p', 'text', b.text, first ? 'Start writing, or press / to add a section' : 'Write, or press / to add a section', 'bed-p', { label: 'Paragraph', first });
       case 'lead':
-        return richField('p', 'text', b.text, 'Intro paragraph — the opening lines', 'bed-lead', { label: 'Intro paragraph', first });
+        return richField('p', 'text', b.text, 'Intro paragraph: the opening lines', 'bed-lead', { label: 'Intro paragraph', first });
       case 'heading':
-        return plainField(b.level === 3 ? 'h3' : 'h2', 'text', b.text, b.level === 3 ? 'Sub-heading' : 'Heading',
-          `bed-h bed-h${b.level === 3 ? 3 : 2} bed-h--${b.size || 'M'}`, { label: b.level === 3 ? 'Sub-heading (H3)' : 'Heading (H2)' });
+        return plainField(b.level === 3 ? 'h3' : 'h2', 'text', b.text, b.level === 3 ? 'Subheading' : 'Heading',
+          `bed-h bed-h${b.level === 3 ? 3 : 2} bed-h--${b.size || 'M'}`, { label: b.level === 3 ? 'Subheading' : 'Heading' });
       case 'list': {
         const items = Array.isArray(b.items) && b.items.length ? b.items : [''];
         return el(b.style === 'number' ? 'ol' : 'ul', { class: `bed-list bed-list--${b.style === 'number' ? 'number' : 'bullet'}` },
@@ -1124,11 +1215,15 @@ export function mountBlockEditor(root, opts = {}) {
       }
       case 'cta': {
         const kind = ['whatsapp', 'call', 'contact'].includes(b.kind) ? b.kind : 'whatsapp';
+        // A Call button with no phone on record is published as the WhatsApp one
+        // (blog-blocks.js CTA_ROUTES), so it shows WhatsApp's label and says why.
+        const noPhone = kind === 'call' && !hasPhone();
         return el('div', { class: 'bed-cta' }, plainField('p', 'text', b.text, 'A short line above the button (optional)', 'bed-cta__text', { opt: true, label: 'Text above the button' }),
-          el('span', { class: 'bed-cta__btn' }, plainField('span', 'label', b.label, CTA_LABELS[kind], 'bed-cta__label', { opt: true, label: 'Button label' })));
+          el('span', { class: 'bed-cta__btn' }, plainField('span', 'label', b.label, CTA_LABELS[noPhone ? 'whatsapp' : kind], 'bed-cta__label', { opt: true, label: 'Button label' })),
+          noPhone ? el('p', { class: 'bed-help bed-cta__note' }, svg('warn'), el('span', { text: 'No phone number on record, so this shows as WhatsApp.' })) : null);
       }
       default:
-        return el('p', { class: 'bed-help', text: `Unknown block “${b.type}”.` });
+        return el('p', { class: 'bed-help', text: `Unknown section “${b.type}”.` });
     }
   }
   function videoBody(b) {
@@ -1137,7 +1232,7 @@ export function mountBlockEditor(root, opts = {}) {
       const film = films.find((f) => f.src === b.src);
       v.append(film
         ? el('div', { class: 'bed-video__frame' }, el('video', { src: resolveSrc(film.src), poster: film.poster ? resolveSrc(film.poster) : false, controls: true, preload: 'none', playsinline: true }))
-        : el('div', { class: 'bed-video__empty' }, svg('film'), el('span', { text: films.length ? 'Choose one of the site’s films' : 'The site has no films yet — switch to YouTube' })));
+        : el('div', { class: 'bed-video__empty' }, svg('film'), el('span', { text: films.length ? 'Choose one of the site’s films' : 'The site has no films yet. Switch to YouTube.' })));
       if (films.length) {
         v.append(el('div', { class: 'bed-films', role: 'group', 'aria-label': 'Site films' }, films.map((f) => el('button', {
           type: 'button', class: 'bed-film', 'data-act': 'film', 'data-val': f.src, 'aria-pressed': String(f.src === b.src) },
@@ -1151,7 +1246,7 @@ export function mountBlockEditor(root, opts = {}) {
         ? el('div', { class: 'bed-yt' }, el('img', { src: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`, alt: '', loading: 'lazy' }), el('span', { class: 'bed-yt__play', 'aria-hidden': 'true' }, svg('video')))
         : el('div', { class: 'bed-video__empty' }, svg('video'), el('span', { text: 'Paste a YouTube link below' })));
       v.append(inputField('youtube', id ? `https://youtu.be/${id}` : '', 'https://www.youtube.com/watch?v=…',
-        { label: 'YouTube link', kind: 'yt', warn: 'That does not look like a YouTube link — paste the address of the video page.', warnShown: false }));
+        { label: 'YouTube link', kind: 'yt', warn: 'That does not look like a YouTube link. Paste the address of the video page.', warnShown: false }));
     }
     v.append(richField('figcaption', 'caption', b.caption, 'Caption (optional)', 'bed-cap', { opt: true, label: 'Video caption' }));
     return v;
@@ -1162,16 +1257,16 @@ export function mountBlockEditor(root, opts = {}) {
     const SML = [['S', 'S'], ['M', 'M'], ['L', 'L']];
     switch (b.type) {
       case 'heading':
-        set.append(chips('Level', 'level', [[2, 'H2'], [3, 'H3']], b.level === 3 ? 3 : 2), chips('Size', 'size', SML, b.size || 'M'),
-          inputField('anchor', b.anchor || '', 'auto', { label: 'Section link #', opt: true, kind: 'anchor', cls: 'bed-input--sm' }));
+        set.append(chips('Level', 'level', [[2, 'Heading'], [3, 'Subheading']], b.level === 3 ? 3 : 2), chips('Size', 'size', SML, b.size || 'M'),
+          inputField('anchor', b.anchor || '', 'Made from the heading', { label: 'Link to this heading', opt: true, kind: 'anchor', cls: 'bed-input--sm' }));
         break;
       case 'list':
         set.append(chips('Style', 'style', [['bullet', 'Bullets'], ['number', 'Numbers']], b.style === 'number' ? 'number' : 'bullet'));
         break;
       case 'image': {
         const w = b.width || 'column';
-        set.append(chips('Width', 'width', [['column', 'Column'], ['wide', 'Wide'], ['full', 'Full']], w),
-          chips('Position', 'align', [['center', 'Centre'], ['left', 'Left'], ['right', 'Right']], b.align || 'center', { disabled: w !== 'column', hint: 'Only a column-width photo can sit beside the text' }));
+        set.append(chips('Width', 'width', [['column', 'Text width'], ['wide', 'Wide'], ['full', 'Full width']], w),
+          chips('Position', 'align', [['center', 'Centre'], ['left', 'Left'], ['right', 'Right']], b.align || 'center', { disabled: w !== 'column', hint: 'Only a text-width photo can sit beside the text' }));
         if (w === 'column' && (b.align === 'left' || b.align === 'right')) set.append(chips('Size', 'size', SML, b.size || 'M'));
         break;
       }
@@ -1182,7 +1277,8 @@ export function mountBlockEditor(root, opts = {}) {
         set.append(chips('Style', 'tone', [['doctor', 'See a doctor'], ['tip', 'Tip'], ['note', 'Note']], b.tone || 'doctor'));
         break;
       case 'cta':
-        set.append(chips('Button', 'kind', [['whatsapp', 'WhatsApp'], ['call', 'Call'], ['contact', 'Contact']], b.kind || 'whatsapp'));
+        // Call is offered only while a phone is on record (or the button already is one).
+        set.append(chips('Button', 'kind', [['whatsapp', 'WhatsApp'], ...(hasPhone() || b.kind === 'call' ? [['call', 'Call']] : []), ['contact', 'Contact']], b.kind || 'whatsapp'));
         break;
       case 'video':
         set.append(chips('Source', 'source', [['film', 'Site film'], ['youtube', 'YouTube']], b.source === 'youtube' ? 'youtube' : 'film'));
@@ -1210,10 +1306,10 @@ export function mountBlockEditor(root, opts = {}) {
         'aria-label': `Move ${labelOf(b.type)}: drag, or press the up or down arrow key`, title: 'Drag, or press ↑ ↓', 'aria-keyshortcuts': 'ArrowUp ArrowDown' }, svg('drag')),
       iconBtn('up', 'Move up', { 'data-act': 'move', 'data-d': '-1', disabled: i === 0 }),
       iconBtn('down', 'Move down', { 'data-act': 'move', 'data-d': '1', disabled: i === doc.blocks.length - 1 }),
-      iconBtn('plus', 'Add a block below', { 'data-act': 'insert', 'data-at': String(i + 1) }),
+      iconBtn('plus', 'Add a section below', { 'data-act': 'insert', 'data-at': String(i + 1) }),
       iconBtn('copy', 'Duplicate', { 'data-act': 'dup' }),
-      iconBtn('trash', 'Delete block', { 'data-act': 'del', class: 'is-danger' }));
-    s.append(el('span', { class: 'bed-strip__name', text: labelOf(b.type) }), set, acts);
+      iconBtn('trash', 'Delete section', { 'data-act': 'del', class: 'is-danger' }));
+    s.append(el('span', { class: 'bed-strip__name', text: b.type === 'heading' && b.level === 3 ? 'Subheading' : labelOf(b.type) }), set, acts);
     return s;
   }
   function renderRefs() {
@@ -1321,6 +1417,7 @@ export function mountBlockEditor(root, opts = {}) {
       toggleWarn(f, !!value && !/^https:\/\/[^\s<>"]+$/.test(value));
     } else value = readField(f);
     if (f.hasAttribute('data-req')) toggleWarn(f, blank(value));
+    if (/(?:^|\.)alt$/.test(path) && !blank(value)) freshAlt.delete(`${t.key}|${path.replace(/\.?alt$/, '')}`);
     const cur = getPath(t.obj, path);
     if (same(cur === undefined ? '' : cur, value)) return;
     change(topOf(t, path), () => setPath(t.obj, path, value, f.hasAttribute('data-opt')), `type:${t.key}:${path}`);
@@ -1510,6 +1607,12 @@ export function mountBlockEditor(root, opts = {}) {
       const prevKey = keys[t.index - 1];
       if (isTextBlock(prev) || (prev && prev.type === 'heading')) {
         const cur = domToRuns(f);
+        // A heading holds plain words only. Merging text with links, citations, bold, italic or highlight into it
+        // would lose them, so Backspace just steps into the heading and leaves the paragraph whole.
+        if (prev.type === 'heading' && cur.some((r) => isCiteRun(r) || r.href || r.b || r.i || r.hl)) {
+          focusPath(prevKey, 'text', 'end');
+          return true;
+        }
         const prevRuns = prev.type === 'heading' ? [{ t: prev.text || '' }] : runsOf(prev.text);
         const at = runsLen(prevRuns);
         change('blocks', () => {
@@ -1561,11 +1664,28 @@ export function mountBlockEditor(root, opts = {}) {
   }
 
   // -------------------------------------------------------------- paste
-  function onPaste(e) {
-    const f = e.target.closest && e.target.closest('[data-f]');
-    if (!f || !f.isContentEditable || !page.contains(f)) return;
+  // A copied photo (a screenshot, or a file copied in Finder, which also puts its name
+  // in the text) becomes an Image section after the one being edited. Clipboard text
+  // otherwise wins: Word and Sheets copy a picture of the text along with it.
+  function pastePhoto(e, cd, node) {
+    const files = filesOf(cd);
+    const text = cd ? String(cd.getData('text/plain') || '').trim() : '';
+    if (!files.length || (text && !files.some((file) => file.name === text))) return false;
     e.preventDefault();
+    const photo = files.find(isPhotoFile);
+    if (photo) insertPhoto(photo, photoSpot(node));
+    else showToast(NOT_PHOTO);
+    return true;
+  }
+  function onPaste(e) {
     const cd = e.clipboardData || window.clipboardData;
+    const f = e.target.closest && e.target.closest('[data-f]');
+    const editable = !!f && f.isContentEditable && page.contains(f);
+    // Also with a section's button or photo focused (not a typing box: those take text).
+    const other = !editable && page.contains(e.target) && !/^(input|textarea|select)$/.test(e.target.localName);
+    if ((editable || other) && pastePhoto(e, cd, editable ? f : e.target)) return;
+    if (!editable) return;
+    e.preventDefault();
     const html = cd ? cd.getData('text/html') : '';
     const text = cd ? cd.getData('text/plain') : '';
     // a spreadsheet range (Sheets/Excel/Numbers paste TSV) into a table cell fills the grid from that cell
@@ -1624,7 +1744,7 @@ export function mountBlockEditor(root, opts = {}) {
     const lr = r0 + grid.length - 1;
     const lc = Math.min(b.header.length - 1, c0 + grid[grid.length - 1].length - 1);
     focusPath(t.key, lr < 0 ? `header.${lc}` : `rows.${lr}.${lc}`, 'end');
-    announce(`Pasted ${grid.length} ${grid.length === 1 ? 'row' : 'rows'} into the table${lost ? ' — columns past the sixth were left out' : ''}`);
+    announce(`Pasted ${grid.length} ${grid.length === 1 ? 'row' : 'rows'} into the table${lost ? '. Columns past the sixth were left out' : ''}`);
   }
   function piecesToBlocks(pieces, seenH2) {
     const out = [];
@@ -1821,10 +1941,15 @@ export function mountBlockEditor(root, opts = {}) {
     pop.hidden = false;
     pop.setAttribute('aria-label', title);
     const anchor = tb.hidden ? selState.f.getBoundingClientRect() : tb.getBoundingClientRect();
-    const coarse = matchMedia('(pointer: coarse)').matches;
     const w = pop.offsetWidth;
+    const h = pop.offsetHeight;
+    // The part of the page on screen (a phone keyboard shrinks it). No room below the
+    // selection: above it, else as low as still fits, so the popup never runs off screen.
+    const vv = window.visualViewport;
+    const lo = vv ? vv.offsetTop : 0;
+    const hi = vv ? vv.offsetTop + vv.height : innerHeight;
     let top = anchor.bottom + 8;
-    if (top + pop.offsetHeight > innerHeight - 8 && !coarse) top = Math.max(8, anchor.top - pop.offsetHeight - 8);
+    if (top + h > hi - 8) top = anchor.top - h - 8 >= lo + 8 ? anchor.top - h - 8 : Math.max(lo + 8, hi - h - 8);
     pop.style.top = `${Math.round(top)}px`;
     pop.style.left = `${Math.round(Math.max(8, Math.min(anchor.left + anchor.width / 2 - w / 2, innerWidth - w - 8)))}px`;
   }
@@ -1839,24 +1964,78 @@ export function mountBlockEditor(root, opts = {}) {
   }
   const popWarn = () => el('p', { class: 'bed-warn', role: 'alert', hidden: true });
   const showPopWarn = (w, msg) => { w.hidden = false; w.textContent = ''; w.append(svg('warn'), el('span', { text: msg })); };
+  // On the site now, as blog-manage.js isLive: published or scheduled, and the date has come.
+  const postIsLive = (p) => (p.status === 'published' || p.status === 'scheduled') && Date.parse(p.publishAt) <= Date.now();
+  // The posts this one can link to: live ones first (newest first), then the rest in
+  // the host's order. Not this post, and not a draft that has no web address yet.
+  function linkablePosts() {
+    const seen = new Set();
+    return postList()
+      .filter((p) => !(postId && p.id === postId))
+      .map((p) => ({ href: `blog/${String(p.slug || '').trim()}/`, title: String(p.title || '').trim() || 'Untitled post', live: postIsLive(p), at: Date.parse(p.publishAt) || 0 }))
+      .filter((p) => p.href !== 'blog//' && hrefAllowed(p.href))
+      .sort((a, b) => (b.live - a.live) || (a.live ? b.at - a.at : 0))
+      .filter((p) => !seen.has(p.href) && seen.add(p.href));
+  }
   function openLink() {
     if (!selState || selState.start === selState.end) return;
     const { f, start, end } = selState;
     const cur = markState(domToRuns(f), start, end, 'href');
     pop.textContent = '';
-    const inp = el('input', { class: 'bed-input', type: 'text', placeholder: 'https://…  ·  blog/post-address/  ·  #section', 'aria-label': 'Link address', spellcheck: 'false', autocomplete: 'off', inputmode: 'url' });
+    const posts = linkablePosts();
+    const inp = el('input', { class: 'bed-input', type: 'text', placeholder: posts.length ? 'Paste a link, or type to find a post' : 'https://…  ·  #section', 'aria-label': posts.length ? 'Link address, or a post to find' : 'Link address',
+      spellcheck: 'false', autocomplete: 'off', autocapitalize: 'off', inputmode: posts.length ? false : 'url' });
     inp.value = cur || '';
     const err = popWarn();
-    const form = el('form', { class: 'bed-pop__form' }, inp,
+    const list = el('div', { class: 'bed-pop__list bed-pop__list--posts', role: 'group', 'aria-label': 'Our posts' });
+    const none = el('p', { class: 'bed-help bed-pop__none', hidden: true });
+    const box = posts.length ? el('div', { class: 'bed-pop__posts' }, el('p', { class: 'bed-pop__sub', text: 'Link to one of our posts' }), list, none) : null;
+    let shown = posts;
+    const paint = () => {
+      if (!box) return;
+      const q = inp.value.trim().toLowerCase();
+      shown = !q || q === String(cur || '').toLowerCase() ? posts : posts.filter((p) => p.title.toLowerCase().includes(q) || p.href.includes(q));
+      list.textContent = '';
+      for (const p of shown) {
+        list.append(el('button', { type: 'button', class: 'bed-pop__ref bed-pop__ref--post', 'data-pop': 'post', 'data-href': p.href, 'aria-current': p.href === cur ? 'true' : false },
+          el('span', { class: 'bed-pop__rt', text: p.title }), p.live ? null : el('span', { class: 'bed-pop__tag', text: 'not on the site yet' })));
+      }
+      // Something that reads like an address hides the list; a search that finds nothing says so.
+      box.hidden = !shown.length && /[:/@#.]/.test(q);
+      list.hidden = !shown.length;
+      none.hidden = !!shown.length;
+      none.textContent = shown.length ? '' : `No post title has “${inp.value.trim()}” in it.`;
+    };
+    const form = el('form', { class: 'bed-pop__form' }, inp, box,
       el('div', { class: 'bed-pop__row' }, el('button', { type: 'submit', class: 'bed-btn bed-btn--primary' }, cur ? 'Update link' : 'Add link'),
         cur ? el('button', { type: 'button', class: 'bed-btn bed-btn--text', 'data-pop': 'unlink' }, 'Remove link') : null,
         el('button', { type: 'button', class: 'bed-btn bed-btn--text', 'data-pop': 'cancel' }, 'Cancel')), err);
+    inp.addEventListener('input', () => {
+      paint();
+      if (!err.hidden) { err.hidden = true; inp.removeAttribute('aria-invalid'); }
+    });
+    // Down arrow from the address goes into the list; up and down move along it.
+    form.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp') return;
+      const items = [...list.querySelectorAll('[data-pop="post"]')];
+      const at = items.indexOf(ev.target);
+      if (ev.target === inp && ev.key === 'ArrowDown' && items.length) { ev.preventDefault(); items[0].focus(); return; }
+      if (at < 0) return;
+      ev.preventDefault();
+      if (ev.key === 'ArrowUp' && at === 0) inp.focus();
+      else items[Math.max(0, Math.min(items.length - 1, at + (ev.key === 'ArrowDown' ? 1 : -1)))].focus();
+    });
     form.addEventListener('submit', (ev) => {
       ev.preventDefault();
       const r = normalizeHref(inp.value);
-      if (r.error) { showPopWarn(err, r.error); inp.setAttribute('aria-invalid', 'true'); inp.focus(); return; }
-      applyLink(r.href);
+      if (!r.error) { applyLink(r.href); return; }
+      // Typed words that find exactly one post: Enter links to it.
+      if (box && shown.length === 1 && shown !== posts) { applyLink(shown[0].href); return; }
+      showPopWarn(err, box && r.error === HREF_HELP ? `${HREF_HELP} Or choose one of our posts from the list.` : r.error);
+      inp.setAttribute('aria-invalid', 'true');
+      inp.focus();
     });
+    paint();
     pop.append(el('p', { class: 'bed-pop__title', text: cur ? 'Edit link' : 'Link' }), form);
     openPop('Link');
     inp.focus();
@@ -1941,28 +2120,163 @@ export function mountBlockEditor(root, opts = {}) {
     announce('Accent removed');
   }
 
+  // -------------------------------------------------------- photo tools
+  // Crop and "Blur part of the photo" under every photo with a file (cover,
+  // image, gallery, photo beside text). The photo's current pixels come through
+  // resolveSrc, are edited in the admin's own dialogs (image-tools.js, loaded on
+  // first use: the editor test imports this file from a data: URL, so there is
+  // no static import), then go through stageImage as a new photo. The src is
+  // swapped only if the photo is still the one that was edited; alt text and
+  // the patient flag stay, and a crop puts the cover's focus point back in the
+  // middle. Every failure ends in a plain message under the photo.
+  const photoJobs = new Set(); // `${key}|${path}` with a crop or blur under way
+  const PHOTO_ICONS = {
+    crop: '<path d="M7 3.5V17h13.5M3.5 7H17v13.5"/>',
+    blur: '<circle cx="12" cy="12" r="8" stroke-dasharray="2.4 2.6"/><circle cx="12" cy="12" r="3.6"/>',
+  };
+  const BLUR_HINT = 'Drag across a face, a name, a tattoo, or anything else that shows who the patient is. Drag a box to move it, or its corner handle to resize. The blur becomes a permanent part of the photo. No AI redraws or adds anything.';
+  const photoIcon = (name) => { const s = svg(''); s.innerHTML = PHOTO_ICONS[name]; return s; };
+  function photoTools(key, path, img) {
+    const id = `${key}|${path}`;
+    const busy = photoJobs.has(id) || (uploads.get(id) || {}).state === 'busy';
+    const patient = img.patient === true;
+    const tool = (act, icon, text, look) => el('button', { type: 'button', class: `bed-btn ${look}`, 'data-act': act, 'data-p': path,
+      'aria-disabled': busy ? 'true' : false }, photoIcon(icon), text);
+    const crop = tool('photo-crop', 'crop', 'Crop', 'bed-btn--quiet');
+    const blur = tool('photo-blur', 'blur', 'Blur part of the photo', patient ? 'bed-btn--primary' : 'bed-btn--quiet');
+    const row = el('div', { class: 'bed-tools', role: 'group', 'aria-label': 'Edit the photo' }, patient ? [blur, crop] : [crop, blur]);
+    if (patient) row.append(el('p', { class: 'bed-help bed-tools__h', text: 'Blur any face, name or tattoo before you publish.' }));
+    return row;
+  }
+  async function photoTool(btn, act) {
+    const t = targetOf(btn);
+    if (!t) return;
+    const key = t.key;
+    const path = btn.dataset.p || '';
+    const id = `${key}|${path}`;
+    const blur = act === 'photo-blur';
+    if (photoJobs.has(id) || (uploads.get(id) || {}).state === 'busy') return;
+    const findImg = () => {
+      if (key === 'doc') return doc.cover || null;
+      const i = keys.indexOf(key);
+      const img = i < 0 ? null : (path ? getPath(doc.blocks[i], path) : doc.blocks[i]);
+      return img && typeof img === 'object' ? img : null;
+    };
+    const present = () => !destroyed && (key === 'doc' || keys.includes(key));
+    const refocus = () => {
+      const w = wrapOf(key);
+      const b = w && [...w.querySelectorAll(`[data-act="${act}"]`)].find((x) => (x.dataset.p || '') === path);
+      if (!b) return;
+      // the cover's tools show only while the cover holds focus (blog-editor.css): land inside it first
+      const frame = key === 'doc' && headEl.querySelector('.bed-cover [data-focal]');
+      if (frame) frame.focus({ preventScroll: true });
+      b.focus({ preventScroll: true });
+    };
+    const fail = (message) => {
+      photoJobs.delete(id);
+      if (!present()) { uploads.delete(id); return; }
+      uploads.set(id, { state: 'error', message });
+      rerenderTarget(key);
+      refocus();
+    };
+    const img = findImg();
+    if (!img || !img.src) return;
+    const src = img.src;
+    if (!stageImage) { fail('Photo uploads are not available here.'); return; }
+    const url = resolveSrc(src);
+    if (!url) { fail('The photo is still loading. Try again in a moment.'); return; }
+    const hadError = uploads.has(id);
+    uploads.delete(id);
+    photoJobs.add(id);
+    let file;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const ext = (/\.(jpe?g|png|webp)(?:[?#]|$)/i.exec(src) || [])[1];
+      const type = ['image/jpeg', 'image/png', 'image/webp'].includes(blob.type) ? blob.type
+        : ext ? `image/${ext.toLowerCase().replace(/^jpg$/, 'jpeg')}` : 'image/jpeg';
+      file = new File([blob], `photo.${type.slice(6)}`, { type });
+    } catch {
+      fail('The photo couldn’t be opened for editing. Check the connection, then try again.');
+      return;
+    }
+    let tools;
+    try {
+      tools = await import('./image-tools.js');
+    } catch {
+      fail('The photo tools didn’t load. Reload the page, then try again.');
+      return;
+    }
+    if (!present()) { photoJobs.delete(id); return; }
+    let edited;
+    try {
+      edited = blur
+        ? await tools.redactImage(file, 'photo', { title: 'Blur part of the photo', hint: BLUR_HINT, canvasLabel: 'Photo with blur boxes', cancelText: 'Cancel' })
+        : await tools.cropEvidenceImage(file, 'photo', { frame: 'natural', watermark: false, kicker: key === 'doc' ? 'Cover photo' : 'Blog photo', title: 'Crop the photo' });
+    } catch {
+      fail('This photo couldn’t be opened for editing. Try replacing it with the original file.');
+      return;
+    }
+    if (!edited) { // cancelled: the photo stays as it was
+      photoJobs.delete(id);
+      // the dialog can't hand focus back itself: the cover's tools hide once focus leaves the cover
+      if (present()) { if (hadError) rerenderTarget(key); refocus(); }
+      return;
+    }
+    if (!present()) { photoJobs.delete(id); return; }
+    uploads.set(id, { state: 'busy' });
+    rerenderTarget(key);
+    refocus();
+    let res;
+    try {
+      const type = edited.type || 'image/webp';
+      const name = `photo-edited.${type === 'image/png' ? 'png' : type === 'image/jpeg' ? 'jpg' : 'webp'}`;
+      res = await stageImage(new File([edited], name, { type }), { purpose: key === 'doc' ? 'cover' : 'block' });
+      if (!res || typeof res.src !== 'string' || !res.src) throw new Error('');
+    } catch (err) {
+      fail((err && err.message) || 'The edited photo couldn’t be saved. Try again.');
+      return;
+    }
+    photoJobs.delete(id);
+    uploads.delete(id);
+    if (!present()) return;
+    const now = findImg();
+    if (!now || now.src !== src) {
+      fail('The photo was changed while you were editing, so the edit wasn’t used.');
+      return;
+    }
+    change(key === 'doc' ? 'cover' : 'blocks', () => {
+      now.src = res.src;
+      if (key === 'doc' && !blur) now.focal = { x: 0.5, y: 0.5 };
+    });
+    rerenderTarget(key);
+    refocus();
+    announce(blur ? 'Blur added. The edited photo is in place.' : key === 'doc' ? 'Photo cropped. Its focus point is back in the middle.' : 'Photo cropped.');
+  }
+
   // ------------------------------------------------------------ inserter
   let menuCtx = null;
   function openMenu(ctx) {
     menuCtx = ctx;
     menu.textContent = '';
-    const search = el('input', { class: 'bed-input bed-menu__search', type: 'search', placeholder: 'Filter blocks…', 'aria-label': 'Filter blocks', autocomplete: 'off', spellcheck: 'false' });
+    const search = el('input', { class: 'bed-input bed-menu__search', type: 'search', placeholder: 'Find a section…', 'aria-label': 'Find a section', autocomplete: 'off', spellcheck: 'false' });
     const body = el('div', { class: 'bed-menu__body' });
-    menu.append(el('div', { class: 'bed-menu__head' }, el('p', { class: 'bed-menu__title', text: ctx.replaceKey ? 'Turn this paragraph into' : 'Add a block' }),
+    menu.append(el('div', { class: 'bed-menu__head' }, el('p', { class: 'bed-menu__title', text: ctx.replaceKey ? 'Turn this paragraph into' : 'Add a section' }),
       iconBtn('close', 'Close', { 'data-menu': 'close' })), search, body);
     const paint = () => {
       body.textContent = '';
       const q = search.value.trim().toLowerCase();
       let any = false;
       for (const [g, types] of GROUPS) {
-        const items = types.filter((t) => !(ctx.replaceKey && t === 'paragraph')).filter((t) => !q || labelOf(t).toLowerCase().includes(q) || HINTS[t].toLowerCase().includes(q) || t.toLowerCase().includes(q));
+        const items = types.filter((t) => !(ctx.replaceKey && t === 'paragraph')).filter((t) => !q || labelOf(t).toLowerCase().includes(q) || hintOf(t).toLowerCase().includes(q) || t.toLowerCase().includes(q));
         if (!items.length) continue;
         any = true;
         body.append(el('p', { class: 'bed-menu__group', text: g }), el('div', { class: 'bed-menu__grid', role: 'group', 'aria-label': g },
           items.map((t) => el('button', { type: 'button', class: 'bed-menu__item', 'data-insert': t },
-            el('span', { class: 'bed-menu__ic' }, svg(t)), el('span', { class: 'bed-menu__name', text: labelOf(t) }), el('span', { class: 'bed-menu__hint', text: HINTS[t] })))));
+            el('span', { class: 'bed-menu__ic' }, svg(t)), el('span', { class: 'bed-menu__name', text: labelOf(t) }), el('span', { class: 'bed-menu__hint', text: hintOf(t) })))));
       }
-      if (!any) body.append(el('p', { class: 'bed-help', text: 'No block matches that.' }));
+      if (!any) body.append(el('p', { class: 'bed-help', text: 'No section matches that.' }));
       const first = body.querySelector('[data-insert]');
       if (first) first.classList.add('is-active');
       if (!menu.hidden) placeMenu();
@@ -2118,7 +2432,9 @@ export function mountBlockEditor(root, opts = {}) {
     announce(`${labelOf(doc.blocks[to].type)} moved to position ${to + 1} of ${doc.blocks.length}`);
   }
   function dupBlock(i) {
-    change('blocks', () => insertAt(i + 1, clone(doc.blocks[i])));
+    const copy = clone(doc.blocks[i]);
+    if (copy.type === 'heading') delete copy.anchor; // two headings may not share a section link: the copy gets its own
+    change('blocks', () => insertAt(i + 1, copy));
     selKey = keys[i + 1];
     rerenderFlow();
     focusBlock(keys[i + 1], 'end');
@@ -2258,8 +2574,8 @@ export function mountBlockEditor(root, opts = {}) {
     const purpose = node.dataset.purpose || 'block';
     const id = `${key}|${path}`;
     if (!stageImage) { uploads.set(id, { state: 'error', message: 'Photo uploads are not available here.' }); rerenderTarget(key); return; }
-    if (!/^image\//.test(file.type || '') && !/\.(heic|heif|jpe?g|png|webp|avif)$/i.test(file.name || '')) {
-      uploads.set(id, { state: 'error', message: 'That file is not a photo — choose a JPG, PNG, HEIC or WebP image.' });
+    if (!isPhotoFile(file)) {
+      uploads.set(id, { state: 'error', message: NOT_PHOTO });
       rerenderTarget(key);
       return;
     }
@@ -2268,15 +2584,23 @@ export function mountBlockEditor(root, opts = {}) {
     try {
       const res = await stageImage(file, { purpose });
       if (destroyed) return;
-      if (!res || typeof res.src !== 'string' || !res.src) throw new Error('The photo could not be prepared — try another file.');
+      if (!res || typeof res.src !== 'string' || !res.src) throw new Error('The photo could not be prepared. Try another file.');
       uploads.delete(id);
-      pendingPatient.delete(id);
+      // A replaced photo keeps its Patient tick but needs a fresh consent tick, and
+      // its old description no longer fits: clear it and say so.
+      let replaced = false;
+      let needsConsent = false;
+      const fit = (img) => {
+        replaced = !blank(img.src);
+        img.src = res.src;
+        if (replaced) { img.alt = ''; freshAlt.add(id); } else freshAlt.delete(id);
+        if (img.patient === true) { img.consent = false; needsConsent = true; }
+      };
       if (key === 'doc') {
         change('cover', () => {
           if (!doc.cover) doc.cover = { src: '', alt: '', caption: '', credit: '', focal: { x: 0.5, y: 0.5 }, patient: false };
-          doc.cover.src = res.src;
+          fit(doc.cover);
           doc.cover.focal = { x: 0.5, y: 0.5 };
-          doc.cover.patient = false;
         });
       } else {
         const i = keys.indexOf(key);
@@ -2284,15 +2608,21 @@ export function mountBlockEditor(root, opts = {}) {
         const b = doc.blocks[i];
         change('blocks', () => {
           const img = path ? getPath(b, path) : b;
-          if (img && typeof img === 'object') { img.src = res.src; if (img.patient) img.patient = false; } else setPath(b, `${path}.src`, res.src);
+          if (img && typeof img === 'object') fit(img); else setPath(b, `${path}.src`, res.src);
         });
       }
       rerenderTarget(key);
-      announce('Photo added. Now describe it in the alt text.');
+      announce(`${replaced ? 'Photo replaced. Describe the new photo' : 'Photo added. Now describe it'}${needsConsent ? ', and tick the consent box again.' : '.'}`);
       focusPath(key, sub(path, 'alt'), 'end');
+      // The photo loads after the focus and pushes the description below the screen: bring it back.
+      const altF = fieldIn(key, sub(path, 'alt'));
+      const shown = altF && altF.closest('[data-key]') && altF.closest('[data-key]').querySelector('.bed-frame img');
+      if (shown && !shown.complete) {
+        shown.addEventListener('load', () => { if (document.activeElement === altF) altF.scrollIntoView({ block: 'nearest' }); }, { once: true });
+      }
     } catch (err) {
       if (destroyed) return;
-      uploads.set(id, { state: 'error', message: (err && err.message) || 'The photo could not be prepared — try another file.' });
+      uploads.set(id, { state: 'error', message: (err && err.message) || 'The photo could not be prepared. Try another file.' });
       rerenderTarget(key);
     }
   }
@@ -2300,21 +2630,24 @@ export function mountBlockEditor(root, opts = {}) {
     const t = targetOf(n);
     if (!t) return;
     const path = n.dataset.p || '';
-    const id = `${t.key}|${path}`;
     const img = t.key === 'doc' ? doc.cover : (path ? getPath(t.obj, path) : t.obj);
     if (!img) return;
     const top = t.key === 'doc' ? 'cover' : 'blocks';
     const act = n.dataset.act;
     if (act === 'patient') {
-      if (n.checked) pendingPatient.add(id);
-      else { pendingPatient.delete(id); if (img.patient) change(top, () => { img.patient = false; }); }
+      if (n.checked) {
+        change(top, () => { img.patient = true; img.consent = false; });
+        announce('Marked as a patient photo');
+      } else {
+        change(top, () => { img.patient = false; delete img.consent; });
+        announce('No longer marked as a patient photo');
+      }
     } else if (n.checked) {
-      pendingPatient.delete(id);
-      change(top, () => { img.patient = true; });
-      announce('Marked as a patient photo, consent on file');
+      change(top, () => { img.consent = true; });
+      announce('Consent on file');
     } else {
-      pendingPatient.add(id);
-      change(top, () => { img.patient = false; });
+      change(top, () => { img.consent = false; });
+      announce('Consent box unticked');
     }
     rerenderTarget(t.key);
     const w = wrapOf(t.key);
@@ -2343,6 +2676,7 @@ export function mountBlockEditor(root, opts = {}) {
       if (a === 'cancel') closePop(true);
       else if (a === 'unlink') applyLink(false);
       else if (a === 'cite') insertCite(pb.dataset.id);
+      else if (a === 'post' && hrefAllowed(pb.dataset.href || '')) applyLink(pb.dataset.href);
       return;
     }
     if (e.target.closest('[data-menu="close"]')) { closeMenu(true); return; }
@@ -2367,7 +2701,10 @@ export function mountBlockEditor(root, opts = {}) {
       case 'undo': toast.hidden = true; undo(); break;
       case 'redo': redo(); break;
       case 'typo': typeOpen = !typeOpen; renderTypo(); break;
-      case 'set': setProp(t, btn.dataset.prop, btn.dataset.val); break;
+      case 'set':
+        setProp(t, btn.dataset.prop, btn.dataset.val);
+        if (t && btn.closest('[data-hwarn]')) { focusPath(t.key, 'text', 'end'); announce('Changed to a Heading'); }
+        break;
       case 'insert': openMenu({ at: Number(btn.dataset.at), anchor: btn }); break;
       case 'move': if (t) moveBlock(t.index, t.index + Number(btn.dataset.d), { focus: 'move', d: btn.dataset.d }); break;
       case 'dup': if (t) dupBlock(t.index); break;
@@ -2376,7 +2713,7 @@ export function mountBlockEditor(root, opts = {}) {
       case 'pick': { const slot = btn.closest('.bed-media'); const input = slot && slot.querySelector('input[type="file"]'); if (input) input.click(); break; }
       case 'cover-remove':
         change('cover', () => { doc.cover = null; });
-        pendingPatient.delete('doc|cover');
+        freshAlt.delete('doc|cover');
         rerenderHead();
         { const add = headEl.querySelector('.bed-cover [data-act="pick"]'); if (add) add.focus(); }
         announce('Cover photo removed');
@@ -2390,6 +2727,7 @@ export function mountBlockEditor(root, opts = {}) {
         }
         break;
       case 'table': if (t) tableOp(t, btn.dataset.val); break;
+      case 'photo-crop': case 'photo-blur': photoTool(btn, act); break;
       case 'gallery-add':
         if (t && t.obj.images.length < 3) { change('blocks', () => t.obj.images.push({ src: '', alt: '' })); renderBlock(t.key); focusPath(t.key, '', 'start'); const p = wrapOf(t.key).querySelectorAll('.bed-gallery__item [data-act="pick"]'); if (p.length) p[p.length - 1].focus(); }
         break;
@@ -2496,23 +2834,96 @@ export function mountBlockEditor(root, opts = {}) {
       if (to !== d.from) moveBlock(d.from, to, { focus: 'handle' });
     } else if (!d.active) select(d.key);
   }
+  // ------------------------------------------- photos pasted or dropped in
+  const filesOf = (dt) => {
+    if (!dt) return [];
+    if (dt.files && dt.files.length) return [...dt.files];
+    return [...(dt.items || [])].filter((it) => it.kind === 'file').map((it) => it.getAsFile()).filter(Boolean);
+  };
+  // Where a photo dropped or pasted at `node` goes: after the section it is in (an
+  // empty paragraph is replaced), at the top from the title area, else at the end.
+  function photoSpot(node) {
+    const w = node && node.closest && node.closest('.bed-block');
+    if (w && page.contains(w) && keys.includes(w.dataset.key)) {
+      const i = keys.indexOf(w.dataset.key);
+      const b = doc.blocks[i];
+      const empty = b.type === 'paragraph' && !inlineText(b.text).trim() && !runsOf(b.text).some(isCiteRun);
+      return { w, at: empty ? i : i + 1, replace: empty };
+    }
+    if (headEl && headEl.contains(node)) return { at: 0, replace: false };
+    return { at: doc.blocks.length, replace: false };
+  }
+  // A new Image section at that spot, its photo staged exactly as the file picker does.
+  function insertPhoto(file, spot) {
+    const nb = newBlock('image', films);
+    let key;
+    if (spot.replace) {
+      key = keys[spot.at];
+      change('blocks', () => { doc.blocks[spot.at] = nb; });
+    } else {
+      const at = Math.max(0, Math.min(spot.at, doc.blocks.length));
+      change('blocks', () => insertAt(at, nb));
+      key = keys[at];
+    }
+    selKey = key;
+    rerenderFlow();
+    focusBlock(key, 'start');
+    announce('Photo section added');
+    const input = wrapOf(key) && wrapOf(key).querySelector('input[type="file"]');
+    if (input) stageInto(input, file);
+  }
+  function placeFileLine(spot) {
+    const blocks = flowEl ? [...flowEl.querySelectorAll(':scope > .bed-block')] : [];
+    if (!blocks.length) { dropLine.hidden = true; return; }
+    const fr = flowEl.getBoundingClientRect();
+    const r = (spot.w || blocks[Math.min(spot.at, blocks.length - 1)]).getBoundingClientRect();
+    const y = spot.replace ? (r.top + r.bottom) / 2 : spot.w || spot.at >= blocks.length ? r.bottom + 8 : r.top - 8;
+    dropLine.hidden = false;
+    dropLine.style.top = `${Math.round(y)}px`;
+    dropLine.style.left = `${Math.round(fr.left)}px`;
+    dropLine.style.width = `${Math.round(fr.width)}px`;
+  }
+  const hasFiles = (e) => !!e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
   function onDragOver(e) {
-    const slot = e.target.closest && e.target.closest('.bed-media');
-    if (!slot || !e.dataTransfer || ![...e.dataTransfer.types].includes('Files')) return;
+    if (!hasFiles(e)) return;
+    // Files dragged anywhere in the editor are handled here, so a missed drop never
+    // makes the browser leave the page to open the photo.
     e.preventDefault();
-    slot.classList.add('is-over');
+    const slot = e.target.closest && e.target.closest('.bed-media');
+    if (slot) { dropLine.hidden = true; slot.classList.add('is-over'); e.dataTransfer.dropEffect = 'copy'; return; }
+    if (!page.contains(e.target)) { dropLine.hidden = true; e.dataTransfer.dropEffect = 'none'; return; }
+    e.dataTransfer.dropEffect = 'copy';
+    placeFileLine(photoSpot(e.target));
   }
   function onDragLeave(e) {
     const slot = e.target.closest && e.target.closest('.bed-media');
     if (slot && !slot.contains(e.relatedTarget)) slot.classList.remove('is-over');
+    if (!e.relatedTarget || !root.contains(e.relatedTarget)) dropLine.hidden = true;
   }
   function onDrop(e) {
-    const slot = e.target.closest && e.target.closest('.bed-media');
-    if (!slot || !e.dataTransfer || !e.dataTransfer.files.length) return;
+    if (!hasFiles(e) && !(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length)) return;
     e.preventDefault();
-    slot.classList.remove('is-over');
-    const input = slot.querySelector('input[type="file"]');
-    if (input) stageInto(input, e.dataTransfer.files[0]);
+    dropLine.hidden = true;
+    const files = filesOf(e.dataTransfer);
+    const slot = e.target.closest && e.target.closest('.bed-media');
+    if (slot) {
+      slot.classList.remove('is-over');
+      const input = slot.querySelector('input[type="file"]');
+      if (input && files.length) stageInto(input, files[0]);
+      return;
+    }
+    if (!page.contains(e.target) || !files.length) return;
+    const photo = files.find(isPhotoFile);
+    if (!photo) { showToast(NOT_PHOTO); return; }
+    insertPhoto(photo, photoSpot(e.target));
+    if (files.filter(isPhotoFile).length > 1) showToast('Added the first photo. Drop the others one at a time.');
+  }
+  // A photo dropped just outside the editor (the post's top bar, the settings beside it)
+  // would make the browser open it and leave the admin: swallow it while the editor is open.
+  function guardFiles(e) {
+    if (e.defaultPrevented || !hasFiles(e) || root.contains(e.target) || (e.target.closest && e.target.closest('input[type="file"]'))) return;
+    e.preventDefault();
+    if (e.type === 'dragover') e.dataTransfer.dropEffect = 'none';
   }
   function reposition() {
     if (!tb.hidden) {
@@ -2529,7 +2940,7 @@ export function mountBlockEditor(root, opts = {}) {
     [root, 'click', onClick], [root, 'change', onChangeEvt], [root, 'focusin', onFocusIn], [root, 'focusout', onFocusOut],
     [root, 'pointerdown', onPointerDown], [root, 'pointermove', onPointerMove], [root, 'pointerup', onPointerUp],
     [root, 'pointercancel', onPointerUp], [root, 'dragover', onDragOver], [root, 'dragleave', onDragLeave], [root, 'drop', onDrop],
-    [document, 'selectionchange', onSelectionChange], [window, 'resize', reposition], [window, 'scroll', reposition, true],
+    [document, 'selectionchange', onSelectionChange], [document, 'dragover', guardFiles], [document, 'drop', guardFiles], [window, 'resize', reposition], [window, 'scroll', reposition, true],
     ...(window.visualViewport ? [[window.visualViewport, 'resize', reposition], [window.visualViewport, 'scroll', reposition]] : []),
   ];
   for (const [t, ev, fn, cap] of listeners) t.addEventListener(ev, fn, cap || false);
@@ -2552,7 +2963,7 @@ export function mountBlockEditor(root, opts = {}) {
       keys = doc.blocks.map(nextKey);
       postId = post && post.id;
       selKey = null;
-      pendingPatient.clear();
+      freshAlt.clear();
       uploads.clear();
       pendingRefDelete = null;
       if (!sameId) { hist.past = []; hist.future = []; hist.lastKey = null; }
@@ -2562,6 +2973,9 @@ export function mountBlockEditor(root, opts = {}) {
       render();
       emitHistory();
     },
+    // Hand the last keystrokes (still inside the ~240 ms batch) to onChange now, so
+    // the host can save or check the post knowing it is current.
+    flush: () => { if (!destroyed) flush(); },
     undo,
     redo,
     canUndo: () => hist.past.length > 0,
