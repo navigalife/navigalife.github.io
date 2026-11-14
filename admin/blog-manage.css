@@ -288,7 +288,10 @@
   .bm .bm-alert{flex-wrap:wrap;align-items:flex-start}
   .bm .bm-alert__copy{flex-basis:calc(100% - 50px)}
   .bm .bm-alert__action{width:100%}
-  .bm .bm-alert--compact .bm-alert__copy{flex-basis:calc(100% - 40px)}
+  /* The compact banner stays one row on phones: short line + button beside it. */
+  .bm .bm-alert--compact{flex-wrap:nowrap;align-items:center;gap:10px;padding:8px 10px}
+  .bm .bm-alert--compact .bm-alert__copy{flex:1;flex-basis:auto;min-width:0}
+  .bm .bm-alert--compact .bm-alert__action{width:auto;flex:none;white-space:nowrap}
 }
 @media(prefers-reduced-motion:reduce){
   .bm *,.bm .bm-alert,.bm .bm-dialog[open]{animation:none!important;transition:none!important}

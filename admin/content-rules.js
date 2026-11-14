@@ -93,11 +93,14 @@
   const blank = (value) => typeof value !== 'string' || value.trim() === '';
 
   // One error collector per validation run.
+  // `fix` (optional) is the short "what to do here" line the admin shows under
+  // the field itself; `message` stays the full sentence that says which item
+  // (publish gate list, toasts, the build). Only set where a field shows it.
   const collector = () => {
     const errors = [];
     return {
       errors,
-      add: (path, message) => errors.push({ path, message }),
+      add: (path, message, fix) => errors.push(fix ? { path, message, fix } : { path, message }),
     };
   };
 
@@ -1420,35 +1423,35 @@
         if (blank(item.id) || !BLOG_ID.test(item.id)) add(`${at}.id`, `${where}: ${who} has a missing or invalid id.`);
         else if (ids.has(item.id)) add(`${at}.id`, `${where}: ${who} has the same id as ${ids.get(item.id)}.`);
         else ids.set(item.id, who);
-        if (blank(item.name)) add(`${at}.name`, `${where}: ${who} needs a name.`);
-        if (blank(item.slug)) add(`${at}.slug`, `${where}: ${who} needs a web address.`);
+        if (blank(item.name)) add(`${at}.name`, `${where}: ${who} needs a name.`, 'Add a name.');
+        if (blank(item.slug)) add(`${at}.slug`, `${where}: ${who} needs a web address.`, 'Add a web address.');
         else if (typeof item.slug !== 'string' || !BLOG_SLUG.test(item.slug)) {
-          add(`${at}.slug`, `${where}: the web address “${String(item.slug)}” for ${who} may only use lowercase letters, digits and single hyphens.`);
+          add(`${at}.slug`, `${where}: the web address “${String(item.slug)}” for ${who} may only use lowercase letters, digits and single hyphens.`, 'Use only lowercase letters, digits and single hyphens.');
         } else if (slugs.has(item.slug)) {
-          add(`${at}.slug`, `${where}: ${who} has the same web address as ${slugs.get(item.slug)}.`);
+          add(`${at}.slug`, `${where}: ${who} has the same web address as ${slugs.get(item.slug)}.`, `Another ${noun} already uses this address. Choose a different one.`);
         } else slugs.set(item.slug, who);
         extra(item, at, who);
       });
     };
 
     checkSlugged(config.categories, 'categories', 'category', (cat, at, who) => {
-      optionalText(cat, 'intro', `${at}.intro`, `${where}: ${who}'s intro`, add);
-      optionalText(cat, 'metaDescription', `${at}.metaDescription`, `${where}: ${who}'s search description`, add);
-      checkEnum(cat.tint, TINTS, `${at}.tint`, `${where}: ${who}'s colour`, add);
+      optionalText(cat, 'intro', `${at}.intro`, `${where}: ${who}’s intro`, add);
+      optionalText(cat, 'metaDescription', `${at}.metaDescription`, `${where}: ${who}’s search description`, add);
+      checkEnum(cat.tint, TINTS, `${at}.tint`, `${where}: ${who}’s colour`, (path, message) => add(path, message, 'Choose a colour.'));
     });
 
     checkSlugged(config.authors, 'authors', 'author', (author, at, who) => {
       for (const [key, name] of [['role', 'role'], ['credentials', 'credentials'], ['bio', 'bio'], ['photo', 'photo']]) {
-        optionalText(author, key, `${at}.${key}`, `${where}: ${who}'s ${name}`, add);
+        optionalText(author, key, `${at}.${key}`, `${where}: ${who}’s ${name}`, add);
       }
       if (!blank(author.photo) && !BLOG_IMAGE.test(author.photo)) {
-        add(`${at}.photo`, `${where}: ${who}’s photo “${author.photo}” must be an image file inside assets/.`);
+        add(`${at}.photo`, `${where}: ${who}’s photo “${author.photo}” must be an image file inside assets/.`, 'Choose the photo again.');
       }
       if (author.sameAs !== undefined) {
         if (!Array.isArray(author.sameAs)) add(`${at}.sameAs`, `${where}: ${who}’s profile links are not a list.`);
         else author.sameAs.forEach((url, k) => {
           if (typeof url !== 'string' || !/^https:\/\/[^\s<>"]+$/.test(url)) {
-            add(`${at}.sameAs.${k}`, `${where}: ${who}’s profile link “${String(url)}” must be a full https:// address.`);
+            add(`${at}.sameAs.${k}`, `${where}: ${who}’s profile link “${String(url)}” must be a full https:// address.`, `“${String(url)}” needs to be a full address that starts with https://.`);
           }
         });
       }

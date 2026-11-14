@@ -181,6 +181,9 @@ label.row-action{position:relative}
 /* "View on site" (blog-tab.js, always last in the message): its own line, a 44px tap target at every size; the
    negative bottom margin lets the target use the toast's bottom padding instead of making the toast taller. */
 .publish-status .bt-view-site--status{display:flex;width:fit-content;min-height:44px;align-items:center;margin-bottom:-13px}
+/* The toast's "Watch/View on GitHub" links close their sentence, so they stay inline but get the same
+   44px tap target as "View on site" (they carry no class of their own; "View on site" is excluded). */
+.publish-status p a:not(.bt-view-site){display:inline-flex;align-items:center;min-height:44px}
 .publish-status .button{margin-top:10px}
 /* Full 44px touch target, but no border or fill — in a box this size a bordered
    icon button reads as the toast's primary action, which the × is not. */

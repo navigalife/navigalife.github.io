@@ -340,6 +340,9 @@ const describeApiError = (error, { reassure = '', again = 'try again' } = {}) =>
   if (!(error instanceof ApiError)) return say(error?.message || 'Something unexpected went wrong.', then('Wait a moment'));
   if (error.status === 0) return say('Couldn’t reach GitHub.', then('Check the internet connection'));
   if ((error.status === 403 || error.status === 429) && /rate limit/i.test(error.message)) return say('GitHub is limiting how often the admin can ask right now.', then('Wait a few minutes'));
+  // A plain 403 means this device’s access can’t change the site’s files, so no
+  // amount of retrying helps: name the one thing that fixes it, not "try again".
+  if (error.status === 403) return say('GitHub won’t let this device change the site’s files.', 'Press Lock at the top, choose “Forget this device”, then set it up again with a key that can change the site’s files, or ask your developer.', 403);
   if (error.status >= 500) return say('GitHub is having trouble right now.', then('Wait a minute'), error.status);
   if (error.status === 404) return say('GitHub couldn’t find the site’s files on the “' + state.branch + '” branch.', then('Ask your developer to check it'), 404);
   // GitHub's own messages often end without a full stop.
@@ -546,8 +549,8 @@ const unsavedFormsBlock = () => {
   const names = tabs.map(tabName);
   const list = names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1] : names[0];
   const message = names.length > 1
-    ? 'Save or discard the edits on the ' + list + ' tabs before publishing.'
-    : 'Save the ' + names[0].toLowerCase() + ' draft on the ' + names[0] + ' tab, or discard those edits, before publishing.';
+    ? 'A publish sends every change you’ve saved, so save or discard the edits on the ' + list + ' tabs first.'
+    : 'A publish sends every change you’ve saved, so save the ' + names[0].toLowerCase() + ' draft on the ' + names[0] + ' tab or discard those edits first.';
   return { title: list + ' edits not saved', message, tab: tabs[0], tabName: names[0] };
 };
 
@@ -1441,7 +1444,10 @@ const blogTab = createBlogTab({
   unstageAsset: (path) => { const staged = state.assetChanges.get(path); if (staged && !staged.delete) unstageOrDeleteAsset(path); },
   // Deleting an unpublished post for good: its committed photo is deleted in the next publish.
   deleteAsset: (path) => unstageOrDeleteAsset(path),
-  otherUnsavedTabs: () => unsavedTabs().filter((tab) => tab !== 'blog').map(tabName),
+  // The other tabs whose saved changes a blog publish also sends. Empty while a
+  // publish gate (typed-unsaved form/Page edits, or content-rule errors) will stop
+  // it: publish's own toast says what to do, so a confirm here would contradict it.
+  otherUnsavedTabs: () => (unsavedFormsBlock() || pageEditor.publishBlock()) ? [] : unsavedTabs().filter((tab) => tab !== 'blog').map(tabName),
   publish: (options) => publish(options),
   // After publish's onConflict: load the latest site with the owner's changes on
   // top, quietly (the Blog tab says what happens next). -> { ok, conflicts, left }
@@ -2025,6 +2031,11 @@ const handleApiError = (error, title = 'Something went wrong', words = {}) => {
   }
   showStatus(title, h(describeApiError(error, words)));
 };
+
+// The paused-scheduler banner (blog-manage.js), on a 401 from "Turn it back on",
+// hands the error here so the Lock screen keeps the owner's unpublished changes;
+// its own path would send them to the Lock button, which asks to discard them.
+document.addEventListener('bm:auth-error', (event) => handleApiError(event.detail?.error || new AuthError()));
 
 setupForm.addEventListener('submit', async (event) => {
   event.preventDefault();

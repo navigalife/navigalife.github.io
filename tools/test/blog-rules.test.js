@@ -137,6 +137,67 @@ test('config: duplicate author ids and slugs', () => {
   expectPath(e, 'authors.1.id');
   expectPath(e, 'authors.1.slug');
 });
+
+// Each row error the admin shows under a field carries a short `fix` (what to do
+// there), while `message` stays the full "Blog settings: …" sentence the publish
+// gate, toasts and the build use. The build's own validator (validateBlogConfig,
+// message-only — the list loadBlog gates on) still rejects every one of these.
+const errAt = (errors, p) => errors.find((e) => e.path === p);
+const buildMsgs = (c) => rules.validateBlogConfig(c); // what src/blog/build-blog.js loadBlog gates on
+test('config fix: blank category name → "Add a name.", full sentence kept, build still fails', () => {
+  const c = baseConfig();
+  c.categories[0].name = ' ';
+  const e = cfgErrs(c);
+  const row = errAt(e, 'categories.0.name');
+  assert.ok(row, 'an error at categories.0.name');
+  assert.equal(row.fix, 'Add a name.');
+  assert.ok(row.message.startsWith('Blog settings:') && /needs a name\.$/.test(row.message), row.message);
+  assert.ok(buildMsgs(c).includes(row.message), 'the build validator reports the same full sentence');
+});
+test('config fix: blank category web address → "Add a web address."', () => {
+  const c = baseConfig();
+  c.categories[0].slug = '';
+  const row = errAt(cfgErrs(c), 'categories.0.slug');
+  assert.ok(row && row.fix === 'Add a web address.', JSON.stringify(row));
+  assert.ok(row.message.startsWith('Blog settings:'));
+  assert.ok(buildMsgs(c).includes(row.message));
+});
+test('config fix: invalid category web address → "Use only lowercase letters, digits and single hyphens."', () => {
+  const c = baseConfig();
+  c.categories[0].slug = 'Bad Slug';
+  const row = errAt(cfgErrs(c), 'categories.0.slug');
+  assert.ok(row && row.fix === 'Use only lowercase letters, digits and single hyphens.', JSON.stringify(row));
+  assert.ok(row.message.startsWith('Blog settings:'));
+  assert.ok(buildMsgs(c).includes(row.message));
+});
+test('config fix: duplicate web address → "Another {category|author} already uses this address. Choose a different one."', () => {
+  const c = baseConfig();
+  c.categories[1].slug = 'diabetic-foot';
+  const catRow = errAt(cfgErrs(c), 'categories.1.slug');
+  assert.ok(catRow && catRow.fix === 'Another category already uses this address. Choose a different one.', JSON.stringify(catRow));
+  assert.ok(buildMsgs(c).includes(catRow.message));
+  const a = baseConfig();
+  a.authors[1].slug = 'care-team';
+  const authRow = errAt(cfgErrs(a), 'authors.1.slug');
+  assert.ok(authRow && authRow.fix === 'Another author already uses this address. Choose a different one.', JSON.stringify(authRow));
+  assert.ok(buildMsgs(a).includes(authRow.message));
+});
+test('config fix: bad category colour → "Choose a colour."', () => {
+  const c = baseConfig();
+  c.categories[0].tint = 'notacolour';
+  const row = errAt(cfgErrs(c), 'categories.0.tint');
+  assert.ok(row && row.fix === 'Choose a colour.', JSON.stringify(row));
+  assert.ok(row.message.startsWith('Blog settings:'));
+  assert.ok(buildMsgs(c).includes(row.message));
+});
+test('config fix: an error with no field-level fix (the blog name) carries no `fix` key', () => {
+  const c = baseConfig();
+  c.name = ' ';
+  const row = errAt(cfgErrs(c), 'name');
+  assert.ok(row, 'an error at name');
+  assert.ok(!('fix' in row), 'no fix key on an error without a field-level fix');
+  assert.ok(buildMsgs(c).includes(row.message));
+});
 test('config: at least one category and one author', () => {
   const c = baseConfig();
   c.categories = [];

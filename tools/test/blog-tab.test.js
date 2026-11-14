@@ -63,7 +63,7 @@ const ist = (ms) => new Date(ms + 330 * MIN).toISOString().slice(0, 19) + '+05:3
   globalThis.location = { hostname: 'test.invalid' };
   globalThis.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
   const mod = await import(`data:text/javascript;base64,${Buffer.from(src).toString('base64')}`);
-  const { isLiveNow, everLive, hadReaders, shownStatus, notSent, failCopy, planNext, planDelete } = mod._internals;
+  const { isLiveNow, everLive, hadReaders, shownStatus, notSent, failCopy, planNext, planDelete, stageOf, actionsFor, statusChip } = mod._internals;
 
   // ------------------------------------------------------------ isLiveNow
 
@@ -297,6 +297,69 @@ const ist = (ms) => new Date(ms + 330 * MIN).toISOString().slice(0, 19) + '+05:3
     assert.equal(used(RULES.validateBlogPostsDetailed(reuse(posts), config, films)).length, 2, 'taken while the post exists');
     const plan = planDelete(posts, config, { id: target.id }, { blogPosts: posts, blogConfig: config }, new Map());
     assert.deepEqual(used(RULES.validateBlogPostsDetailed(reuse(plan.nextPosts), plan.nextConfig, films)), []);
+  });
+
+  // ------------------------------------------------------------ statusChip
+
+  // The host's HTML escaper is threaded in; a passthrough is enough for these
+  // safe inputs. stripTags gives the chip's text content (what a reader hears).
+  const esc = (v = '') => String(v);
+  const stripTags = (html) => html.replace(/<[^>]*>/g, '');
+  // The text inside the one `.bt-status__when` span, if any.
+  const whenText = (html) => (/<span class="bt-status__when">([^<]*)</.exec(html) || [])[1];
+
+  test('statusChip: a live row nests the dates in .bt-status__when, "Published" stays outside it', () => {
+    const html = statusChip(esc, 'published', PAST, '30 Sep', '2 Nov');
+    assert.ok(html.includes('class="bt-status bt-status--dated"'));
+    assert.ok(html.includes('data-status="published"'));
+    // "Published" is printed before the when span opens, so it is not inside it.
+    assert.ok(html.indexOf('Published') < html.indexOf('bt-status__when'), 'Published before the when span');
+    assert.ok(!(whenText(html) || '').includes('Published'), '"Published" is not inside .bt-status__when');
+    assert.equal(whenText(html), ' 30 Sep · updated 2 Nov');
+    assert.equal(stripTags(html), 'Published 30 Sep · updated 2 Nov');
+  });
+  test('statusChip: a live row with no update date drops the " · updated …" tail', () => {
+    const html = statusChip(esc, 'published', PAST, '30 Sep', '');
+    assert.equal(stripTags(html), 'Published 30 Sep');
+    assert.equal(whenText(html), ' 30 Sep');
+  });
+  test('statusChip: a plain status (no publishedOn) shows its label; a scheduled one dates the when span', () => {
+    assert.equal(stripTags(statusChip(esc, 'draft')), 'Draft');
+    assert.ok(statusChip(esc, 'unpublished').includes('data-status="unpublished"'));
+    const sched = statusChip(esc, 'scheduled', FUTURE);
+    assert.ok(sched.includes('data-status="scheduled"'));
+    assert.ok(/bt-status__when">\s*·\s*/.test(sched), 'a valid scheduled time fills the when span');
+    // Not a valid time → no when span at all.
+    assert.ok(!statusChip(esc, 'scheduled', '').includes('bt-status__when'));
+  });
+
+  // ------------------------------------------------------------ actionsFor
+
+  test('actionsFor: a live post with unpublished edits offers "Discard" (not "Delete")', () => {
+    const acts = actionsFor({ live: { status: 'published', publishAt: PAST }, hasDraft: true });
+    const discard = acts.find(([action]) => action === 'discard');
+    assert.ok(discard, 'a discard action is present');
+    assert.equal(discard[1], 'Discard');
+    assert.ok(!acts.some(([action]) => action === 'delete'), 'no draft-delete for a live post');
+  });
+  test('actionsFor: a never-live draft deletes the draft, not "Discard"', () => {
+    const acts = actionsFor({ live: null, hasDraft: true });
+    assert.deepEqual((acts.find(([a]) => a === 'delete') || [])[1], 'Delete draft');
+    assert.ok(!acts.some(([action]) => action === 'discard'));
+  });
+  test('stageOf: published/scheduled-due = live, future scheduled = waiting, off otherwise, none when no record', () => {
+    assert.equal(stageOf(null), 'none');
+    assert.equal(stageOf({ status: 'published', publishAt: PAST }), 'live');
+    assert.equal(stageOf({ status: 'scheduled', publishAt: PAST }), 'live');
+    assert.equal(stageOf({ status: 'scheduled', publishAt: FUTURE }), 'waiting');
+    assert.equal(stageOf({ status: 'unpublished', publishAt: PAST }), 'off');
+  });
+
+  // ------------------------------------------------------------ paintPost markup
+
+  test('the post view carries no data-bt-meta (the single word count lives in the editor bar)', () => {
+    const raw = fs.readFileSync(FILE, 'utf8');
+    assert.ok(!raw.includes('data-bt-meta'), 'blog-tab.js should not reference data-bt-meta');
   });
 
   console.log(`blog-tab: ${passed} passed, ${failed} failed`);

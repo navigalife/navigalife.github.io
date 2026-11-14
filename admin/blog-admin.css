@@ -100,8 +100,9 @@
 /* Pointing at the link still shows which row it belongs to. */
 .bt-rows li:has(>.bt-row__view:hover)>.bt-row{background:color-mix(in srgb,var(--surface-2) 48%,transparent)}
 /* A live row: one line, the dot then "Published 30 Sep · updated 2 Nov" in the date's voice. */
-.bt-status--dated{gap:9px;color:var(--ink-muted);font-weight:400;font-variant-numeric:tabular-nums}
-.bt-status--dated .bt-status__when{font-weight:inherit}
+/* The status word is one weight on every chip (.bt-status, 600); the date/time part is one lighter
+   weight (.bt-status__when, 500 muted). A published row keeps the calm green dot and tabular dates. */
+.bt-status--dated{gap:9px;font-variant-numeric:tabular-nums}
 .bt-none,.bt-empty{display:grid;justify-items:center;gap:6px;padding:64px 20px;text-align:center}
 .bt-none p{margin:0 0 10px;color:var(--ink-muted)}
 /* Fixed padding: .bt-art's 12%/11% resolves against the containing block, which
@@ -145,17 +146,17 @@
 
 /* ---- post view: bar, notes, panes */
 /* The editor's own bars (blog-editor.css --bed-sticky) stick just under the admin header and this
-   post bar; the bar wraps to two or three rows on a phone, so blog-tab.js measures it (--bt-bar-h).
-   Scroll padding clears the whole stack (+52px editor bar), so a typed caret never sits under it. */
+   post bar; the bar is taller on a tablet, so blog-tab.js measures it (--bt-bar-h). Scroll padding
+   clears the whole stack (+52px editor bar), so a typed caret never sits under it. Phones: below. */
 html:has(.bt-post .bed-bar){scroll-padding-top:calc(var(--admin-inset-top,0px) + var(--bt-bar-h,0px) + 52px + 12px)}
 .bt-post{--bed-sticky:calc(var(--admin-inset-top,0px) + var(--bt-bar-h,0px));display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,360px);grid-template-areas:"bar bar" "notes notes" "main panes" "main side";grid-template-rows:auto auto auto 1fr;gap:0 40px;align-items:start}
-.bt-bar{position:sticky;top:var(--admin-inset-top,0px);z-index:25;grid-area:bar;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:24px;padding:12px 0;border-bottom:1px solid var(--line);background:var(--bg)}
+.bt-bar{position:sticky;top:var(--admin-inset-top,0px);z-index:25;grid-area:bar;display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;margin-bottom:24px;padding:12px 0;border-bottom:1px solid var(--line);background:var(--bg)}
 .bt-back{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 10px 0 2px;border:0;border-radius:8px;background:transparent;color:var(--ink-muted);font:inherit;font-size:.875rem;font-weight:600;cursor:pointer;transition:color 200ms var(--bt-ease)}
 .bt-back:hover{color:var(--ink)}
 .bt-back svg,.bt-undo svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.bt-bar__state{display:flex;flex:1 1 auto;flex-wrap:wrap;align-items:center;gap:4px 18px;min-width:0;padding-left:18px;border-left:1px solid var(--line)}
+.bt-bar__state{display:flex;flex:1 1 auto;flex-wrap:wrap;align-items:center;gap:4px 14px;min-width:0;padding-left:14px;border-left:1px solid var(--line)}
 .bt-bar__status{display:inline-flex;align-items:center;gap:12px}
-.bt-bar__meta,.bt-save{color:var(--ink-muted);font-size:.8125rem;font-variant-numeric:tabular-nums}
+.bt-save{color:var(--ink-muted);font-size:.8125rem;font-variant-numeric:tabular-nums}
 /* Autosave: a small state dot ahead of the words. */
 .bt-save{display:inline-flex;align-items:center;gap:7px}
 .bt-save:empty{display:none}
@@ -165,8 +166,8 @@ html:has(.bt-post .bed-bar){scroll-padding-top:calc(var(--admin-inset-top,0px) +
 .bt-save[data-state="error"],.bt-save[data-state="conflict"]{color:var(--alert);font-weight:600}
 .bt-save[data-state="error"]::before,.bt-save[data-state="conflict"]::before{background:var(--alert)}
 @keyframes bt-pulse{from{opacity:1}to{opacity:.25}}
-.bt-bar__actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
-.bt-bar .button{min-height:40px;padding:0 16px;font-size:.875rem}
+.bt-bar__actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:7px}
+.bt-bar .button{min-height:40px;padding:0 14px;font-size:.875rem}
 .bt-bar .button--quiet{border-color:var(--line);background:transparent}
 .bt-bar .button--quiet:hover{border-color:color-mix(in srgb,var(--ink) 24%,var(--line));background:var(--surface)}
 .bt-bar .button--text{padding-inline:10px;color:var(--ink-muted)}
@@ -236,6 +237,14 @@ html:has(.bt-post .bed-bar){scroll-padding-top:calc(var(--admin-inset-top,0px) +
   .bt-panes .bt-chip{flex:none}
   .bt-post[data-pane="write"] .bt-side,.bt-post:not([data-pane="write"]) .bt-main{display:none}
   .bt-layouts{grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 18px}
+}
+/* Phones: a pinned three-row post bar left little room to see the words while typing, so it scrolls
+   away with the page and the editor bar pins straight under the admin header. --bt-bar-h plays no
+   part here (blog-tab.js also sets it to 0 while the bar isn't pinned). */
+@media (max-width:760px){
+  .bt-bar{position:static}
+  .bt-post{--bed-sticky:var(--admin-inset-top,0px)}
+  html:has(.bt-post .bed-bar){scroll-padding-top:calc(var(--admin-inset-top,0px) + 52px + 12px)}
 }
 @media (max-width:560px){
   .bt-head{column-gap:16px}

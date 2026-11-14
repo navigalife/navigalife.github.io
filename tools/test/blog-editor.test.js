@@ -47,7 +47,7 @@ const E = RULES.BLOG_ENUMS;
   const I = mod._internals;
   const {
     toInline, normRuns, trimRuns, applyMark, markState, splitRuns, normalizeHref, parseYouTube,
-    wholeWordMatch, citeCounts, mapRunArrays, newBlock, piecesFromText,
+    wholeWordMatch, citeCounts, mapRunArrays, newBlock, piecesFromText, callNote,
   } = I;
 
   // Contract Inline: a string is one unmarked run ('' is no runs).
@@ -595,6 +595,24 @@ const E = RULES.BLOG_ENUMS;
     const before = JSON.stringify(NESTED);
     mapRunArrays(NESTED, () => []);
     assert.equal(JSON.stringify(NESTED), before);
+  });
+
+  // ------------------------------------------------------------ cta note
+
+  // The note under a no-phone Call button. First sentence is always the same; the
+  // second depends on whether the author typed a label (their words are kept and
+  // return with a phone) or not (it just becomes a Call button).
+  test('cta', 'callNote: a typed label keeps the author’s words, an empty one does not', () => {
+    const LEAD = 'No phone number on record, so this button shows as WhatsApp. ';
+    assert.equal(callNote(true), LEAD + 'Your own words come back when a phone number is added in the Company tab.');
+    assert.equal(callNote(false), LEAD + 'It becomes a Call button when a phone number is added in the Company tab.');
+  });
+  test('cta', 'callNote: both say it shows as WhatsApp and names the Company tab, no em-dash', () => {
+    for (const typed of [true, false]) {
+      assert.ok(callNote(typed).includes('shows as WhatsApp'), `shows as WhatsApp (typed=${typed})`);
+      assert.ok(callNote(typed).includes('added in the Company tab.'), `Company tab (typed=${typed})`);
+      assert.ok(!callNote(typed).includes('—'), `no em-dash (typed=${typed})`);
+    }
   });
 
   // ------------------------------------------------------------ summary

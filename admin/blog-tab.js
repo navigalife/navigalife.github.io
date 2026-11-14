@@ -129,6 +129,33 @@ const shownStatus = (live) => {
   if (live.status === 'scheduled') return 'scheduled';
   return everLive(live) ? 'unpublished' : 'draft';
 };
+// What the committed record is right now: on the site (published, or scheduled
+// and its time has come), waiting on the schedule, or off the site.
+const stageOf = (live) => (!live ? 'none' : isLiveNow(live) ? 'live' : live.status === 'scheduled' ? 'waiting' : 'off');
+const actionsFor = (c) => {
+  const stage = stageOf(c.live);
+  const edits = c.hasDraft || c.dirty;
+  const out = [];
+  // Only a post that is off the site can be deleted for good. It leads the
+  // actions, as far from Publish as the bar allows.
+  if (stage === 'off') out.push(['delete-post', 'Delete permanently', 'button--text bt-danger']);
+  if (!c.live) out.push(['delete', 'Delete draft', 'button--text']);
+  else if (edits) out.push(['discard', 'Discard', 'button--text']);
+  if (stage === 'live') out.push(['unpublish', 'Unpublish', 'button--quiet']);
+  else if (stage === 'waiting') out.push(['unpublish', 'Unschedule', 'button--quiet']);
+  out.push(['schedule', stage === 'waiting' ? 'Reschedule' : 'Schedule', 'button--quiet']);
+  if (stage === 'live') out.push(['publish', 'Publish changes', 'button--primary', !edits]);
+  else out.push(['publish', 'Publish now', 'button--primary']);
+  return out;
+};
+// `publishedOn` (a list row of a live post): the status and its dates are one
+// line, "● Published 30 Sep · updated 2 Nov", read once by a screen reader.
+// `h` is the host's HTML escaper (ctx.h), threaded in so this stays pure.
+const statusChip = (h, status, publishAt, publishedOn = '', updatedOn = '') => (publishedOn
+  ? '<span class="bt-status bt-status--dated" data-status="published"><span>Published<span class="bt-status__when"> ' + h(publishedOn) +
+    (updatedOn ? ' · updated ' + h(updatedOn) : '') + '</span></span></span>'
+  : '<span class="bt-status" data-status="' + h(status) + '"><span>' + h(STATUS[status] || 'Draft') +
+    (status === 'scheduled' && validTime(publishAt) ? '<span class="bt-status__when"> · ' + h(whenIst(publishAt)) + '</span>' : '') + '</span></span>');
 // The post's address on the live site (blog-seo.js SITE).
 const SITE = 'https://medivasc.in/';
 const liveUrl = (slug) => SITE + 'blog/' + slug + '/';
@@ -345,7 +372,8 @@ const layoutArt = (id) => {
  * @param {object} ctx from app.js: { state, h, icon, markDirty, clearDirty, renderUnsaved,
  *   showStatus, stageBlob, committedAssetUrl, unstageAsset(path), deleteAsset(path),
  *   publish({ message, ownStatus?, done?: { title, message }, failed?: { title, note } }) → Promise<boolean>,
- *   otherUnsavedTabs() → [tab names], apiBase(), sessionToken() }
+ *   otherUnsavedTabs() → [tab names whose saved changes a publish also sends; [] when a
+ *   publish gate will stop it], apiBase(), sessionToken() }
  * @returns {{ mount(root), owns(node), hasUnsavedDraft() }}
  */
 export const createBlogTab = (ctx) => {
@@ -568,13 +596,6 @@ export const createBlogTab = (ctx) => {
   const viewLink = (slug, cls, title = '') => '<a class="bt-view-site ' + cls + '" href="' + h(liveUrl(slug)) + '" target="_blank" rel="noopener"' +
     ' aria-label="View on site' + (title ? ': “' + h(title) + '”' : '') + ' (opens a new tab)">View on site</a>';
   const tintChip = (category) => '<span class="bt-tint" data-tint="' + h(category.tint || 'slate') + '">' + h(category.name) + '</span>';
-  // `publishedOn` (a list row of a live post): the status and its dates are one
-  // line, "● Published 30 Sep · updated 2 Nov", read once by a screen reader.
-  const statusChip = (status, publishAt, publishedOn = '', updatedOn = '') => (publishedOn
-    ? '<span class="bt-status bt-status--dated" data-status="published"><span>Published ' + h(publishedOn) +
-      (updatedOn ? '<span class="bt-status__when"> · updated ' + h(updatedOn) + '</span>' : '') + '</span></span>'
-    : '<span class="bt-status" data-status="' + h(status) + '"><span>' + h(STATUS[status] || 'Draft') +
-      (status === 'scheduled' && validTime(publishAt) ? '<span class="bt-status__when"> · ' + h(whenIst(publishAt)) + '</span>' : '') + '</span></span>');
 
   // DOM order = reading order (WCAG 2.4.3): kicker, title, then New post (it sits on
   // the title's row), the intro, then the view tabs right above the filters. The
@@ -615,7 +636,7 @@ export const createBlogTab = (ctx) => {
       '<span class="bt-row__body"><span class="bt-row__title' + (title ? '' : ' bt-row__title--empty') + '">' + h(title || 'Untitled post') + '</span>' +
       '<span class="bt-row__meta">' + (category ? tintChip(category) : '') +
       (post.slug ? '<span class="bt-row__slug">blog/' + h(post.slug) + '/</span>' : '') + '</span></span>' +
-      '<span class="bt-row__side">' + statusChip(status, entry.live?.publishAt, publishedOn, updatedOn) +
+      '<span class="bt-row__side">' + statusChip(h, status, entry.live?.publishAt, publishedOn, updatedOn) +
       (entry.live && entry.draft ? '<span class="bt-edits">Changes not on the site yet</span>' : '') +
       (updated && !publishedOn ? '<span class="bt-row__date">Updated ' + h(shortDate(updated)) + '</span>' : '') +
       '</span></button>' +
@@ -1126,36 +1147,6 @@ export const createBlogTab = (ctx) => {
     if (el && el.innerHTML !== html) el.innerHTML = html;
   };
 
-  const stats = (post) => {
-    try {
-      const words = (String(blogBlocks().plainText ? blogBlocks().plainText(post) : '').match(/\S+/g) || []).length;
-      if (!words) return 'No words yet';
-      const minutes = blogBlocks().readingMinutes ? blogBlocks().readingMinutes(post) : Math.max(1, Math.round(words / 220));
-      return words.toLocaleString('en-IN') + ' word' + (words === 1 ? '' : 's') + ' · ' + minutes + ' min read';
-    } catch {
-      return '';
-    }
-  };
-
-  // What the committed record is right now: on the site (published, or scheduled
-  // and its time has come), waiting on the schedule, or off the site.
-  const stageOf = (live) => (!live ? 'none' : isLiveNow(live) ? 'live' : live.status === 'scheduled' ? 'waiting' : 'off');
-  const actionsFor = (c) => {
-    const stage = stageOf(c.live);
-    const edits = c.hasDraft || c.dirty;
-    const out = [];
-    // Only a post that is off the site can be deleted for good. It leads the
-    // actions, as far from Publish as the bar allows.
-    if (stage === 'off') out.push(['delete-post', 'Delete permanently', 'button--text bt-danger']);
-    if (!c.live) out.push(['delete', 'Delete draft', 'button--text']);
-    else if (edits) out.push(['discard', 'Discard edits', 'button--text']);
-    if (stage === 'live') out.push(['unpublish', 'Unpublish', 'button--quiet']);
-    else if (stage === 'waiting') out.push(['unpublish', 'Unschedule', 'button--quiet']);
-    out.push(['schedule', stage === 'waiting' ? 'Reschedule' : 'Schedule', 'button--quiet']);
-    if (stage === 'live') out.push(['publish', 'Publish changes', 'button--primary', !edits]);
-    else out.push(['publish', 'Publish now', 'button--primary']);
-    return out;
-  };
   const publishLabel = (c) => (actionsFor(c).find(([action]) => action === 'publish') || [])[1] || 'Publish now';
 
   const paintBar = () => {
@@ -1163,9 +1154,8 @@ export const createBlogTab = (ctx) => {
     if (!c) return;
     const status = viewEl.querySelector('[data-bt-status]');
     if (!status) return;
-    const statusHtml = statusChip(shownStatus(c.live), c.live?.publishAt) + (c.live && (c.hasDraft || c.dirty) ? '<span class="bt-edits">Changes not on the site yet</span>' : '');
+    const statusHtml = statusChip(h, shownStatus(c.live), c.live?.publishAt) + (c.live && (c.hasDraft || c.dirty) ? '<span class="bt-edits">Changes not on the site yet</span>' : '');
     if (status.innerHTML !== statusHtml) status.innerHTML = statusHtml;
-    viewEl.querySelector('[data-bt-meta]').textContent = stats(c.post);
     const actions = viewEl.querySelector('[data-bt-actions]');
     const html = '<button class="icon-button bt-undo" type="button" data-bt="undo" aria-label="Undo">' + icon('undo') + '</button>' +
       '<button class="icon-button bt-undo" type="button" data-bt="redo" aria-label="Redo">' + icon('redo') + '</button>' +
@@ -1220,18 +1210,22 @@ export const createBlogTab = (ctx) => {
 
   const historyAvailable = (c) => everLive(c.live);
 
-  // The post bar wraps to two or three rows on a phone (and while it says "Saving"), so its real
-  // height goes to --bt-bar-h on <html>; blog-admin.css stacks the editor's sticky bars under it
-  // and widens scroll-padding so a typed caret or a focused field never hides behind them.
+  // The pinned post bar is one row on a desktop but taller on a tablet, so its real height goes to
+  // --bt-bar-h on <html>; blog-admin.css stacks the editor's sticky bars under it and widens
+  // scroll-padding so a typed caret or a focused field never hides behind them. On a phone the bar
+  // scrolls away with the page (blog-admin.css), so nothing sits under it: 0, never a stale height.
   const barSize = new ResizeObserver((entries) => {
-    for (const e of entries) document.documentElement.style.setProperty('--bt-bar-h', e.target.offsetHeight + 'px');
+    for (const e of entries) {
+      const pinned = getComputedStyle(e.target).position === 'sticky';
+      document.documentElement.style.setProperty('--bt-bar-h', (pinned ? e.target.offsetHeight : 0) + 'px');
+    }
   });
   const paintPost = () => {
     const c = cur;
     const panes = PANES.filter(([key]) => key !== 'history' || historyAvailable(c));
     viewEl.innerHTML = '<section class="bt-post" data-pane="' + c.pane + '">' +
       '<div class="bt-bar"><button class="bt-back" type="button" data-bt="back">' + icon('back') + '<span>All posts</span></button>' +
-      '<div class="bt-bar__state"><span class="bt-bar__status" data-bt-status></span><span class="bt-bar__meta" data-bt-meta></span>' +
+      '<div class="bt-bar__state"><span class="bt-bar__status" data-bt-status></span>' +
       '<span class="bt-save" data-bt-save role="status" aria-live="polite"></span></div>' +
       '<div class="bt-bar__actions" data-bt-actions></div></div>' +
       '<div class="bt-notes"><div data-note="conflict"></div><div data-note="save"></div><div data-note="problems"></div><div data-note="progress"></div></div>' +
@@ -1750,7 +1744,7 @@ export const createBlogTab = (ctx) => {
       if (!confirm(ask)) return;
     }
     const others = ctx.otherUnsavedTabs();
-    if (others.length && !retry && !confirm('This also publishes your unsaved changes on the ' + others.join(', ') + (others.length === 1 ? ' tab' : ' tabs') + '. Continue?')) return;
+    if (others.length && !retry && !confirm('This also publishes the changes you saved on the ' + others.join(', ') + (others.length === 1 ? ' tab' : ' tabs') + '. Continue?')) return;
 
     busy = true;
     paintBar();
@@ -1847,7 +1841,7 @@ export const createBlogTab = (ctx) => {
         (names.length === 1 ? ' links' : ' link') + ' to this post; ' + (names.length === 1 ? 'that link' : 'those links') + ' will show as plain words.';
     if (!confirm('Delete “' + title + '” for good? The post and its photos will be removed and can’t be brought back.' + (edits ? ' Your unpublished edits will be deleted too.' : '') + linkNote)) return;
     const others = ctx.otherUnsavedTabs();
-    if (others.length && !confirm('This also publishes your unsaved changes on the ' + others.join(', ') + (others.length === 1 ? ' tab' : ' tabs') + '. Continue?')) return;
+    if (others.length && !confirm('This also publishes the changes you saved on the ' + others.join(', ') + (others.length === 1 ? ' tab' : ' tabs') + '. Continue?')) return;
 
     busy = true;
     paintBar();
@@ -2071,4 +2065,4 @@ export const createBlogTab = (ctx) => {
 };
 
 // Test seam (tools/test/blog-tab.test.js): pure helpers only.
-export const _internals = { isLiveNow, everLive, hadReaders, shownStatus, notSent, failCopy, planNext, planDelete };
+export const _internals = { isLiveNow, everLive, hadReaders, shownStatus, notSent, failCopy, planNext, planDelete, stageOf, actionsFor, statusChip };

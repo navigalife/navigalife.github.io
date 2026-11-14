@@ -278,6 +278,22 @@ and sitemaps. blog-blocks `depthOf` silently drops an absolute depth (`'/'`).
   while the first is opening) has NO unit pin; it lives in the closure. If you touch it,
   re-check by hand: Unpublish during an in-flight autosave makes one commit, not two.
   The blog-seo emptied-address help line is DOM-only too (no pin).
+- **Pinned post chrome.** Above 760px the post bar (`.bt-bar`) is sticky and a
+  `ResizeObserver` in `paintPost` writes its height to `--bt-bar-h` on `<html>`
+  (0 whenever it isn't `position:sticky`); `.bt-post` sets `--bed-sticky` = header inset
+  + `--bt-bar-h`, and the editor's `.bed-bar` sticks at `--bed-sticky`. At ≤760px the post
+  bar scrolls away (`position:static`) and `--bed-sticky` is the header inset alone.
+  `scroll-padding-top` clears the whole stack (+52px editor bar), so a typed caret never
+  hides. The selection toolbar's ceiling is the pinned bars' bottom edge (`place()`).
+  Change one side and you change all three: recheck 1440, 390 and 360.
+- **Unsaved vs saved at publish.** `unsavedFormsBlock` stops a publish while
+  Company/Appearance/Page edits are typed but not saved (a publish sends every SAVED
+  change, all tabs). `ctx.otherUnsavedTabs()` is [] while that gate (or a rule error) will
+  stop it, so the blog's "This also publishes the changes you saved on…" confirm never
+  contradicts the gate.
+- A Call button with no `company.phone` publishes as WhatsApp with WhatsApp's own words
+  (`R.cta` uses `label` only when route === kind); the editor shows that, read-only, and
+  keeps `label` saved for when a phone is added.
 
 **Invariants**
 - Validator-enforced (the build fails, the admin blocks): posts are structured blocks

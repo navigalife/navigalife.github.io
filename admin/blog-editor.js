@@ -45,6 +45,11 @@ const CALLOUT_TITLES = { doctor: 'When to see a doctor', tip: 'Tip', note: 'Note
 // The reader sees the renderer's default labels (blog-blocks.js CTA_LABELS), so the
 // placeholders match them.
 const CTA_LABELS = { whatsapp: 'Message us on WhatsApp', call: 'Call the clinic', contact: 'Contact us' };
+// The note under a no-phone Call button. `typed` = the author wrote a label, so
+// their words are kept and return with a phone; else it just becomes a Call button.
+const callNote = (typed) => `No phone number on record, so this button shows as WhatsApp. ${typed
+  ? 'Your own words come back when a phone number is added in the Company tab.'
+  : 'It becomes a Call button when a phone number is added in the Company tab.'}`;
 
 const ICONS = {
   paragraph: '<path d="M5 7h14M5 12h14M5 17h9"/>',
@@ -1215,12 +1220,17 @@ export function mountBlockEditor(root, opts = {}) {
       }
       case 'cta': {
         const kind = ['whatsapp', 'call', 'contact'].includes(b.kind) ? b.kind : 'whatsapp';
-        // A Call button with no phone on record is published as the WhatsApp one
-        // (blog-blocks.js CTA_ROUTES), so it shows WhatsApp's label and says why.
+        // A Call button with no phone on record is published as the WhatsApp one with
+        // WhatsApp's own words (blog-blocks.js R.cta uses the typed label only when the
+        // route is the kind asked for). So it shows exactly that, read-only: typing
+        // would change nothing. b.label stays saved and comes back with a phone.
         const noPhone = kind === 'call' && !hasPhone();
+        const typed = String(b.label || '').trim() !== '';
         return el('div', { class: 'bed-cta' }, plainField('p', 'text', b.text, 'A short line above the button (optional)', 'bed-cta__text', { opt: true, label: 'Text above the button' }),
-          el('span', { class: 'bed-cta__btn' }, plainField('span', 'label', b.label, CTA_LABELS[noPhone ? 'whatsapp' : kind], 'bed-cta__label', { opt: true, label: 'Button label' })),
-          noPhone ? el('p', { class: 'bed-help bed-cta__note' }, svg('warn'), el('span', { text: 'No phone number on record, so this shows as WhatsApp.' })) : null);
+          noPhone
+            ? el('span', { class: 'bed-cta__btn', 'data-locked': '' }, el('span', { class: 'bed-cta__label', text: CTA_LABELS.whatsapp }))
+            : el('span', { class: 'bed-cta__btn' }, plainField('span', 'label', b.label, CTA_LABELS[kind], 'bed-cta__label', { opt: true, label: 'Button label' })),
+          noPhone ? el('p', { class: 'bed-help bed-cta__note' }, svg('warn'), el('span', { text: callNote(typed) })) : null);
       }
       default:
         return el('p', { class: 'bed-help', text: `Unknown section “${b.type}”.` });
@@ -1889,9 +1899,16 @@ export function mountBlockEditor(root, opts = {}) {
     const coarse = matchMedia('(pointer: coarse)').matches;
     const w = node.offsetWidth;
     const hgt = node.offsetHeight;
+    // The toolbar never lands over the pinned bars (post bar + this editor bar,
+    // or the typography panel when it is open): its ceiling is their bottom edge,
+    // not the top of the window. When the selection sits right under the bars it
+    // flips below; with no room below it goes above but no higher than that edge.
+    const vv = window.visualViewport;
+    const ceil = Math.max(vv ? vv.offsetTop : 0, (typePanel.hidden ? bar : typePanel).getBoundingClientRect().bottom) + 8;
+    const floor = (vv ? vv.offsetTop + vv.height : innerHeight) - 8;
     let top = coarse ? rect.bottom + gapPx + 14 : rect.top - hgt - gapPx;
-    if (top < 8) top = rect.bottom + gapPx;
-    if (top + hgt > innerHeight - 8) top = Math.max(8, rect.top - hgt - gapPx);
+    if (top < ceil) top = rect.bottom + gapPx;
+    if (top + hgt > floor) top = Math.max(ceil, rect.top - hgt - gapPx);
     let left = rect.left + rect.width / 2 - w / 2;
     left = Math.max(8, Math.min(left, innerWidth - w - 8));
     node.style.top = `${Math.round(top)}px`;
@@ -2948,6 +2965,18 @@ export function mountBlockEditor(root, opts = {}) {
     if (!root.contains(e.target)) { closeMenu(false); closePop(false); hideToolbar(); }
   };
   document.addEventListener('pointerdown', onDocDown, true);
+  // A phone number added or removed in the Company tab changes what a Call button
+  // publishes as. The host keeps this editor mounted while another tab is open, so
+  // when it comes back into view, redraw if the answer changed.
+  let phoneSeen = hasPhone();
+  const phoneWatch = typeof IntersectionObserver === 'function' ? new IntersectionObserver((entries) => {
+    if (destroyed || !entries.some((e) => e.isIntersecting)) return;
+    const now = hasPhone();
+    if (now === phoneSeen) return;
+    phoneSeen = now;
+    if (doc.blocks.some((b) => b.type === 'cta')) { flush(); rerenderFlow(); }
+  }) : null;
+  if (phoneWatch) phoneWatch.observe(root);
 
   render();
 
@@ -2993,6 +3022,7 @@ export function mountBlockEditor(root, opts = {}) {
       clearTimeout(selTimer);
       for (const [t, ev, fn, cap] of listeners) t.removeEventListener(ev, fn, cap || false);
       document.removeEventListener('pointerdown', onDocDown, true);
+      if (phoneWatch) phoneWatch.disconnect();
       root.textContent = '';
       root.classList.remove('bed', 'is-dragging');
       delete root.dataset.title;
@@ -3007,4 +3037,5 @@ export function mountBlockEditor(root, opts = {}) {
 export const _internals = {
   domToRuns, runsToDom, sanitizeHtml, piecesFromText, toInline, normRuns, trimRuns, applyMark, markState,
   splitRuns, normalizeHref, parseYouTube, wholeWordMatch, citeCounts, mapRunArrays, newBlock, getOffsets, setOffsets,
+  callNote,
 };
