@@ -8,7 +8,7 @@
     "lang": "en",
     "layout": "editorial",
     "category": "c_foot",
-    "title": "DIABETIC FOOT: A SMALL WOUND CAN BECOME A LIFE-DISRUPTING COMPLICATION",
+    "title": "Diabetic Foot: A Small Wound Can Become A Life-Disrupting Complication",
     "titleAccent": "",
     "dek": "Did you know that people living with diabetes are at risk of developing serious foot complications that can sometimes lead to gangrene or amputation causing immobility?",
     "titleSize": "L",
@@ -45,7 +45,7 @@
         "type": "paragraph",
         "text": [
           {
-            "t": "DIABETIC FOOT COMPLICATIONS OFTEN DEVELOP DUE TO THREE MAJOR FACTORS:",
+            "t": "Diabetic Foot Complications Often Develop Due To Three Major Factors:",
             "b": true
           }
         ]
@@ -129,13 +129,16 @@
           "Maintain blood sugar, blood pressure, and cholesterol within your prescribed targets.",
           "Avoid walking barefoot.",
           "Seek professional medical advice promptly if you notice any wound or unusual change.",
-          "Sedentary life style aggravates the problem and return venous flow & arterial flow tend to get stagnant. To prevent such a condition, its important to walk 20 – 30 minutes everyday.",
-          [
-            {
-              "t": "HOW DOES MEDIVASC HELP?",
-              "b": true
-            }
-          ]
+          "Sedentary life style aggravates the problem and return venous flow & arterial flow tend to get stagnant. To prevent such a condition, its important to walk 20 – 30 minutes everyday."
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": [
+          {
+            "t": "HOW DOES MEDIVASC HELP?",
+            "b": true
+          }
         ]
       },
       {
@@ -181,6 +184,7 @@
         "text": "#MediVasc #DiabeticFootCare #DiabetesAwareness #DiabeticFootUlcer #FootAmputationPrevention #VascularHealth #LimbPreservation #PeripheralArteryDisease #WoundCare #HealthcareAwareness"
       }
     ],
-    "references": []
+    "references": [],
+    "updatedAt": "2026-11-21T17:52:28+05:30"
   }
 ]
