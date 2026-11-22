@@ -2,7 +2,10 @@
   "name": "The MediVasc Journal",
   "navLabel": "Blog",
   "intro": "Plain-spoken guidance on diabetic feet, circulation, wounds and swollen limbs, written to help you act early and keep walking.",
-  "seo": { "title": "", "description": "" },
+  "seo": {
+    "title": "",
+    "description": ""
+  },
   "featured": [],
   "categories": [
     {
@@ -53,7 +56,7 @@
       "slug": "medivasc",
       "role": "",
       "credentials": "",
-      "bio": "MediVasc works with people across India to help protect feet and legs from the complications of diabetes, poor circulation and long-standing swelling.",
+      "bio": "MediVasc works with people across India to help protect feet and legs from the complications of diabetes, poor circulation and long-standing lymphedema swelling.",
       "photo": "",
       "sameAs": []
     }
