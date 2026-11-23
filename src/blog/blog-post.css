@@ -158,13 +158,16 @@ html:not(.js) .post-body>:is(.b-wide,.b-full){background:var(--bg)}
 @container post (min-width:1001px) and (max-width:1339.98px){
   .post--rail:not(.post--toc) .post-cover,.post--toc .post-cover{justify-self:stretch;width:auto;margin-left:0}
 }
-.post-cover__frame{position:relative;overflow:hidden;aspect-ratio:16 / 9;border-radius:clamp(14px,1.8vw,24px);background:var(--surface-2);box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 8%,transparent),0 30px 60px -36px color-mix(in srgb,var(--ink) 45%,transparent)}
-.post-cover__frame img{width:100%;height:100%;object-fit:cover;object-position:var(--fx,50%) var(--fy,50%)}
+/* The frame takes the cover's own shape (the img's width/height), never taller
+   than 16:9 on wide screens or 4:5 on phones: a wide banner shows whole, edge to
+   edge, and a taller photo crops around its focal point as before. */
+.post-cover__frame{position:relative;overflow:hidden;container-type:inline-size;border-radius:clamp(14px,1.8vw,24px);background:var(--surface-2);box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 8%,transparent),0 30px 60px -36px color-mix(in srgb,var(--ink) 45%,transparent)}
+.post-cover__frame img{display:block;width:100%;height:auto;max-height:56.25cqw;object-fit:cover;object-position:var(--fx,50%) var(--fy,50%)}
 .post-cover__caption{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 20px;margin-top:14px;color:var(--ink-muted);font:400 .875rem/1.5 var(--sans)}
 .post-cover__credit{font-size:.75rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
 @container post (max-width:700px){
-  .post-cover__frame{aspect-ratio:4 / 3}
-  .post-cover{width:100cqw;margin-left:calc(-1 * var(--left))}
+  .post-cover__frame img{max-height:125cqw}
+  .post-cover{justify-self:start;width:100cqw;margin-left:calc(-1 * var(--left))}
   .post-head--guide .post-cover{width:100cqw;margin-left:calc(-1 * var(--left))}
   .post-cover__frame{border-radius:0;box-shadow:none}
   .post-cover>.post-cover__caption{padding-inline:var(--pad)}
@@ -202,9 +205,14 @@ html:not(.js) .post-body>:is(.b-wide,.b-full){background:var(--bg)}
 .post-split .post-title--S,.post-split .post-title--M{max-width:20ch}
 .post-cover--split{width:auto;margin:0}
 .post-cover--split .post-cover__frame{aspect-ratio:4 / 5;max-height:max(440px,100svh - 200px);border-radius:clamp(18px,2.2vw,30px)}
+.post-cover--split .post-cover__frame img{height:100%;max-height:none}
 @container post (max-width:1000px){
   .post-split{grid-template-columns:minmax(0,1fr);gap:clamp(32px,6vw,48px)}
-  .post-cover--split .post-cover__frame{aspect-ratio:4 / 3}
+  .post-cover--split .post-cover__frame{aspect-ratio:auto;max-height:none}
+  .post-cover--split .post-cover__frame img{height:auto;max-height:75cqw}
+}
+@container post (max-width:700px){
+  .post-cover--split .post-cover__frame img{max-height:125cqw}
 }
 @container post (max-width:700px){
   .post-cover--split{width:100cqw;margin-left:calc(-1 * var(--pad))}
@@ -218,6 +226,7 @@ html:not(.js) .post-body>:is(.b-wide,.b-full){background:var(--bg)}
 .post-body :is(p,li) em{font-style:italic}
 
 /* lead-in: one style per post, on renderBlocks' first paragraph */
+.post-body[data-leadin="dropcap"] [data-first]{display:flow-root;min-height:3lh}
 .post-body[data-leadin="dropcap"] [data-first]::first-letter{float:left;margin:.07em .1em -.05em -.04em;color:var(--accent);font-family:var(--display);font-size:4.45em;font-style:normal;font-weight:600;font-variation-settings:"opsz" 144;line-height:.8}
 @supports (initial-letter:3) or (-webkit-initial-letter:3){
   .post-body[data-leadin="dropcap"] [data-first]::first-letter{float:none;margin:0 .1em 0 0;font-size:inherit;line-height:inherit;-webkit-initial-letter:3;initial-letter:3}

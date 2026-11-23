@@ -10,7 +10,7 @@
 // Every href/src is depth-relative (the preview is mounted at /changes/); the only
 // absolute URLs are the share targets, which must be shareable.
 const blocks = require('../../admin/blog-blocks.js');
-const { highlightWholeWord } = require('../../admin/content-rules.js');
+const { highlightWholeWord, disclaimerOf } = require('../../admin/content-rules.js');
 const { renderPostCard, svg, CONTACT_ICONS, contactCta } = require('./render-landing.js');
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -250,15 +250,25 @@ const wrapLeadIn = (html, leadIn) => {
   });
 };
 
-const DISCLAIMER = 'General information, not a diagnosis. Every foot and every wound is different; for advice about your own care, please see a doctor.';
+// A drop cap is three lines tall, so it needs an opening paragraph that fills
+// them; on a one-line opener ("…three major factors:") it would hang into the
+// next block. Short openers get no lead-in (the CSS also contains the float, for
+// a paragraph that wraps to only two lines on a wide screen).
+const DROPCAP_MIN_CHARS = 140;
+const firstParagraphText = (html) => {
+  const match = html.match(/<p\b[^>]*\sdata-first\b[^>]*>([\s\S]*?)<\/p>/);
+  return match ? match[1].replace(/<[^>]*>/g, '').replace(/&#?\w+;/g, '_').replace(/\s+/g, ' ').trim() : '';
+};
+const fitLeadIn = (html, leadIn) => (leadIn === 'dropcap' && firstParagraphText(html).length < DROPCAP_MIN_CHARS ? 'none' : leadIn);
 
 const renderPost = (ctx, post) => {
   const layout = pick(post.layout, LAYOUTS, 'editorial');
   const bodySize = pick(post.bodySize, BODY_SIZES, 'M');
-  const leadIn = pick(post.leadIn, LEADINS, 'dropcap');
-  const body = wrapLeadIn(blocks.renderBlocks(post.blocks, {
+  const raw = blocks.renderBlocks(post.blocks, {
     img: ctx.img, depth: ctx.depth, films: ctx.films, references: post.references, contactHref: ctx.contactHref, postLinks: ctx.postLinks,
-  }), leadIn);
+  });
+  const leadIn = fitLeadIn(raw, pick(post.leadIn, LEADINS, 'dropcap'));
+  const body = wrapLeadIn(raw, leadIn);
   const toc = layout === 'guide' ? tocItems(post, body) : [];
   const hasToc = toc.length >= 2;
   const rail = renderRail(ctx, post);
@@ -274,7 +284,7 @@ const renderPost = (ctx, post) => {
     + (hasToc ? renderTocMobile(toc) : '')
     + `<div class="post-body post-body--${bodySize}" data-leadin="${leadIn}">${body}</div>`
     + '<footer class="post-end">'
-    + `<p class="post-disclaimer">${esc(DISCLAIMER)}</p>`
+    + `<p class="post-disclaimer">${esc(disclaimerOf(post, ctx.blog))}</p>`
     + renderShare(post)
     + renderReferences(post, body)
     + renderAuthorCard(ctx, post)

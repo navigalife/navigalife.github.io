@@ -191,7 +191,7 @@ const BLOG_CONFIG_LISTS = {
   redirects: { key: 'from', file: 'Blog settings (redirects)', name: (item) => 'from ' + item.from },
   featured: { key: 'id', file: 'Blog settings (featured posts)', name: (item) => item.id, ids: true },
 };
-const BLOG_CONFIG_WORDS = { name: 'blog name', navLabel: 'menu label', intro: 'intro text', seo: 'search listing' };
+const BLOG_CONFIG_WORDS = { name: 'blog name', navLabel: 'menu label', intro: 'intro text', disclaimer: 'disclaimer', seo: 'search listing' };
 const blogConfigLabel = (path) => 'Blog settings: ' + (path[1] ? 'search listing ' + words(path[1]) : BLOG_CONFIG_WORDS[path[0]] || words(path[0]));
 
 const mergeBlogConfig = (base, ours, theirs, conflicts) => {

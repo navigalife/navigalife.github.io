@@ -46,7 +46,7 @@ const clone = (value) => structuredClone(value);
 // Fixed clock, India time (the admin writes +05:30 stamps).
 const NOW = Date.parse('2026-11-13T12:00:00+05:30');
 const PAST = '2026-10-01T09:00:00+05:30';
-const FUTURE = '2026-11-20T09:00:00+05:30';
+const FUTURE = '2036-11-20T09:00:00+05:30';
 const MIN = 60 * 1000;
 const ist = (ms) => new Date(ms + 330 * MIN).toISOString().slice(0, 19) + '+05:30';
 

@@ -200,6 +200,9 @@ html:not(.js) .blog-featured__track{scrollbar-width:thin;scrollbar-color:color-m
   .blog-feature{display:flex;flex-direction:column;min-height:0;border-radius:22px}
   .blog-feature .blog-card__link:focus-visible::after{border-radius:22px}
   .blog-feature__media{order:-1;aspect-ratio:4/3;flex:none}
+  /* phones: the cover's own shape (≤ 4:5 tall), so a wide banner is not cut at both edges */
+  .blog-feature__media:not(.blog-feature__media--empty){aspect-ratio:auto;container-type:inline-size}
+  .blog-feature__media:not(.blog-feature__media--empty) img{position:static;display:block;height:auto;max-height:125cqw}
   .blog-feature__panel{flex:1;gap:28px;padding:22px 22px 24px}
   .blog-feature__title{font-size:1.75rem;margin-bottom:12px}
   .blog-feature__dek{margin-bottom:20px;font-size:1rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}

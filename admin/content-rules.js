@@ -1011,6 +1011,18 @@
     ctaKind: ['whatsapp', 'call', 'contact'],
     videoSource: ['film', 'youtube'],
   };
+  // The line at the end of every post. Blog settings `disclaimer` replaces it
+  // site-wide and a post's own `disclaimer` replaces that; an empty value falls
+  // back a level, so a post can never end without one.
+  const BLOG_DISCLAIMER = 'General information, not a diagnosis. Every foot and every wound is different; for advice about your own care, please see a doctor.';
+  const disclaimerOf = (post, config) => [post && post.disclaimer, config && config.disclaimer]
+    .map((v) => (typeof v === 'string' ? v.trim() : ''))
+    .find(Boolean) || BLOG_DISCLAIMER;
+  const checkDisclaimer = (obj, path, label, add) => {
+    if (obj.disclaimer === undefined || obj.disclaimer === null) return;
+    if (typeof obj.disclaimer !== 'string') add(path, `${label} must be text.`);
+    else if (tagIn(obj.disclaimer)) add(path, `${label} contains HTML code (“${tagIn(obj.disclaimer)}”).`);
+  };
   // Owner-facing block names (the editor's block picker uses the same words).
   const BLOCK_LABELS = {
     paragraph: 'Paragraph', lead: 'Intro paragraph', heading: 'Heading', list: 'List',
@@ -1398,6 +1410,7 @@
     if (blank(config.name)) add('name', `${where}: the blog needs a name.`);
     if (blank(config.navLabel)) add('navLabel', `${where}: the menu label for the blog is empty.`);
     optionalText(config, 'intro', 'intro', `${where}: the intro`, add);
+    checkDisclaimer(config, 'disclaimer', `${where}: the disclaimer`, add);
     if (config.seo !== undefined) {
       if (!isObject(config.seo)) add('seo', `${where}: the search settings are not valid.`);
       else {
@@ -1594,6 +1607,7 @@
       }
       if (blank(post.dek)) add(p('dek'), `${who} needs a short summary under the title.`);
       else if (tagIn(post.dek)) add(p('dek'), `${who}: the summary contains HTML code (“${tagIn(post.dek)}”).`);
+      checkDisclaimer(post, p('disclaimer'), `${who}: the disclaimer`, add);
 
       // References first: citations in the text point at them.
       const refIds = new Set();
@@ -1708,6 +1722,8 @@
     LAYOUTS: Object.freeze(LAYOUTS.slice()),
     BLOCK_TYPES: Object.freeze(BLOCK_TYPES.slice()),
     BLOCK_LABELS: Object.freeze(Object.assign({}, BLOCK_LABELS)),
+    BLOG_DISCLAIMER,
+    disclaimerOf,
     BLOG_ENUMS: Object.freeze(Object.fromEntries(Object.entries(BLOG_ENUMS).map(([k, v]) => [k, Object.freeze(v.slice())]))),
     accentMatches,
     highlightWholeWord,

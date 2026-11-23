@@ -284,7 +284,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
     <section class="bm-section" id="${pid}-blog" aria-labelledby="${pid}-blog-h">
       <header class="bm-section__head"><div>
         <h2 id="${pid}-blog-h">Blog</h2>
-        <p>The blog's name, its menu label and the introduction on its front page.</p>
+        <p>The blog's name, its menu label, the introduction on its front page and the line at the end of every post.</p>
       </div></header>
       <div class="bm-card"><div class="bm-grid">
         ${field({ label: 'Blog name', path: 'name', value: config.name, help: 'The title on the blog’s front page and in search results.' })}
@@ -292,6 +292,7 @@ export function mountBlogSettings(root, { getConfig, onChange, onMovePosts, post
         ${field({ label: 'Introduction', path: 'intro', value: config.intro, area: true, rows: 3, full: true, help: 'A sentence or two under the blog’s name.' })}
         ${field({ label: 'Search title', path: 'seo.title', value: config.seo.title, placeholder: config.name || '', max: 60, help: 'Leave empty to use the blog name.' })}
         ${field({ label: 'Search description', path: 'seo.description', value: config.seo.description, area: true, rows: 3, placeholder: config.intro || '', max: 160, help: 'Leave empty to use the introduction. Google shows about 155 characters.' })}
+        ${field({ label: 'Disclaimer', path: 'disclaimer', value: config.disclaimer, area: true, rows: 3, full: true, placeholder: rules().BLOG_DISCLAIMER || '', help: 'The line at the end of every post. A post can use its own in Settings. Leave empty for the standard wording.' })}
       </div></div>
     </section>`;
 

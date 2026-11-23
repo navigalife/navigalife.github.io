@@ -417,6 +417,10 @@ export const createBlogTab = (ctx) => {
   const films = () => (Array.isArray(state.draft.films) ? state.draft.films : []);
   const categories = () => (Array.isArray(config().categories) ? config().categories.filter(isObject) : []);
   const authors = () => (Array.isArray(config().authors) ? config().authors.filter(isObject) : []);
+  const blogDisclaimer = () => {
+    const own = typeof config().disclaimer === 'string' ? config().disclaimer.trim() : '';
+    return own || rules?.BLOG_DISCLAIMER || '';
+  };
   const categoryById = (id) => categories().find((category) => category.id === id);
   // The preview's call-to-action hrefs, from the company draft exactly as the build
   // makes ctx.contactHref (src/template.js contactHrefs), at the blog's depth '../'.
@@ -1199,7 +1203,9 @@ export const createBlogTab = (ctx) => {
       (p.reviewer ? '<label>Reviewed on<input type="date" data-bt-field="reviewedAt" value="' + h(String(p.reviewedAt || '').slice(0, 10)) + '"></label>' : '') +
       '<label>Publish date and time<input type="datetime-local" data-bt-field="publishAt" value="' + h(toLocalInput(p.publishAt)) + '">' +
       '<span class="help">India time (IST). Used by Schedule: the post goes live within about 30 minutes of this time.</span></label>' +
-      '<p class="inline-error" data-bt-error="publishAt" hidden></p></div>';
+      '<p class="inline-error" data-bt-error="publishAt" hidden></p>' +
+      '<label>Disclaimer<textarea data-bt-field="disclaimer" rows="3" placeholder="' + h(blogDisclaimer()) + '">' + h(typeof p.disclaimer === 'string' ? p.disclaimer : '') + '</textarea>' +
+      '<span class="help">The line at the end of this post. Leave empty to use the one in Blog → Settings.</span></label></div>';
   };
 
   const paintSettings = (c) => {
@@ -1532,7 +1538,7 @@ export const createBlogTab = (ctx) => {
 
   // "Fix this" in the problems list: show the pane that holds the field, then
   // focus it. Paths are validateBlogPostsDetailed's, minus the post index.
-  const SETTINGS_FIELDS = new Set(['layout', 'category', 'author', 'reviewer', 'reviewedAt', 'publishAt']);
+  const SETTINGS_FIELDS = new Set(['layout', 'category', 'author', 'reviewer', 'reviewedAt', 'publishAt', 'disclaimer']);
   const SEO_FIELDS = new Set(['slug', 'previousSlugs', 'seo', 'about', 'related']);
   const focusEl = (el) => {
     if (!el) return false;

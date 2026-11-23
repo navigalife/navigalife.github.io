@@ -687,6 +687,54 @@ test('713481f: a cover caption stored as inline runs renders as text in every la
   }
 });
 
+test('s16: the post disclaimer comes from the post, else Blog settings, else the standard line', () => {
+  const { renderPost } = require(path.join(ROOT, 'src/blog/render-post.js'));
+  const rules = require(path.join(ROOT, 'admin/content-rules.js'));
+  const render = (blog, post) => {
+    const rctx = { depth: '../../', img: (src) => `<img src="${src}">`, films: [], contactHref: {}, postLinks: new Map(), blog, related: () => [], featured: [] };
+    return (renderPost(rctx, { ...p1, related: [], ...post }).match(/<p class="post-disclaimer">([\s\S]*?)<\/p>/) || [])[1];
+  };
+  const std = 'General information, not a diagnosis. Every foot and every wound is different; for advice about your own care, please see a doctor.';
+  assert.equal(rules.BLOG_DISCLAIMER, std);
+  assert.equal(render({ ...config, disclaimer: undefined }, {}), std, 'no setting anywhere: the standard line');
+  assert.equal(render({ ...config, disclaimer: '  ' }, { disclaimer: '' }), std, 'blank values fall back');
+  assert.equal(render({ ...config, disclaimer: 'Site line.' }, {}), 'Site line.', 'Blog settings replace it site-wide');
+  assert.equal(render({ ...config, disclaimer: 'Site line.' }, { disclaimer: ' Post line & more ' }), 'Post line &#38; more', 'a post replaces it, trimmed + escaped');
+  // The live data carries the standard line, so the first ship changes nothing on the page.
+  assert.equal(JSON.parse(fs.readFileSync(path.join(ROOT, 'data/blog/config.json'), 'utf8')).disclaimer, std);
+  // Validation: text only, no HTML, on both levels.
+  const cfgErr = (disclaimer) => rules.validateBlogConfigDetailed({ ...config, disclaimer }).filter((e) => e.path === 'disclaimer').length;
+  assert.equal(cfgErr('Plain words.'), 0);
+  assert.equal(cfgErr(''), 0);
+  assert.equal(cfgErr(42), 1);
+  assert.equal(cfgErr('See <b>a doctor</b>'), 1);
+  const postErr = (disclaimer) => rules.validateBlogPostsDetailed([{ ...p1, disclaimer }], config, []).filter((e) => /\.disclaimer$/.test(e.path)).length;
+  assert.equal(postErr('Plain words.'), 0);
+  assert.equal(postErr(undefined), 0);
+  assert.equal(postErr(['x']), 1);
+  assert.equal(postErr('<script>x</script>'), 1);
+});
+
+test('s16: the drop cap needs an opening paragraph long enough to fill its three lines; empty paragraphs are skipped', () => {
+  const { renderPost } = require(path.join(ROOT, 'src/blog/render-post.js'));
+  const rctx = { depth: '../../', img: (src) => `<img src="${src}">`, films: [], contactHref: {}, postLinks: new Map(), blog: config, related: () => [], featured: [] };
+  const body = (blocks, leadIn = 'dropcap') => {
+    const html = renderPost(rctx, { ...p1, related: [], leadIn, blocks });
+    return { leadin: (html.match(/<div class="post-body[^"]*" data-leadin="(\w+)">/) || [])[1], first: (html.match(/<p class="b-p" data-first>([\s\S]*?)<\/p>/) || [])[1] };
+  };
+  const long = 'Diabetes can quietly dull the nerves and narrow the blood vessels of the feet, so a small cut can go unnoticed for days and turn into a wound that will not heal.';
+  // Post 1 as published: an empty first block, then a one-line bold opener.
+  const post1 = body([{ type: 'paragraph', text: '' }, { type: 'paragraph', text: [{ t: 'Diabetic Foot Complications Often Develop Due To Three Major Factors:', b: true }] }, { type: 'paragraph', text: [{ t: 'NERVE DAMAGE (NEUROPATHY)', b: true }] }]);
+  assert.equal(post1.leadin, 'none', 'a one-line opener gets no drop cap');
+  assert.match(post1.first, /^<strong>Diabetic Foot Complications/, 'the empty first paragraph is skipped');
+  assert.doesNotMatch(post1.first, /class="leadin"/);
+  const ok = body([{ type: 'paragraph', text: '' }, { type: 'paragraph', text: long }]);
+  assert.equal(ok.leadin, 'dropcap');
+  assert.match(ok.first, /^<span class="leadin">Diabetes can quietly dull<\/span>/);
+  assert.equal(body([{ type: 'paragraph', text: 'Short.' }], 'smallcaps').leadin, 'smallcaps', 'only the drop cap steps aside');
+  assert.equal(body([{ type: 'paragraph', text: 'Short.' }], 'boldwords').leadin, 'boldwords');
+});
+
 test('E1: a patient photo still waiting for the consent tick never goes outward', () => {
   const pending = enrich({
     ...base, id: 'p_pend', slug: 'pending-consent', status: 'published', publishAt: '2026-11-02T09:00:00+05:30',
