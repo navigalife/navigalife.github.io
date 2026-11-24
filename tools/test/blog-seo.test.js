@@ -700,8 +700,9 @@ test('s16: the post disclaimer comes from the post, else Blog settings, else the
   assert.equal(render({ ...config, disclaimer: '  ' }, { disclaimer: '' }), std, 'blank values fall back');
   assert.equal(render({ ...config, disclaimer: 'Site line.' }, {}), 'Site line.', 'Blog settings replace it site-wide');
   assert.equal(render({ ...config, disclaimer: 'Site line.' }, { disclaimer: ' Post line & more ' }), 'Post line &#38; more', 'a post replaces it, trimmed + escaped');
-  // The live data carries the standard line, so the first ship changes nothing on the page.
-  assert.equal(JSON.parse(fs.readFileSync(path.join(ROOT, 'data/blog/config.json'), 'utf8')).disclaimer, std);
+  // The live config is owner-edited through the admin: pin its shape, not its words.
+  const liveDisclaimer = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/blog/config.json'), 'utf8')).disclaimer;
+  assert.ok(liveDisclaimer === undefined || typeof liveDisclaimer === 'string', 'config.json disclaimer is a string when set');
   // Validation: text only, no HTML, on both levels.
   const cfgErr = (disclaimer) => rules.validateBlogConfigDetailed({ ...config, disclaimer }).filter((e) => e.path === 'disclaimer').length;
   assert.equal(cfgErr('Plain words.'), 0);
