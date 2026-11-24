@@ -36,8 +36,10 @@
 //     related: (post) => [], // rail "Related" cards: enriched posts (see below). [] is fine.
 //     featured: [],          // rail "Featured" cards: enriched posts. [] is fine.
 //   }                        // related + featured both empty → the post renders with no rail.
-//   imgData / absImg / posts / categories / authors / homeHref / siteUrl are NOT read by
-//   renderPost or renderPostCard; omit them.
+//   absImg / posts / categories / authors / homeHref / siteUrl are NOT read by
+//   renderPost or renderPostCard; omit them. imgData(src) → { width, height } is read
+//   only by renderPostCard's grid/feature cards to detect a wide (banner) cover and
+//   show it whole; absent here, so the preview just crops as before (never breaks).
 // The post must be ENRICHED like the build's (raw post fields + these):
 //   categoryObj  config category + { href: '../blog/category/<slug>/' } (or null)
 //   authorObj    config author + { href: '../blog/author/<slug>/' } (or null)

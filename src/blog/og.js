@@ -696,6 +696,19 @@ const loadCover = async (post, root, width, height) => {
     const fy = Number.isFinite(cover.focal && cover.focal.y) ? cover.focal.y : 0.5;
     const left = Math.min(rw - width, Math.max(0, Math.round(fx * rw - width / 2)));
     const top = Math.min(rh - height, Math.max(0, Math.round(fy * rh - height / 2)));
+    // A wide (banner) cover would lose its text when cropped into this tall panel, so
+    // show it whole (contain, centred) over a blurred, darkened fill of itself.
+    if (w / h >= 1.7) {
+      const backdrop = await sharp(upright.data).resize(rw, rh).extract({ left, top, width, height })
+        .blur(18).modulate({ brightness: 0.8 }).toBuffer();
+      const fscale = Math.min(width / w, height / h);
+      const fw = Math.max(1, Math.round(w * fscale));
+      const fh = Math.max(1, Math.round(h * fscale));
+      const fg = await sharp(upright.data).resize(fw, fh).toBuffer();
+      return await sharp(backdrop)
+        .composite([{ input: fg, left: Math.round((width - fw) / 2), top: Math.round((height - fh) / 2) }])
+        .toBuffer();
+    }
     return await sharp(upright.data).resize(rw, rh).extract({ left, top, width, height }).toBuffer();
   } catch (error) {
     // An unreadable cover costs the card its photo, not the card.

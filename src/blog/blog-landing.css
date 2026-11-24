@@ -98,6 +98,13 @@ a.blog-chip:hover{background:color-mix(in srgb,var(--t,var(--surface-2)) 86%,var
 .blog-feature:hover .blog-feature__media img{transform:scale(1.025)}
 .blog-feature__media--empty,.blog-card__media--empty,.blog-rail-card__media--empty{display:grid;place-items:center;background:var(--t,var(--surface-2))}
 .blog-feature__media--empty{background:color-mix(in srgb,var(--panel) 88%,var(--panel-ink))}
+/* Wide (banner) covers: show the whole image (object-fit:contain) over a blurred
+   fill of itself, so a 2:1 banner is never cut. The backdrop is oversized ~12% so
+   the blur's soft edges sit off-frame; the hover zoom still rides on both layers. */
+.blog-feature__media--fit,.blog-card__media--fit{position:relative}
+.blog-feature__media--fit .blog-media__backdrop,.blog-card__media--fit .blog-media__backdrop{position:absolute;inset:auto;top:-6%;left:-6%;width:112%;height:112%;object-fit:cover;object-position:50% 50%;filter:blur(24px) saturate(1.05) brightness(.82)}
+[data-theme="dark"] .blog-feature__media--fit .blog-media__backdrop,[data-theme="dark"] .blog-card__media--fit .blog-media__backdrop{filter:blur(24px) saturate(1.05) brightness(.6)}
+.blog-feature__media--fit>img:not(.blog-media__backdrop),.blog-card__media--fit>img:not(.blog-media__backdrop){position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:50% 50%}
 
 .blog-featured__pager{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:22px}
 .blog-featured__bar{position:relative;width:clamp(140px,16vw,220px);height:2px;border-radius:2px;background:color-mix(in srgb,var(--line) 90%,transparent);overflow:hidden}
@@ -204,6 +211,8 @@ html:not(.js) .blog-featured__track{scrollbar-width:thin;scrollbar-color:color-m
   /* phones: the cover's own shape (≤ 4:5 tall), so a wide banner is not cut at both edges */
   .blog-feature__media:not(.blog-feature__media--empty){aspect-ratio:auto;container-type:inline-size}
   .blog-feature__media:not(.blog-feature__media--empty) img{position:static;display:block;height:auto;max-height:125cqw}
+  /* phones already show the feature cover at its own shape, so the fit backdrop is redundant */
+  .blog-feature__media.blog-feature__media--fit .blog-media__backdrop{display:none}
   .blog-feature__panel{flex:1;gap:28px;padding:22px 22px 24px}
   .blog-feature__title{font-size:1.75rem;margin-bottom:12px}
   .blog-feature__dek{margin-bottom:20px;font-size:1rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}

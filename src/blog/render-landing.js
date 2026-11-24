@@ -47,11 +47,35 @@ const chip = (ctx, category, tag = 'a') => {
     : `<span ${attrs}>${esc(category.name)}</span>`;
 };
 
+// A wide (banner) cover ≥ this intrinsic aspect is shown whole ("fit" mode) rather
+// than cropped: the build supplies width/height through ctx.imgData's image manifest.
+const WIDE_ASPECT = 1.7;
+const coverIsWide = (ctx, cover) => {
+  const data = typeof ctx.imgData === 'function' ? ctx.imgData(cover.src) : null;
+  const w = data && Number(data.width);
+  const h = data && Number(data.height);
+  return !!(w && h && w / h >= WIDE_ASPECT);
+};
+// Decorative blurred copy of the same cover, filling the frame behind the contained
+// image so a banner reads as intentional, not letterboxed. Same src/srcset/sizes as
+// the foreground so the browser reuses the one download.
+const fitBackdrop = (ctx, cover, sizes) => {
+  const data = typeof ctx.imgData === 'function' ? ctx.imgData(cover.src) : null;
+  if (!data || !data.src) return '';
+  const srcset = data.srcset ? ` srcset="${esc(data.srcset)}" sizes="${esc(sizes || '100vw')}"` : '';
+  return `<img class="blog-media__backdrop" alt="" aria-hidden="true" src="${esc(data.src)}"${srcset} loading="lazy" decoding="async">`;
+};
+
 // Cover image with its focal point carried into object-position. Without a cover
-// the card shows a quiet tint panel with the diamond marker instead of a hole.
-const media = (ctx, post, className, imgOpts) => {
+// the card shows a quiet tint panel with the diamond marker instead of a hole. A
+// wide banner (allowFit, frame not square-tiny) is shown whole over a blurred fill.
+const media = (ctx, post, className, imgOpts, { allowFit = true } = {}) => {
   const cover = post.cover && text(post.cover.src) ? post.cover : null;
   if (!cover) return `<div class="${className} ${className}--empty" aria-hidden="true"><span class="blog-diamond"></span></div>`;
+  if (allowFit && coverIsWide(ctx, cover)) {
+    const sizes = imgOpts && imgOpts.sizes;
+    return `<div class="${className} ${className}--fit">${fitBackdrop(ctx, cover, sizes)}${ctx.img(cover.src, { alt: text(cover.alt), ...imgOpts })}</div>`;
+  }
   const fx = Math.round(Math.min(1, Math.max(0, Number(cover.focal && cover.focal.x) || 0.5)) * 100);
   const fy = Math.round(Math.min(1, Math.max(0, Number(cover.focal && cover.focal.y) || 0.5)) * 100);
   const focal = cover.focal ? ` style="--fx:${fx}%;--fy:${fy}%"` : '';
@@ -80,7 +104,7 @@ const gridCard = (ctx, post, { eager = false, showChip = true, showAuthor = true
 
 const railCard = (ctx, post) => `
 <article class="blog-rail-card">
-  ${media(ctx, post, 'blog-rail-card__media', { sizes: '88px', widths: [480] })}
+  ${media(ctx, post, 'blog-rail-card__media', { sizes: '88px', widths: [480] }, { allowFit: false })}
   <div class="blog-rail-card__body">
     <h3 class="blog-rail-card__title"><a class="blog-card__link" href="${esc(post.href)}">${titleHtml(post)}</a></h3>
     <p class="blog-meta">${timeHtml(post)}${sep}<span>${minutes(post)}</span></p>
