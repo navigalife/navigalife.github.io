@@ -208,6 +208,19 @@ function toInline(runs) {
   return n;
 }
 const inlineText = (inline) => runsOf(inline).map((r) => (isCiteRun(r) ? '' : r.t)).join('');
+// The canvas drop cap follows the site's fit rule (render-post.js fitLeadIn): a
+// drop cap needs a long enough opening paragraph or it hangs into the next block.
+// Pick the first paragraph/lead block — the same block types renderBlocks marks
+// [data-first] — and defer the threshold to content-rules so the canvas and the
+// published page cannot disagree.
+const firstBodyText = (blocks) => {
+  const b = (Array.isArray(blocks) ? blocks : []).find((x) => x && (x.type === 'paragraph' || x.type === 'lead'));
+  return b ? inlineText(b.text) : '';
+};
+const effectiveLeadIn = (leadIn, blocks) => {
+  const fit = rules()?.fitLeadIn;
+  return fit ? fit(leadIn, firstBodyText(blocks)) : leadIn;
+};
 function splitRuns(runs, at) {
   const left = [];
   const right = [];
@@ -779,6 +792,7 @@ export function mountBlockEditor(root, opts = {}) {
     seed.clear();
     schedule();
     updateCount();
+    syncLeadIn(); // typing, add/remove/reorder/retype all land here: keep the drop-cap fit live
     if (!hwarnQueued) { hwarnQueued = true; queueMicrotask(syncHeadingWarns); }
   }
 
@@ -971,11 +985,16 @@ export function mountBlockEditor(root, opts = {}) {
   }
 
   // ------------------------------------------------------------ render
+  // Keep the canvas's lead-in in lockstep with the site: apply the shared fit
+  // rule to the chosen style (doc.leadIn is preserved; a dropcap on too short an
+  // opener renders as none). Cheap attribute flip, no re-render — safe to call on
+  // every edit so crossing the threshold toggles live.
+  function syncLeadIn() { root.dataset.leadin = effectiveLeadIn(doc.leadIn, doc.blocks); }
   function render() {
     page.textContent = '';
     root.dataset.title = doc.titleSize;
     root.dataset.body = doc.bodySize;
-    root.dataset.leadin = doc.leadIn;
+    syncLeadIn();
     headEl = renderHead();
     flowEl = renderFlow();
     refsEl = renderRefs();
@@ -2477,7 +2496,7 @@ export function mountBlockEditor(root, opts = {}) {
       change(prop, () => { doc[prop] = raw; });
       root.dataset.title = doc.titleSize;
       root.dataset.body = doc.bodySize;
-      root.dataset.leadin = doc.leadIn;
+      syncLeadIn();
       renderTypo();
       const chip = typePanel.querySelector(`[data-prop="${prop}"][data-val="${CSS.escape(raw)}"]`);
       if (chip) chip.focus({ preventScroll: true });
@@ -3037,5 +3056,5 @@ export function mountBlockEditor(root, opts = {}) {
 export const _internals = {
   domToRuns, runsToDom, sanitizeHtml, piecesFromText, toInline, normRuns, trimRuns, applyMark, markState,
   splitRuns, normalizeHref, parseYouTube, wholeWordMatch, citeCounts, mapRunArrays, newBlock, getOffsets, setOffsets,
-  callNote,
+  callNote, firstBodyText, effectiveLeadIn,
 };

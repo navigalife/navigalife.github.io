@@ -1690,6 +1690,19 @@
     return errors;
   };
 
+  // A drop cap is three lines tall, so it needs an opening paragraph long enough
+  // to fill them; on a short opener ("…three major factors:") it hangs into the
+  // next block, so short openers drop to no lead-in. The build (render-post.js
+  // fitLeadIn) and the admin editor canvas BOTH apply this rule — they share the
+  // threshold here rather than re-typing the number and drifting apart. Only
+  // "dropcap" is fit-checked; the other opening styles are returned unchanged.
+  const DROPCAP_MIN_CHARS = 140;
+  const fitLeadIn = (leadIn, firstText) =>
+    (leadIn === 'dropcap'
+      && String(firstText == null ? '' : firstText).replace(/\s+/g, ' ').trim().length < DROPCAP_MIN_CHARS
+      ? 'none'
+      : leadIn);
+
   // ------------------------------------------------------------------ export
 
   const messages = (detailed) => (value) => detailed(value).map((error) => error.message);
@@ -1725,6 +1738,8 @@
     BLOG_DISCLAIMER,
     disclaimerOf,
     BLOG_ENUMS: Object.freeze(Object.fromEntries(Object.entries(BLOG_ENUMS).map(([k, v]) => [k, Object.freeze(v.slice())]))),
+    DROPCAP_MIN_CHARS,
+    fitLeadIn,
     accentMatches,
     highlightWholeWord,
     stripHeadlineQuotes,

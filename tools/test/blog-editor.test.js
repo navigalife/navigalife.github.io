@@ -48,6 +48,7 @@ const E = RULES.BLOG_ENUMS;
   const {
     toInline, normRuns, trimRuns, applyMark, markState, splitRuns, normalizeHref, parseYouTube,
     wholeWordMatch, citeCounts, mapRunArrays, newBlock, piecesFromText, callNote,
+    firstBodyText, effectiveLeadIn,
   } = I;
 
   // Contract Inline: a string is one unmarked run ('' is no runs).
@@ -613,6 +614,55 @@ const E = RULES.BLOG_ENUMS;
       assert.ok(callNote(typed).includes('added in the Company tab.'), `Company tab (typed=${typed})`);
       assert.ok(!callNote(typed).includes('—'), `no em-dash (typed=${typed})`);
     }
+  });
+
+  // ------------------------------------------------------------ lead-in fit
+
+  // The canvas drop cap must match the published page: render-post.js downgrades a
+  // "dropcap" to "none" when the first paragraph/lead is shorter than
+  // DROPCAP_MIN_CHARS (140). The editor shares content-rules.fitLeadIn and picks
+  // the same first block, so effectiveLeadIn(doc) is what data-leadin becomes on
+  // the canvas. This pins: short opener → none (no drop cap), long → dropcap, the
+  // first block is the first paragraph/lead (headings skipped, like the site), and
+  // the other opening styles are unaffected by the fit.
+  const MIN = RULES.DROPCAP_MIN_CHARS;
+  const short = 'Diabetic foot complications often develop due to three major factors:'; // 69 chars, the owner's opener
+  const long = 'x'.repeat(MIN); // exactly the threshold renders a drop cap
+  assert.equal(MIN, 140, 'DROPCAP_MIN_CHARS is 140');
+  assert.ok(short.length < MIN && long.length >= MIN, 'fixtures straddle the threshold');
+
+  test('leadin', 'short dropcap opener renders no drop cap on the canvas (none)', () => {
+    assert.equal(effectiveLeadIn('dropcap', [{ type: 'paragraph', text: short }]), 'none');
+    assert.equal(effectiveLeadIn('dropcap', [{ type: 'lead', text: short }]), 'none');
+  });
+  test('leadin', 'a dropcap opener at or over 140 chars keeps the drop-cap marker', () => {
+    assert.equal(effectiveLeadIn('dropcap', [{ type: 'paragraph', text: long }]), 'dropcap');
+    assert.equal(effectiveLeadIn('dropcap', [{ type: 'paragraph', text: 'y'.repeat(MIN - 1) }]), 'none');
+  });
+  test('leadin', 'crossing 140 toggles the drop cap live as the author types', () => {
+    const grow = (n) => effectiveLeadIn('dropcap', [{ type: 'paragraph', text: 'z'.repeat(n) }]);
+    assert.equal(grow(MIN - 1), 'none');
+    assert.equal(grow(MIN), 'dropcap');
+  });
+  test('leadin', 'the opening block is the first paragraph/lead — headings skipped, like the site', () => {
+    const blocks = [{ type: 'heading', level: 2, text: 'Why it happens' }, { type: 'paragraph', text: long }];
+    assert.equal(firstBodyText(blocks), long);
+    assert.equal(effectiveLeadIn('dropcap', blocks), 'dropcap');
+    const shortAfterHeading = [{ type: 'heading', level: 2, text: 'Why it happens' }, { type: 'paragraph', text: short }];
+    assert.equal(effectiveLeadIn('dropcap', shortAfterHeading), 'none');
+  });
+  test('leadin', 'rich-run opener text is measured by its characters, cites excluded', () => {
+    const runs = [{ t: short }, { cite: 'r1' }];
+    assert.equal(firstBodyText([{ type: 'paragraph', text: runs }]).length, short.length);
+  });
+  test('leadin', 'the other opening styles are not fit-checked (only dropcap)', () => {
+    for (const style of ['smallcaps', 'boldwords', 'none']) {
+      assert.equal(effectiveLeadIn(style, [{ type: 'paragraph', text: short }]), style, style);
+    }
+  });
+  test('leadin', 'no paragraph/lead block at all leaves a dropcap with no opener as none', () => {
+    assert.equal(effectiveLeadIn('dropcap', [{ type: 'heading', level: 2, text: 'H' }]), 'none');
+    assert.equal(firstBodyText([]), '');
   });
 
   // ------------------------------------------------------------ summary

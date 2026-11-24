@@ -10,7 +10,7 @@
 // Every href/src is depth-relative (the preview is mounted at /changes/); the only
 // absolute URLs are the share targets, which must be shareable.
 const blocks = require('../../admin/blog-blocks.js');
-const { highlightWholeWord, disclaimerOf } = require('../../admin/content-rules.js');
+const { highlightWholeWord, disclaimerOf, DROPCAP_MIN_CHARS } = require('../../admin/content-rules.js');
 const { renderPostCard, svg, CONTACT_ICONS, contactCta } = require('./render-landing.js');
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -254,7 +254,6 @@ const wrapLeadIn = (html, leadIn) => {
 // them; on a one-line opener ("…three major factors:") it would hang into the
 // next block. Short openers get no lead-in (the CSS also contains the float, for
 // a paragraph that wraps to only two lines on a wide screen).
-const DROPCAP_MIN_CHARS = 140;
 const firstParagraphText = (html) => {
   const match = html.match(/<p\b[^>]*\sdata-first\b[^>]*>([\s\S]*?)<\/p>/);
   return match ? match[1].replace(/<[^>]*>/g, '').replace(/&#?\w+;/g, '_').replace(/\s+/g, ' ').trim() : '';
