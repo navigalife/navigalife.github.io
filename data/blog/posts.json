@@ -15,8 +15,8 @@
     "bodySize": "M",
     "leadIn": "dropcap",
     "cover": {
-      "src": "assets/blog/diabetic-foot-a-small-wound-can-become-a-life-disrupting/cover-dhrsvlvy.webp",
-      "alt": "WARNING SIGNS YOU SHOULD NEVER IGNORE",
+      "src": "assets/blog/diabetic-foot-a-small-wound-can-become-a-life-disrupting/cover-0ncsh0x1.webp",
+      "alt": "Comfortable walking shoes, white cotton socks, a hand mirror, a blood glucose meter and a tube of foot cream laid out on teal linen.",
       "caption": "",
       "credit": "",
       "focal": {
@@ -32,71 +32,60 @@
     "seo": {
       "title": "",
       "description": "",
-      "focusKeyphrase": "",
-      "keywords": []
+      "focusKeyphrase": "diabetic foot",
+      "keywords": [
+        "diabetic foot care",
+        "diabetic foot ulcer",
+        "diabetes awareness",
+        "foot amputation prevention",
+        "vascular health",
+        "limb preservation",
+        "peripheral artery disease",
+        "wound care"
+      ]
     },
     "related": [],
     "blocks": [
       {
-        "type": "paragraph",
-        "text": ""
+        "type": "heading",
+        "level": 2,
+        "text": "What causes diabetic foot complications?"
       },
       {
         "type": "paragraph",
-        "text": [
-          {
-            "t": "Diabetic Foot Complications Often Develop Due To Three Major Factors:",
-            "b": true
-          }
-        ]
+        "text": "Diabetic foot complications often develop due to three major factors:"
       },
       {
-        "type": "paragraph",
-        "text": [
-          {
-            "t": "NERVE DAMAGE (NEUROPATHY)",
-            "b": true
-          }
-        ]
+        "type": "heading",
+        "level": 3,
+        "text": "Nerve damage (neuropathy)"
       },
       {
         "type": "paragraph",
         "text": "Reduced sensation can make it difficult to notice cuts, blisters, or injuries."
       },
       {
-        "type": "paragraph",
-        "text": [
-          {
-            "t": "POOR BLOOD CIRCULATION (ISCHEMIA)",
-            "b": true
-          }
-        ]
+        "type": "heading",
+        "level": 3,
+        "text": "Poor blood circulation (ischemia)"
       },
       {
         "type": "paragraph",
         "text": "Restricted arterial blood flow reduces the oxygen and nutrients reaching foot tissues, affecting wound healing."
       },
       {
-        "type": "paragraph",
-        "text": [
-          {
-            "t": "INFECTIONS AND FOOT ULCERS",
-            "b": true
-          }
-        ]
+        "type": "heading",
+        "level": 3,
+        "text": "Infections and foot ulcers"
       },
       {
         "type": "paragraph",
         "text": "Even a minor wound can develop into a serious ulcer or infection if not identified and treated promptly."
       },
       {
-        "type": "paragraph",
-        "text": [
-          {
-            "t": "WARNING SIGNS YOU SHOULD NEVER IGNORE",
-            "b": true
-          }
-        ]
+        "type": "heading",
+        "level": 2,
+        "text": "Warning signs you should never ignore"
       },
       {
         "type": "list",
@@ -107,17 +96,13 @@
           "Cold feet or changes in skin colour",
           "Redness, swelling, or unusual discharge",
           "Foul odour or blackened tissue",
-          "Bacterial infection leading to life dangering Sepsis"
+          "Bacterial infection leading to life-threatening sepsis"
         ]
       },
       {
-        "type": "paragraph",
-        "text": [
-          {
-            "t": "HOW CAN YOU PROTECT YOUR FEET?",
-            "b": true
-          }
-        ]
+        "type": "heading",
+        "level": 2,
+        "text": "How can you protect your feet?"
       },
       {
         "type": "list",
@@ -129,62 +114,41 @@
           "Maintain blood sugar, blood pressure, and cholesterol within your prescribed targets.",
           "Avoid walking barefoot.",
           "Seek professional medical advice promptly if you notice any wound or unusual change.",
-          "Sedentary life style aggravates the problem and return venous flow & arterial flow tend to get stagnant. To prevent such a condition, its important to walk 20 – 30 minutes everyday."
+          "A sedentary lifestyle aggravates the problem, as venous return and arterial flow tend to become stagnant. To prevent this, it's important to walk 20–30 minutes every day."
         ]
       },
       {
-        "type": "paragraph",
-        "text": [
-          {
-            "t": "HOW DOES MEDIVASC HELP?",
-            "b": true
-          }
-        ]
+        "type": "heading",
+        "level": 2,
+        "text": "How does MediVasc help?"
       },
       {
         "type": "paragraph",
-        "text": "At MediVasc, we optimise V3V - Vascularity of three vessels viz. arteries, veins & lymphatic vessels. We emphasise on vascular complications affecting the feet and legs."
+        "text": "At MediVasc, we optimise V3V – Vascularity of three vessels, viz. arteries, veins and lymphatic vessels. We emphasise vascular complications affecting the feet and legs."
       },
       {
         "type": "paragraph",
-        "text": "We study each case, assess the patient's existing medical condition, and work towards developing a customised, affordable solution to be used at home under our guidance which ensures no hospital visits and consultation costs and no waste of productive time. Patients are monitored at regular interval follow-ups for feedback."
+        "text": "We study each case, assess the patient's existing medical condition, and work towards developing a customised, affordable solution to be used at home under our guidance, which means no hospital visits, no consultation costs and no waste of productive time. Patients are monitored through follow-ups at regular intervals for feedback."
       },
       {
         "type": "paragraph",
-        "text": "Our prime objective is to take the patient out of pain & misery, heal the wounds and preserve the limb."
+        "text": "Our prime objective is to take the patient out of pain and misery, heal the wounds and preserve the limb."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Take early notice of warning signs"
       },
       {
         "type": "paragraph",
-        "text": [
-          {
-            "t": "TAKE EARLY NOTICE OF WARNING SIGNS.",
-            "b": true
-          }
-        ]
-      },
-      {
-        "type": "paragraph",
-        "text": "If you or someone you know is struggling with diabetic foot complications."
-      },
-      {
-        "type": "paragraph",
-        "text": [
-          {
-            "t": "Visit: https://medivasc.in",
-            "b": true
-          }
-        ]
+        "text": "If you or someone you know is struggling with diabetic foot complications, reach out to us early."
       },
       {
         "type": "paragraph",
         "text": "Help us spread awareness. Share this post to help protect more feet and prevent avoidable complications."
-      },
-      {
-        "type": "paragraph",
-        "text": "#MediVasc #DiabeticFootCare #DiabetesAwareness #DiabeticFootUlcer #FootAmputationPrevention #VascularHealth #LimbPreservation #PeripheralArteryDisease #WoundCare #HealthcareAwareness"
       }
     ],
     "references": [],
-    "updatedAt": "2026-11-21T17:52:28+05:30"
+    "updatedAt": "2026-11-24T12:44:59+05:30"
   }
 ]
