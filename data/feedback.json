@@ -12,9 +12,6 @@
     "src": "assets/feedback/feedback-06.webp"
   },
   {
-    "src": "assets/feedback/feedback-07.webp"
-  },
-  {
     "src": "assets/feedback/feedback-09.webp"
   },
   {
@@ -37,5 +34,8 @@
   },
   {
     "src": "assets/feedback/feedback-17.webp"
+  },
+  {
+    "src": "assets/feedback/feedback-08.webp"
   }
 ]
